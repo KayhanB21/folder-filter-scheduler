@@ -116,6 +116,11 @@ extension APIs precisely so it stays this easy to test.
 Targets Thunderbird **128+** (uses the folder-`id`-based messages API). Built and
 tested against Thunderbird 152.
 
+## Privacy
+
+The add-on collects and transmits nothing — all processing is local. See
+[PRIVACY.md](PRIVACY.md).
+
 ## License
 
 [MPL-2.0](LICENSE) — the same license Thunderbird itself uses.
