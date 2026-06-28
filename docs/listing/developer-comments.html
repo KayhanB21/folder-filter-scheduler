@@ -1,0 +1,19 @@
+<strong>Reporting bugs</strong>
+Please report issues at <a href="https://github.com/KayhanB21/folder-filter-scheduler/issues">github.com/KayhanB21/folder-filter-scheduler/issues</a>. Including your Thunderbird version, the rule you configured, and what you expected to happen makes problems much faster to fix.
+
+<strong>Known limitations</strong>
+<ul>
+<li>Conditions on Reply-To and other non-indexed headers need the message available locally. For an IMAP folder, enable offline storage (Account Settings, Synchronization and Storage) for that folder, then run Repair Folder once.</li>
+<li>Requires Thunderbird 128 or newer (it uses the folder-id based messages API).</li>
+<li>The store validator may show warnings for Thunderbird mail permissions such as messagesMove. These are expected: the validator is shared with Firefox, which does not have mail permissions. They do not affect the add-on.</li>
+</ul>
+
+<strong>Planned for future versions</strong>
+<ul>
+<li>Multiple actions per rule (for example, mark as read and move)</li>
+<li>Conditions on the message body and additional headers</li>
+<li>Per-rule schedule intervals</li>
+</ul>
+
+<strong>Source</strong>
+Full source and changelog: <a href="https://github.com/KayhanB21/folder-filter-scheduler">github.com/KayhanB21/folder-filter-scheduler</a>

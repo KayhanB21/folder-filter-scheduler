@@ -1,0 +1,28 @@
+Folder Filter Scheduler runs your message-filter rules on any folder, automatically and on a schedule. Thunderbird only runs filters automatically on the Inbox, so mail a provider files server-side into Junk or Bulk, or anything sitting in another folder, never gets filtered. This add-on closes that gap.
+
+<strong>What it does</strong>
+<ul>
+<li>Runs rules on any folder you choose, not just the Inbox</li>
+<li>Runs on a timer (every N minutes) or instantly with one click</li>
+<li>Works across multiple accounts in a single rule</li>
+</ul>
+
+<strong>Conditions</strong>
+Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is, starts with, ends with, or matches regex. Each condition can be negated and combined with AND or OR.
+
+<strong>Actions</strong>
+<ul>
+<li>Move to Trash, routed to each message's own account</li>
+<li>Move or copy to any folder, including a folder in a different account</li>
+<li>Mark as read, flagged, or junk</li>
+<li>Delete permanently</li>
+</ul>
+
+<strong>About Reply-To and other headers</strong>
+Conditions on From, To, Cc, and Subject use indexed data and download nothing. Conditions on Reply-To, or other non-indexed headers, need the full message, which is fetched on demand on an online IMAP folder. For speed and offline use, enable offline storage for that folder.
+
+<strong>Privacy</strong>
+No data is collected or transmitted. Everything runs locally inside Thunderbird, and the add-on makes no network requests of its own.
+
+<strong>Open source</strong>
+Licensed under MPL-2.0. Source, issues, and contributions welcome at <a href="https://github.com/KayhanB21/folder-filter-scheduler">github.com/KayhanB21/folder-filter-scheduler</a>
