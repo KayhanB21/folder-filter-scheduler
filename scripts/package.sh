@@ -26,7 +26,11 @@ rm -f "$OUT"
 zip -r -X "$OUT" "${INCLUDE[@]}" -x '*.DS_Store' >/dev/null
 
 # Fail loudly if manifest.json is not at the archive root (the #1 upload error).
-if ! unzip -l "$OUT" | grep -qE ' manifest\.json$'; then
+# Capture the listing first: piping straight into `grep -q` makes grep close the
+# pipe on first match, which SIGPIPEs `unzip` and — under `set -o pipefail` —
+# reports a false failure.
+listing="$(unzip -l "$OUT")"
+if ! printf '%s\n' "$listing" | grep -qE ' manifest\.json$'; then
   echo "ERROR: manifest.json is not at the ZIP root." >&2
   exit 1
 fi
