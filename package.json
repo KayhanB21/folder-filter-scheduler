@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "test": "node --test",
-    "lint": "node --check src/matcher.js && node --check src/background.js"
+    "lint": "for f in src/*.js options/options.js; do node --check \"$f\" || exit 1; done"
   },
   "license": "MPL-2.0",
   "repository": {

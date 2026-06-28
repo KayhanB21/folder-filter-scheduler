@@ -61,15 +61,8 @@
 
         <div class="row action-row">
           <span class="lbl">Action</span>
-          <select class="rule-action-type">
-            <option value="trash">Move to Trash (each message's own account)</option>
-            <option value="move">Move to folder…</option>
-            <option value="copy">Copy to folder…</option>
-            <option value="markRead">Mark as read</option>
-            <option value="markFlagged">Flag</option>
-            <option value="markJunk">Mark as junk</option>
-            <option value="deletePermanently">Delete permanently</option>
-          </select>
+          <!-- Options are rendered from src/actions.js (single source of truth). -->
+          <select class="rule-action-type"></select>
           <select class="rule-action-folder hidden"></select>
         </div>
         <p class="action-hint"></p>

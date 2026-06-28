@@ -14,6 +14,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   delete permanently.
 - Periodic execution on **any** folder via the `alarms` API, plus a manual
   "Run all rules now" button.
+- Cross-account moves: "Move to folder…" can target a folder in a different
+  account (e.g. Yahoo Bulk → Outlook Trash).
+- Modular action registry (`src/actions.js`) as the single source of truth for
+  both the engine and the options UI, with unit tests.
+- Lazy full-message fetch: rules using only cheap indexed headers
+  (`from`/`to`/`cc`/`subject`) download nothing.
 - Options page for managing rules, source folders, and the interval.
 - Localization for English, German, French, Spanish, Italian, Japanese,
   Simplified Chinese, and Korean.

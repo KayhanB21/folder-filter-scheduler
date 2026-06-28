@@ -44,9 +44,19 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Conditions** on `from`, `to`, `cc`, `subject`, `reply-to`, `list-id`, `sender`
   with `contains` / `is` / `starts with` / `ends with` / `matches regex`, each
   optionally negated, combined with AND or OR.
-- **Actions**: move to Trash, move/copy to a chosen folder, mark read / flagged /
-  junk, or delete permanently.
+- **Actions**: move to Trash, move/copy to a chosen folder (**including a folder
+  in a different account** — e.g. Yahoo Bulk → Outlook Trash), mark read /
+  flagged / junk, or delete permanently. Actions live in a single
+  [registry](src/actions.js) that drives both the engine and the UI, so adding
+  one is a one-entry change.
+- **Multiple source folders per rule**, spanning multiple accounts — one rule can
+  watch Yahoo Bulk *and* Outlook Junk at once, and "Move to Trash" routes each
+  match to its own account's Trash.
 - **Any folder, on a timer** — not just the Inbox.
+- **Lazy fetching**: a rule that only uses `from`/`to`/`cc`/`subject` reads the
+  free indexed header and downloads nothing; only `reply-to`/`list-id`/`sender`
+  rules pay for a full message fetch. Offline storage is therefore a performance
+  choice, not a requirement.
 - **Run now** button for immediate, on-demand runs.
 
 ## Install (temporary / development)

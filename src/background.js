@@ -3,6 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 import { evaluateRule, requiresFullMessage, FIELDS } from './matcher.js';
+import { runAction } from './actions.js';
 
 /**
  * Background engine.
@@ -86,35 +87,6 @@ async function* messagesInFolder(folderId) {
   }
 }
 
-async function applyAction(ids, action) {
-  if (ids.length === 0) return;
-  switch (action?.type) {
-    case 'move':
-      await messenger.messages.move(ids, action.folderId);
-      break;
-    case 'copy':
-      await messenger.messages.copy(ids, action.folderId);
-      break;
-    case 'trash': // move to Trash (recoverable)
-      await messenger.messages.delete(ids, false);
-      break;
-    case 'deletePermanently':
-      await messenger.messages.delete(ids, true);
-      break;
-    case 'markRead':
-      await Promise.all(ids.map((id) => messenger.messages.update(id, { read: true })));
-      break;
-    case 'markFlagged':
-      await Promise.all(ids.map((id) => messenger.messages.update(id, { flagged: true })));
-      break;
-    case 'markJunk':
-      await Promise.all(ids.map((id) => messenger.messages.update(id, { junk: true })));
-      break;
-    default:
-      warn('unknown action type', action?.type);
-  }
-}
-
 /** Run one rule across all its source folders. Returns count of affected messages. */
 async function runRule(rule) {
   if (rule.enabled === false) return 0;
@@ -133,7 +105,7 @@ async function runRule(rule) {
       continue;
     }
     try {
-      await applyAction(matchedIds, rule.action);
+      await runAction(messenger, matchedIds, rule.action);
       affected += matchedIds.length;
     } catch (e) {
       warn(`action failed for rule "${rule.name}"`, e);
