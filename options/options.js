@@ -10,17 +10,39 @@ const statusEl = $('#status');
 
 let folders = []; // [{ id, label }]
 
-/** Walk every account's folder tree into a flat, labelled list for <select>s. */
+/** Build a flat, labelled folder list for the <select>s, across all accounts. */
 async function loadFolders() {
   const accounts = await messenger.accounts.list();
+  const nameByAccount = new Map(accounts.map((a) => [a.id, a.name]));
   const flat = [];
+
+  // Preferred path: the flat folder query (Thunderbird 121+). One call, every folder.
+  if (messenger.folders?.query) {
+    try {
+      const all = await messenger.folders.query({});
+      for (const f of all) {
+        if (!f.id || !f.path || f.path === '/') continue;
+        flat.push({ id: f.id, label: `${nameByAccount.get(f.accountId) ?? ''}: ${f.path}` });
+      }
+      if (flat.length) {
+        folders = flat;
+        return;
+      }
+    } catch (e) {
+      console.warn('[FolderFilterScheduler] folders.query failed, falling back', e);
+    }
+  }
+
+  // Fallback: walk each account's tree, explicitly requesting subfolders.
+  const withSubs = await messenger.accounts.list(true);
   const walk = (folder, accountName) => {
-    if (folder.id) flat.push({ id: folder.id, label: `${accountName}: ${folder.path}` });
+    if (folder.id && folder.path && folder.path !== '/') {
+      flat.push({ id: folder.id, label: `${accountName}: ${folder.path}` });
+    }
     for (const child of folder.subFolders ?? []) walk(child, accountName);
   };
-  for (const account of accounts) {
-    const root = account.rootFolder ?? account;
-    for (const child of root.subFolders ?? []) walk(child, account.name);
+  for (const account of withSubs) {
+    walk(account.rootFolder ?? account, account.name);
   }
   folders = flat;
 }
@@ -141,6 +163,10 @@ async function init() {
   $('#add-rule').addEventListener('click', () => renderRule({}));
   $('#save').addEventListener('click', () => save().catch((e) => flash(e.message, true)));
   $('#run-now').addEventListener('click', runNow);
+
+  if (folders.length === 0) {
+    flash('No folders found — check the “accountsRead” permission and reload the add-on.', true);
+  }
 }
 
 init().catch((e) => flash(e.message, true));
