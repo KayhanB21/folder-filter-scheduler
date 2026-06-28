@@ -10,6 +10,17 @@ const statusEl = $('#status');
 
 let folders = []; // [{ id, label }]
 
+/** One-line clarifier shown under the Action dropdown. */
+const ACTION_HINTS = {
+  trash: 'Routes each matched message to the Trash of its own account — safe across multi-account rules.',
+  move: 'Sends every match to this one folder. Avoid picking a folder in a different account than the source.',
+  copy: 'Leaves the original in place and copies a duplicate into the chosen folder.',
+  markRead: 'Marks matches as read without moving them.',
+  markFlagged: 'Flags matches without moving them.',
+  markJunk: 'Marks matches as junk (does not move them — Thunderbird’s junk handling decides the rest).',
+  deletePermanently: 'Skips the Trash and deletes matches immediately. This cannot be undone.',
+};
+
 /** Build a flat, labelled folder list for the <select>s, across all accounts. */
 async function loadFolders() {
   const accounts = await messenger.accounts.list();
@@ -93,10 +104,13 @@ function renderRule(rule = {}) {
 
   const actionType = $('.rule-action-type', node);
   const actionFolder = $('.rule-action-folder', node);
+  const actionHint = $('.action-hint', node);
   fillFolderSelect(actionFolder, rule.action?.folderId ? [rule.action.folderId] : []);
   const syncActionFolder = () => {
     const needsFolder = actionType.value === 'move' || actionType.value === 'copy';
     actionFolder.classList.toggle('hidden', !needsFolder);
+    actionHint.textContent = ACTION_HINTS[actionType.value] ?? '';
+    actionHint.classList.toggle('danger', actionType.value === 'deletePermanently');
   };
   actionType.value = rule.action?.type ?? 'trash';
   actionType.addEventListener('change', syncActionFolder);
