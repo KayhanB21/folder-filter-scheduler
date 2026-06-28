@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateCondition, evaluateRule, OPERATORS } from '../src/matcher.js';
+import { evaluateCondition, evaluateRule, requiresFullMessage, OPERATORS } from '../src/matcher.js';
 
 const msg = (fields) => ({ fields });
 
@@ -104,6 +104,33 @@ test('rule match=all is an AND across conditions', () => {
 
 test('a rule with no conditions never matches', () => {
   assert.equal(evaluateRule(spam, { match: 'any', conditions: [] }), false);
+});
+
+test('requiresFullMessage is false for cheap-field-only rules', () => {
+  const rule = {
+    match: 'any',
+    conditions: [
+      { field: 'from', operator: 'endsWith', value: '@x.com' },
+      { field: 'subject', operator: 'contains', value: 'sale' },
+    ],
+  };
+  assert.equal(requiresFullMessage(rule), false);
+});
+
+test('requiresFullMessage is true when a rule needs reply-to', () => {
+  const rule = {
+    match: 'any',
+    conditions: [
+      { field: 'from', operator: 'endsWith', value: '@x.com' },
+      { field: 'reply-to', operator: 'contains', value: 'spammer' },
+    ],
+  };
+  assert.equal(requiresFullMessage(rule), true);
+});
+
+test('requiresFullMessage handles missing/empty conditions', () => {
+  assert.equal(requiresFullMessage({}), false);
+  assert.equal(requiresFullMessage({ conditions: [] }), false);
 });
 
 test('OPERATORS set is the documented contract', () => {

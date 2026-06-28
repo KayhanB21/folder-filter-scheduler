@@ -41,6 +41,24 @@ export const FIELDS = Object.freeze([
   'sender',
 ]);
 
+/**
+ * Fields obtainable for free from a lightweight MessageHeader (author,
+ * recipients, ccList, subject) — i.e. without fetching the full message.
+ * Everything else (reply-to, list-id, sender, arbitrary headers) needs a
+ * `messages.getFull()`, which on a non-offline IMAP folder hits the network.
+ */
+export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject']);
+
+/**
+ * True when a rule references at least one header that is NOT cheaply
+ * available, so the engine must fetch the full message to evaluate it.
+ * Lets a from/subject-only rule run with zero downloads.
+ */
+export function requiresFullMessage(rule) {
+  const cheap = new Set(CHEAP_FIELDS);
+  return (rule?.conditions ?? []).some((c) => !cheap.has((c.field || '').toLowerCase()));
+}
+
 const foldCase = (s) => (s ?? '').toString().toLowerCase();
 
 function valuesFor(message, field) {

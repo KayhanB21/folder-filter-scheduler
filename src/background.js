@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { evaluateRule, FIELDS } from './matcher.js';
+import { evaluateRule, requiresFullMessage, FIELDS } from './matcher.js';
 
 /**
  * Background engine.
@@ -40,10 +40,14 @@ async function ensureAlarm() {
 
 /**
  * Build the normalized `{ fields }` object matcher.js expects from a message.
- * Header fields come from getFull(); we also seed the common addressing fields
- * from the lightweight MessageHeader so a rule still works if a header is sparse.
+ *
+ * When `fetchFull` is false (the rule only needs from/to/cc/subject) we read
+ * everything from the lightweight MessageHeader — no network, works offline,
+ * irrespective of whether the folder is stored locally. Only when a rule needs
+ * a non-indexed header (reply-to, list-id, …) do we pay for `getFull()`, which
+ * fetches the message on demand on a non-offline IMAP folder.
  */
-async function normalize(messageHeader) {
+async function normalize(messageHeader, fetchFull) {
   const fields = {};
   const push = (name, value) => {
     if (value == null || value === '') return;
@@ -51,20 +55,23 @@ async function normalize(messageHeader) {
     (fields[key] ??= []).push(String(value));
   };
 
-  try {
-    const full = await messenger.messages.getFull(messageHeader.id);
-    const headers = full?.headers ?? {};
-    for (const [name, values] of Object.entries(headers)) {
-      for (const v of values) push(name, v);
+  if (fetchFull) {
+    try {
+      const full = await messenger.messages.getFull(messageHeader.id);
+      for (const [name, values] of Object.entries(full?.headers ?? {})) {
+        for (const v of values) push(name, v);
+      }
+    } catch (e) {
+      warn('getFull failed', messageHeader.id, e);
     }
-  } catch (e) {
-    warn('getFull failed', messageHeader.id, e);
   }
 
-  // Fallbacks from the indexed header in case getFull omitted something.
+  // Cheap fields from the indexed header — the only source when fetchFull is
+  // false, and a fallback for anything getFull happened to omit.
   if (!fields.from && messageHeader.author) push('from', messageHeader.author);
   if (!fields.subject && messageHeader.subject) push('subject', messageHeader.subject);
-  for (const r of messageHeader.recipients ?? []) push('to', r);
+  if (!fields.to) for (const r of messageHeader.recipients ?? []) push('to', r);
+  if (!fields.cc) for (const c of messageHeader.ccList ?? []) push('cc', c);
 
   return { fields, _header: messageHeader };
 }
@@ -111,13 +118,14 @@ async function applyAction(ids, action) {
 /** Run one rule across all its source folders. Returns count of affected messages. */
 async function runRule(rule) {
   if (rule.enabled === false) return 0;
+  const fetchFull = requiresFullMessage(rule);
   let affected = 0;
 
   for (const folderId of rule.folderIds ?? []) {
     const matchedIds = [];
     try {
       for await (const header of messagesInFolder(folderId)) {
-        const message = await normalize(header);
+        const message = await normalize(header, fetchFull);
         if (evaluateRule(message, rule)) matchedIds.push(header.id);
       }
     } catch (e) {
