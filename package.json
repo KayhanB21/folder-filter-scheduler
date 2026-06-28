@@ -1,6 +1,6 @@
 {
   "name": "folder-filter-scheduler",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run message-filter rules on any Thunderbird folder on a schedule — the modern WebExtension successor to the abandoned Auto Filter Timer.",
   "type": "module",
   "private": true,
