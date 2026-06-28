@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extensionName__",
+  "description": "__MSG_extensionDescription__",
+  "version": "0.1.0",
+  "author": "Kayhan",
+  "default_locale": "en",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "folder-filter-scheduler@kayhan.dev",
+      "strict_min_version": "128.0"
+    }
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "permissions": [
+    "accountsRead",
+    "messagesRead",
+    "messagesMove",
+    "messagesDelete",
+    "messagesUpdate",
+    "storage",
+    "alarms"
+  ],
+  "background": {
+    "scripts": ["src/background.js"],
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  }
+}

@@ -1,0 +1,11 @@
+# Build artifacts
+*.xpi
+web-ext-artifacts/
+
+# Dependencies (none required, but keep clones clean)
+node_modules/
+
+# Editor / OS noise
+.idea/
+.vscode/
+.DS_Store

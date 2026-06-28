@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Folder Filter Scheduler",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Run message-filter rules on any folder on a schedule — the modern successor to Auto Filter Timer.",
+    "description": "Short description shown in the add-ons manager."
+  }
+}

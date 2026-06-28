@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <rect width="96" height="96" rx="20" fill="#0a84ff"/>
+  <!-- funnel (filter) -->
+  <path d="M26 28h44L52 52v20l-8-6V52z" fill="#fff"/>
+  <!-- clock (schedule) -->
+  <circle cx="68" cy="66" r="16" fill="#fff" stroke="#0a84ff" stroke-width="3"/>
+  <path d="M68 58v8l6 4" fill="none" stroke="#0a84ff" stroke-width="3" stroke-linecap="round"/>
+</svg>

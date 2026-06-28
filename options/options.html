@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!--
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Folder Filter Scheduler</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Folder Filter Scheduler</h1>
+      <p class="sub">
+        Run rules on any folder on a timer — the piece stock Thunderbird only does for the Inbox.
+      </p>
+    </header>
+
+    <section class="bar">
+      <label>
+        Run every
+        <input id="interval" type="number" min="1" step="1" value="10" /> minutes
+      </label>
+      <span class="spacer"></span>
+      <button id="run-now" type="button">Run all rules now</button>
+      <button id="save" type="button" class="primary">Save</button>
+    </section>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <section id="rules"></section>
+    <button id="add-rule" type="button" class="add">+ Add rule</button>
+
+    <!-- Template for a single rule card. -->
+    <template id="rule-template">
+      <article class="rule">
+        <div class="rule-head">
+          <input class="rule-name" type="text" placeholder="Rule name" />
+          <label class="toggle"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
+          <button class="del-rule danger" type="button">Delete</button>
+        </div>
+
+        <div class="row">
+          <span class="lbl">Folders</span>
+          <select class="rule-folders" multiple size="4"></select>
+        </div>
+
+        <div class="row">
+          <span class="lbl">Match</span>
+          <select class="rule-match">
+            <option value="any">any of the conditions (OR)</option>
+            <option value="all">all of the conditions (AND)</option>
+          </select>
+        </div>
+
+        <div class="conditions"></div>
+        <button class="add-cond" type="button">+ Add condition</button>
+
+        <div class="row action-row">
+          <span class="lbl">Action</span>
+          <select class="rule-action-type">
+            <option value="trash">Move to Trash</option>
+            <option value="move">Move to folder…</option>
+            <option value="copy">Copy to folder…</option>
+            <option value="markRead">Mark as read</option>
+            <option value="markFlagged">Flag</option>
+            <option value="markJunk">Mark as junk</option>
+            <option value="deletePermanently">Delete permanently</option>
+          </select>
+          <select class="rule-action-folder hidden"></select>
+        </div>
+      </article>
+    </template>
+
+    <template id="condition-template">
+      <div class="condition">
+        <select class="cond-field"></select>
+        <select class="cond-op">
+          <option value="contains">contains</option>
+          <option value="is">is</option>
+          <option value="startsWith">starts with</option>
+          <option value="endsWith">ends with</option>
+          <option value="matchesRegex">matches regex</option>
+        </select>
+        <label class="toggle"><input class="cond-negate" type="checkbox" /> not</label>
+        <input class="cond-value" type="text" placeholder="value" />
+        <button class="del-cond danger" type="button">×</button>
+      </div>
+    </template>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
