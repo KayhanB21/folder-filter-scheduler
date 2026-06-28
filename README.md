@@ -7,6 +7,8 @@ only does for the Inbox.
 [![CI](https://github.com/KayhanB21/folder-filter-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/KayhanB21/folder-filter-scheduler/actions/workflows/ci.yml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://www.mozilla.org/MPL/2.0/)
 
+![The options page: a rule scheduled every few minutes, matching on Reply-To, moving matches to each account's Trash](docs/images/04-options-page.png)
+
 ## The gap this fills
 
 Thunderbird's message filters can only run **automatically** on the Inbox. The
@@ -61,17 +63,50 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 
 ## Install (temporary / development)
 
-> Header matching such as `reply-to` needs the message available locally. For an
-> IMAP folder, enable offline storage for it (Account Settings → Synchronization &
-> Storage) and run **Repair Folder** once, so the headers are present.
-
 1. Clone this repo.
 2. In Thunderbird: **Tools → Developer Tools → Debug Add-ons**.
 3. **Load Temporary Add-on…** and pick `manifest.json`.
-4. Open the add-on's **Options**, add a rule, choose folders + interval, **Save**.
 
 A signed `.xpi` for permanent install will follow once published to
 [addons.thunderbird.net](https://addons.thunderbird.net).
+
+## Using it
+
+### 1. Open the options page
+
+Open the Thunderbird menu (☰, top-right):
+
+![Thunderbird menu button](docs/images/01-open-menu.png)
+
+Choose **Add-ons and Themes**:
+
+![Add-ons and Themes in the menu](docs/images/02-addons-and-themes.png)
+
+Find **Folder Filter Scheduler** and click the **wrench / options** button:
+
+![Folder Filter Scheduler options button](docs/images/03-extension-options.png)
+
+### 2. Create a rule
+
+![Configuring a rule on the options page](docs/images/04-options-page.png)
+
+- **Run every** — how often the schedule fires (in minutes).
+- **Folders** — pick one or more source folders (Cmd-click to multi-select). They
+  can span multiple accounts.
+- **Match** — `any` (OR) or `all` (AND) of the conditions below.
+- **Condition** — e.g. `reply-to` · `contains` · a value. Tick **not** to negate.
+- **Action** — e.g. *Move to Trash (each message's own account)*. The hint line
+  under it explains exactly where matches go.
+
+Click **Save**, then **Run all rules now** to test immediately — the status line
+reports how many messages were affected (e.g. *"Done — 1 message(s) affected."*).
+
+> **Header matching and offline storage.** Conditions on `from`/`to`/`cc`/`subject`
+> read the indexed header and need no download. Conditions on `reply-to` (or other
+> non-indexed headers) require the full message: on an online IMAP folder it is
+> fetched on demand, so it works either way. For speed and offline use, enable
+> offline storage for the folder (Account Settings → Synchronization & Storage) and
+> run **Repair Folder** once.
 
 ## Develop
 

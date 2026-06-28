@@ -1,5 +1,11 @@
+# Secrets / credentials
+.env
+.env.*
+!.env.example
+
 # Build artifacts
 *.xpi
+*.zip
 web-ext-artifacts/
 
 # Dependencies (none required, but keep clones clean)
