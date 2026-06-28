@@ -22,13 +22,6 @@ is a standing [Mozilla Connect feature request](https://connect.mozilla.org/t5/i
 asking for native non-Inbox filter scheduling. This project is the modern,
 WebExtension-era replacement.
 
-### Real-world motivation
-
-A recurring spam campaign rotated its `From` address every wave but kept a constant
-`Reply-To: spammer@example.com`. Yahoo files it server-side into **Bulk**,
-so an Inbox filter never runs on it. Folder Filter Scheduler watches the Bulk folder
-on a timer, matches on `Reply-To`, and moves matches to Trash automatically.
-
 ## A deliberate design decision (and the constraint behind it)
 
 You might expect this add-on to simply *re-run your existing Thunderbird filters* on
