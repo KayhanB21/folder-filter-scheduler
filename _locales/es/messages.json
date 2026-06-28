@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Programador de filtros de carpeta",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Ejecuta reglas de filtrado de mensajes en cualquier carpeta de forma programada: el sucesor moderno de Auto Filter Timer.",
+    "description": "Short description shown in the add-ons manager."
+  }
+}

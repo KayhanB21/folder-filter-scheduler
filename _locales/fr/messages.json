@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Planificateur de filtres de dossier",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Exécutez des règles de filtrage sur n'importe quel dossier selon un horaire — le successeur moderne d'Auto Filter Timer.",
+    "description": "Short description shown in the add-ons manager."
+  }
+}

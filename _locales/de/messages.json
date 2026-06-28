@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Ordnerfilter-Planer",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Nachrichtenfilterregeln zeitgesteuert auf jeden Ordner anwenden – der moderne Nachfolger von Auto Filter Timer.",
+    "description": "Short description shown in the add-ons manager."
+  }
+}

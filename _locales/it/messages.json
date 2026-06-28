@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Pianificatore di filtri per cartelle",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Esegui regole di filtro dei messaggi su qualsiasi cartella in modo pianificato: il successore moderno di Auto Filter Timer.",
+    "description": "Short description shown in the add-ons manager."
+  }
+}
