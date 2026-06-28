@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "폴더 필터 스케줄러",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "메시지 필터 규칙을 모든 폴더에서 예약 실행 — Auto Filter Timer의 현대적 후속작.",
+    "description": "Short description shown in the add-ons manager."
+  }
+}

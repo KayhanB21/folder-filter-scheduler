@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "フォルダーフィルタースケジューラー",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "メッセージフィルターのルールを任意のフォルダーでスケジュール実行 — Auto Filter Timer の最新の後継。",
+    "description": "Short description shown in the add-ons manager."
+  }
+}

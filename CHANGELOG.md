@@ -15,5 +15,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Periodic execution on **any** folder via the `alarms` API, plus a manual
   "Run all rules now" button.
 - Options page for managing rules, source folders, and the interval.
-- Localization for English, German, French, Spanish, Italian, and Persian (RTL).
+- Localization for English, German, French, Spanish, Italian, Japanese,
+  Simplified Chinese, and Korean.
 - Unit tests for the matcher and a GitHub Actions CI pipeline.

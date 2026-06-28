@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "文件夹过滤器调度器",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "按计划在任意文件夹上运行邮件过滤规则——Auto Filter Timer 的现代继任者。",
+    "description": "Short description shown in the add-ons manager."
+  }
+}
