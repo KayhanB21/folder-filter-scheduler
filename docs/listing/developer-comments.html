@@ -3,16 +3,18 @@ Please report issues at <a href="https://github.com/KayhanB21/folder-filter-sche
 
 <strong>Known limitations</strong>
 <ul>
+<li>Requires Thunderbird 147 or newer. Older versions stay on 0.1.1, which needs 128 or newer.</li>
 <li>Conditions on Reply-To and other non-indexed headers need the message available locally. For an IMAP folder, enable offline storage (Account Settings, Synchronization and Storage) for that folder, then run Repair Folder once.</li>
-<li>Requires Thunderbird 128 or newer (it uses the folder-id based messages API).</li>
+<li>Scheduled runs pick up new mail using each message's Date header, which the sender controls. A backdated message can slip past a scheduled run. "Run all rules now" scans the whole folder and will catch it.</li>
 <li>The store validator may show warnings for Thunderbird mail permissions such as messagesMove. These are expected: the validator is shared with Firefox, which does not have mail permissions. They do not affect the add-on.</li>
 </ul>
 
 <strong>Planned for future versions</strong>
 <ul>
 <li>Multiple actions per rule (for example, mark as read and move)</li>
-<li>Conditions on the message body and additional headers</li>
+<li>Conditions on the message body</li>
 <li>Per-rule schedule intervals</li>
+<li>Translations for the options page, which is English only today</li>
 </ul>
 
 <strong>Source</strong>

@@ -5,10 +5,14 @@ Folder Filter Scheduler runs your message-filter rules on any folder, automatica
 <li>Runs rules on any folder you choose, not just the Inbox</li>
 <li>Runs on a timer (every N minutes) or instantly with one click</li>
 <li>Works across multiple accounts in a single rule</li>
+<li>Builds a sender-domain blocklist from spam you already have, with one right-click</li>
 </ul>
 
+<strong>Blocking spam domains</strong>
+Select spam anywhere in the message list, right-click, and choose "Add spam domains to Folder Filter Scheduler". The sender domains are read from both Reply-To and From, shown to you in separate groups for review, and added to a rule that moves matching mail to Trash on your normal schedule. Subdomains are covered automatically, so blocking evil.com also catches bounce.evil.com. Well-known providers such as Gmail, Yahoo, Outlook and iCloud are never blocked, and that protected list is yours to edit.
+
 <strong>Conditions</strong>
-Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is, starts with, ends with, or matches regex. Each condition can be negated and combined with AND or OR.
+Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is, starts with, ends with, or matches regex. Each condition can be negated and combined with AND or OR. A single condition can also hold a whole list of domains, which is what the right-click action fills in.
 
 <strong>Actions</strong>
 <ul>
@@ -18,8 +22,11 @@ Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is
 <li>Delete permanently</li>
 </ul>
 
-<strong>About Reply-To and other headers</strong>
-Conditions on From, To, Cc, and Subject use indexed data and download nothing. Conditions on Reply-To, or other non-indexed headers, need the full message, which is fetched on demand on an online IMAP folder. For speed and offline use, enable offline storage for that folder.
+<strong>Backups and moving between profiles</strong>
+Rules export to a JSON file and import back. A rule you already have is recognised and skipped rather than duplicated, so importing a shared file is safe.
+
+<strong>Speed, and about Reply-To</strong>
+Conditions on From, To, Cc, and Subject use indexed data and download nothing. Conditions on Reply-To, or other non-indexed headers, need the message itself, which is fetched on demand on an online IMAP folder. For speed and offline use, enable offline storage for that folder. Scheduled runs look only at mail that arrived since the previous run, so a large folder stays cheap. "Run all rules now" always scans everything.
 
 <strong>Privacy</strong>
 No data is collected or transmitted. Everything runs locally inside Thunderbird, and the add-on makes no network requests of its own.
