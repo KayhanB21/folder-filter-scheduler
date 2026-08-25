@@ -9,9 +9,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - **Add spam domains to Folder Filter Scheduler**: a message-list context-menu
   action that extracts sender domains from the selected messages and merges them
-  into a standing block rule. Matching uses `Reply-To`, well-known provider
-  domains are never blocked, and a confirmation dialog (with a "don't show this
-  again" opt-out) lists exactly what will be added before anything is written.
+  into a standing block rule. Domains are harvested from both `Reply-To` and
+  `From` and presented in separate groups, since most spam carries only one of
+  the two and a `From` domain is forgeable enough to warrant its own review.
+  Well-known provider domains are never blocked, and a confirmation dialog (with
+  a "don't show this again" opt-out) lists exactly what will be added before
+  anything is written.
+- Conditions may watch several headers at once via `fields`, so one domain list
+  can cover `reply-to` and `from` together.
+- Import and export of rule sets as JSON (`src/rules.js`). Imported rules are
+  rebuilt field by field from known-good values, so an unknown action, an empty
+  domain list, an empty operator value, or a folder absent from this profile is
+  dropped and reported instead of stored. Nothing is written until Save.
 - New `domainInList` condition operator, holding a whole domain list in one
   editable box and matching subdomains automatically. An empty list never
   matches, so a blank block list cannot affect a folder.

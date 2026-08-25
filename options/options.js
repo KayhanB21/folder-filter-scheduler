@@ -5,6 +5,7 @@
 import { FIELDS, DOMAIN_IN_LIST } from '../src/matcher.js';
 import { ACTIONS, ACTIONS_BY_ID } from '../src/actions.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
+import { buildExport, sanitizeImport } from '../src/rules.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const rulesEl = $('#rules');
@@ -60,6 +61,26 @@ function fillFolderSelect(select, selectedIds = []) {
   }
 }
 
+/** A domain-list condition can watch several headers at once. */
+const DOMAIN_FIELD_SETS = [
+  { value: 'reply-to,from', label: 'reply-to or from' },
+  { value: 'reply-to', label: 'reply-to' },
+  { value: 'from', label: 'from' },
+];
+
+function fillDomainFieldSelect(select, cond) {
+  const current = (cond.fields ?? [cond.field ?? 'reply-to']).join(',');
+  select.innerHTML = '';
+  for (const set of DOMAIN_FIELD_SETS) {
+    const opt = document.createElement('option');
+    opt.value = set.value;
+    opt.textContent = set.label;
+    opt.selected = set.value === current;
+    select.append(opt);
+  }
+  if (!DOMAIN_FIELD_SETS.some((s) => s.value === current)) select.value = 'reply-to,from';
+}
+
 function fillFieldSelect(select, value) {
   select.innerHTML = '';
   for (const field of FIELDS) {
@@ -82,10 +103,13 @@ function renderCondition(container, cond = {}) {
 
   // A domain list needs a textarea, not a one-line input: a harvested list runs
   // to hundreds of entries and would otherwise be unreadable and uneditable.
+  const fieldSelect = $('.cond-field', node);
   const syncOperator = () => {
     const isList = op.value === DOMAIN_IN_LIST;
     $('.cond-domains', node).classList.toggle('hidden', !isList);
     $('.cond-value', node).classList.toggle('hidden', isList);
+    if (isList) fillDomainFieldSelect(fieldSelect, cond);
+    else fillFieldSelect(fieldSelect, cond.field ?? 'reply-to');
   };
   op.addEventListener('change', syncOperator);
   syncOperator();
@@ -156,6 +180,8 @@ function collectConfig(rejected = []) {
           negate: $('.cond-negate', c).checked,
         };
         if (operator === DOMAIN_IN_LIST) {
+          condition.fields = $('.cond-field', c).value.split(',');
+          delete condition.field;
           // parseDomainList drops anything malformed, so a stray blank line can
           // never become an entry that matches every message.
           const { domains, invalid } = parseDomainList($('.cond-domains', c).value);
@@ -204,6 +230,59 @@ async function save() {
   );
 }
 
+function currentConfigForExport() {
+  const collected = collectConfig();
+  return buildExport(collected);
+}
+
+function exportRules() {
+  const blob = new Blob([JSON.stringify(currentConfigForExport(), null, 2)], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'folder-filter-scheduler-rules.json';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  flash('Exported the current rules. Unsaved edits on this page are included.');
+}
+
+/**
+ * Import is deliberately staged: rules are validated and rendered into the page,
+ * but nothing is stored until the user presses Save. So a bad file can be
+ * abandoned by reloading, and can never start deleting mail on its own.
+ */
+async function importRules(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (e) {
+    flash(`Could not read ${file.name}: ${e.message}`, true);
+    return;
+  }
+
+  const knownFolderIds = folders.map((f) => f.id);
+  const { rules, allowlist, intervalMinutes, problems } = sanitizeImport(data, { knownFolderIds });
+
+  if (rules.length === 0) {
+    flash(`Nothing imported. ${problems.join('; ') || 'The file contained no usable rules.'}`, true);
+    return;
+  }
+
+  for (const rule of rules) renderRule(rule);
+  if (allowlist?.length) $('#allowlist').value = allowlist.join('\n');
+  if (intervalMinutes) $('#interval').value = intervalMinutes;
+
+  const skipped = problems.length > 0 ? ` Skipped: ${problems.join('; ')}.` : '';
+  flash(
+    `Imported ${rules.length} rule(s) — review them, then press Save to keep them.${skipped}`,
+    problems.length > 0,
+  );
+}
+
 async function runNow() {
   flash('Running…');
   try {
@@ -230,6 +309,20 @@ async function init() {
   $('#add-rule').addEventListener('click', () => renderRule({}));
   $('#save').addEventListener('click', () => save().catch((e) => flash(e.message, true)));
   $('#run-now').addEventListener('click', runNow);
+  $('#export').addEventListener('click', () => {
+    try {
+      exportRules();
+    } catch (e) {
+      flash(`Export failed: ${e.message}`, true);
+    }
+  });
+  $('#import').addEventListener('click', () => $('#import-file').click());
+  $('#import-file').addEventListener('change', (event) => {
+    const [file] = event.target.files ?? [];
+    // Reset so re-picking the same file fires change again.
+    event.target.value = '';
+    if (file) importRules(file).catch((e) => flash(`Import failed: ${e.message}`, true));
+  });
 
   if (folders.length === 0) {
     flash('No folders found — check the “accountsRead” permission and reload the add-on.', true);

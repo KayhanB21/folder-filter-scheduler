@@ -58,6 +58,19 @@ export const FIELDS = Object.freeze([
  */
 export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject']);
 
+const foldCase = (s) => (s ?? '').toString().toLowerCase();
+
+/**
+ * The header(s) a condition reads. `fields` (plural) lets one domain-list
+ * condition watch both Reply-To and From, which matters because most spam
+ * carries only one of the two. Falls back to the singular `field` so rules
+ * written before this existed keep working.
+ */
+export function fieldsOf(condition) {
+  if (Array.isArray(condition?.fields) && condition.fields.length > 0) return condition.fields;
+  return condition?.field ? [condition.field] : [];
+}
+
 /**
  * True when a rule references at least one header that is NOT cheaply
  * available, so the engine must fetch the full message to evaluate it.
@@ -65,10 +78,13 @@ export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject']);
  */
 export function requiresFullMessage(rule) {
   const cheap = new Set(CHEAP_FIELDS);
-  return (rule?.conditions ?? []).some((c) => !cheap.has((c.field || '').toLowerCase()));
+  return (rule?.conditions ?? []).some((c) => {
+    // A condition naming no field at all is treated as expensive, erring toward
+    // fetching rather than silently evaluating against nothing.
+    const fields = fieldsOf(c);
+    return (fields.length > 0 ? fields : ['']).some((f) => !cheap.has(foldCase(f)));
+  });
 }
-
-const foldCase = (s) => (s ?? '').toString().toLowerCase();
 
 function valuesFor(message, field) {
   const key = foldCase(field);
@@ -98,8 +114,10 @@ function evaluateDomainCondition(message, condition) {
   const list = new Set(domains.map(normalizeDomain).filter(Boolean));
   if (list.size === 0) return false;
 
-  const anySatisfied = valuesFor(message, condition.field).some((value) =>
-    domainsFromHeaderValue(value).some((domain) => matchesDomainList(domain, list)),
+  const anySatisfied = fieldsOf(condition).some((field) =>
+    valuesFor(message, field).some((value) =>
+      domainsFromHeaderValue(value).some((domain) => matchesDomainList(domain, list)),
+    ),
   );
   return condition.negate ? !anySatisfied : anySatisfied;
 }

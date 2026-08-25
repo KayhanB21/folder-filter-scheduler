@@ -26,8 +26,15 @@ const ALARM_NAME = 'folder-filter-scheduler.tick';
 const MENU_ID = 'folder-filter-scheduler.harvest-domains';
 const DEFAULT_INTERVAL_MINUTES = 10;
 
-/** Header the right-click harvest reads, and the rule it builds conditions on. */
-const HARVEST_FIELD = 'reply-to';
+/**
+ * Headers the right-click harvest reads, most trustworthy first.
+ *
+ * Reply-To is harder to forge on bulk mail, but most spam carries no Reply-To at
+ * all, so From is harvested too. They are kept apart all the way to the
+ * confirmation dialog: a From domain can be forged to impersonate a brand, so it
+ * is presented in its own group for the user to vet rather than mixed in.
+ */
+const HARVEST_FIELDS = ['reply-to', 'from'];
 const HARVEST_RULE_NAME = 'Spam domains';
 
 /**
@@ -276,7 +283,9 @@ function harvestRuleFor(config) {
       enabled: true,
       match: 'any',
       folderIds: [],
-      conditions: [{ field: HARVEST_FIELD, operator: DOMAIN_IN_LIST, domains: [], negate: false }],
+      conditions: [
+        { fields: [...HARVEST_FIELDS], operator: DOMAIN_IN_LIST, domains: [], negate: false },
+      ],
       action: { type: 'trash' },
     },
   };
@@ -287,7 +296,7 @@ function domainConditionOf(rule) {
   rule.conditions = Array.isArray(rule.conditions) ? rule.conditions : [];
   let condition = rule.conditions.find((c) => c.operator === DOMAIN_IN_LIST);
   if (!condition) {
-    condition = { field: HARVEST_FIELD, operator: DOMAIN_IN_LIST, domains: [], negate: false };
+    condition = { fields: [...HARVEST_FIELDS], operator: DOMAIN_IN_LIST, domains: [], negate: false };
     rule.conditions.push(condition);
   }
   condition.domains = Array.isArray(condition.domains) ? condition.domains : [];
@@ -334,48 +343,61 @@ async function takePayload(token) {
   return stored?.[key] ?? null;
 }
 
-/** Collect the harvest field's addresses from every selected message. */
+/** Collect addresses per harvest header across every selected message. */
 async function addressesFromSelection(selectedMessages) {
-  const addresses = [];
+  const byField = Object.fromEntries(HARVEST_FIELDS.map((f) => [f, []]));
   let scanned = 0;
-  let withoutHeader = 0;
+  let unreadable = 0;
 
   for await (const header of eachMessage(selectedMessages)) {
     scanned += 1;
     try {
       const headers = await readHeaders(header.id);
-      const values = headers[HARVEST_FIELD] ?? [];
-      if (values.length === 0) {
-        withoutHeader += 1;
-        continue;
+      for (const field of HARVEST_FIELDS) {
+        const found = (headers[field] ?? []).flatMap((v) => addressesFromHeaderValue(v));
+        // Per message, not per batch: the indexed author stands in when this
+        // message carries no From header of its own.
+        if (found.length === 0 && field === 'from' && header.author) {
+          found.push(...addressesFromHeaderValue(header.author));
+        }
+        byField[field].push(...found);
       }
-      for (const value of values) addresses.push(...addressesFromHeaderValue(value));
     } catch (e) {
       warn('could not read headers for message', header.id, e);
-      withoutHeader += 1;
+      unreadable += 1;
     }
   }
-  return { addresses, scanned, withoutHeader };
+  return { byField, scanned, unreadable };
 }
 
 async function handleHarvest(info) {
   const config = await loadConfig();
-  const { addresses, scanned, withoutHeader } = await addressesFromSelection(info.selectedMessages);
-  const result = harvestDomains(addresses, config.allowlist);
+  const { byField, scanned, unreadable } = await addressesFromSelection(info.selectedMessages);
 
-  log(`harvest scanned ${scanned} message(s), found ${result.accepted.length} candidate domain(s)`);
+  // One group per header, in trust order. A domain already offered by a more
+  // trustworthy header is not repeated in a later group.
+  const groups = [];
+  const alreadyOffered = new Set();
+  for (const field of HARVEST_FIELDS) {
+    const result = harvestDomains(byField[field], config.allowlist);
+    const accepted = result.accepted.filter((d) => !alreadyOffered.has(d));
+    for (const d of accepted) alreadyOffered.add(d);
+    groups.push({ field, ...result, accepted });
+  }
+
+  const total = groups.reduce((n, g) => n + g.accepted.length, 0);
+  log(`harvest scanned ${scanned} message(s), found ${total} candidate domain(s)`);
 
   const payload = {
-    ...result,
+    groups,
     scanned,
-    withoutHeader,
-    field: HARVEST_FIELD,
+    unreadable,
     folderId: info.displayedFolder?.id ?? null,
     ruleName: HARVEST_RULE_NAME,
   };
 
-  if (config.skipHarvestConfirm && result.accepted.length > 0) {
-    await mergeHarvestedDomains(result.accepted, payload.folderId);
+  if (config.skipHarvestConfirm && total > 0) {
+    await mergeHarvestedDomains(groups.flatMap((g) => g.accepted), payload.folderId);
     return;
   }
 

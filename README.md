@@ -56,6 +56,9 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   Folder Filter Scheduler*, and the extracted sender domains are merged into a
   standing block rule after a confirmation step. Well-known providers (gmail,
   yahoo, outlook, …) are never blocked.
+- **Import / export rules** as JSON, so a rule set can be backed up or moved
+  between profiles. Imported rules are validated field by field and staged on the
+  page for review before anything is stored.
 - **Domain-list conditions** that match subdomains automatically (`evil.com` also
   catches `bounce.evil.com`) and hold hundreds of entries in a single editable box.
 - **Incremental scheduled scans**: a scheduled run only examines messages that
@@ -103,18 +106,28 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
 ### 3. Or build a block list by right-clicking
 
 Select one or more spam messages, right-click, and choose **Add spam domains to
-Folder Filter Scheduler**. The add-on reads each message's `Reply-To` header,
-extracts the sender domains, drops anything on the protected-domains list, and
-shows you what it found. Confirm, and the domains are merged into a rule named
-**Spam domains** that moves matches to Trash on the normal schedule.
+Folder Filter Scheduler**. The add-on reads each message's `Reply-To` and `From`
+headers, extracts the sender domains, drops anything on the protected-domains
+list, and shows you what it found. Confirm, and the domains are merged into a rule
+named **Spam domains** that moves matches to Trash on the normal schedule.
 
 Two things worth knowing:
 
-- Matching uses `Reply-To`, which is harder to forge than `From` on bulk mail.
-  A message with no `Reply-To` contributes nothing, and the dialog says so.
+- The dialog groups domains by the header they came from. `Reply-To` is harder to
+  forge on bulk mail, but plenty of spam carries none at all, so `From` is
+  harvested too and shown separately: a `From` domain can be forged to impersonate
+  a real company, so uncheck anything you do not recognise before adding.
 - The protected-domains list (editable on the options page) means this will not
   block mail from gmail, yahoo, outlook and similar. That is deliberate: blocking
   a whole provider would discard far more legitimate mail than spam.
+
+### Backing up and moving rules
+
+**Export…** writes the current rules, protected-domains list, and interval to a
+JSON file. **Import…** validates such a file and stages the rules on the page for
+review; nothing is stored until you press **Save**. Anything unrecognised (an
+unknown action, an empty domain list, a folder that does not exist in this
+profile) is dropped and reported rather than imported.
 
 Click **Save**, then **Run all rules now** to test immediately — the status line
 reports how many messages were affected (e.g. *"Done — 1 message(s) affected."*).

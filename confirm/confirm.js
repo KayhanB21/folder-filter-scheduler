@@ -21,9 +21,35 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 let payload = null;
 
-function renderDomains(domains) {
-  listEl.hidden = domains.length === 0;
-  for (const domain of domains) {
+const FIELD_LABELS = {
+  'reply-to': {
+    title: 'Reply-To domains',
+    note: 'Where replies would go. Harder to forge on bulk mail.',
+  },
+  from: {
+    title: 'From domains',
+    note: 'The visible sender, which can be forged to impersonate a brand. Check these before adding.',
+  },
+};
+
+/** One checkbox group per source header, so From domains can be vetted apart. */
+function renderGroup(group) {
+  if (group.accepted.length === 0) return;
+  const meta = FIELD_LABELS[group.field] ?? { title: group.field, note: '' };
+
+  const section = document.createElement('section');
+  section.className = 'domain-group';
+
+  const heading = document.createElement('h2');
+  heading.textContent = meta.title;
+  const note = document.createElement('p');
+  note.className = 'group-note';
+  note.textContent = meta.note;
+  section.append(heading, note);
+
+  const list = document.createElement('div');
+  list.className = 'domain-list';
+  for (const domain of group.accepted) {
     const label = document.createElement('label');
     const box = document.createElement('input');
     box.type = 'checkbox';
@@ -32,29 +58,24 @@ function renderDomains(domains) {
     const text = document.createElement('span');
     text.textContent = domain;
     label.append(box, text);
-    listEl.append(label);
+    list.append(label);
   }
+  section.append(list);
+  listEl.append(section);
 }
 
 /** Explain a thin or empty result rather than appearing to have done nothing. */
 function renderNotes() {
   const notes = [];
-  if (payload.skippedAllowlisted.length > 0) {
+  const allowlisted = [...new Set(payload.groups.flatMap((g) => g.skippedAllowlisted))];
+  if (allowlisted.length > 0) {
     notes.push(
-      `Skipped ${plural(payload.skippedAllowlisted.length, 'well-known provider domain')} ` +
-        `(${payload.skippedAllowlisted.join(', ')}). These are never blocked, to protect ` +
-        'legitimate mail.',
+      `Skipped ${plural(allowlisted.length, 'well-known provider domain')} ` +
+        `(${allowlisted.join(', ')}). These are never blocked, to protect legitimate mail.`,
     );
   }
-  if (payload.withoutHeader > 0) {
-    notes.push(
-      `${plural(payload.withoutHeader, 'message')} had no ${payload.field} header and ` +
-        'contributed nothing. Matching uses that header, so those senders cannot be ' +
-        'blocked this way.',
-    );
-  }
-  if (payload.skippedInvalid.length > 0) {
-    notes.push(`Ignored ${plural(payload.skippedInvalid.length, 'unreadable address')}.`);
+  if (payload.unreadable > 0) {
+    notes.push(`${plural(payload.unreadable, 'message')} could not be read.`);
   }
   notesEl.textContent = notes.join(' ');
 }
@@ -77,15 +98,16 @@ async function load() {
     return;
   }
 
-  const { accepted, scanned } = payload;
+  const total = payload.groups.reduce((n, g) => n + g.accepted.length, 0);
   summaryEl.textContent =
-    accepted.length > 0
-      ? `Found ${plural(accepted.length, 'domain')} in ${plural(scanned, 'selected message')}. ` +
+    total > 0
+      ? `Found ${plural(total, 'domain')} in ${plural(payload.scanned, 'selected message')}. ` +
         `Checked domains will be added to the “${payload.ruleName}” rule, which moves ` +
         'matching mail to Trash on the normal schedule.'
-      : `No new domains to add from ${plural(scanned, 'selected message')}.`;
+      : `No new domains to add from ${plural(payload.scanned, 'selected message')}.`;
 
-  renderDomains(accepted);
+  listEl.hidden = total === 0;
+  for (const group of payload.groups) renderGroup(group);
   renderNotes();
   syncAddButton();
   listEl.addEventListener('change', syncAddButton);
