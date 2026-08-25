@@ -18,7 +18,7 @@ OUT_DIR="dist"
 OUT="${OUT_DIR}/folder-filter-scheduler-${VERSION}.zip"
 
 # Only the files the add-on needs at runtime — no tests, CI, docs, or secrets.
-INCLUDE=(manifest.json src options _locales icons LICENSE)
+INCLUDE=(manifest.json src options confirm _locales icons LICENSE)
 
 mkdir -p "$OUT_DIR"
 rm -f "$OUT"

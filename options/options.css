@@ -80,3 +80,23 @@ input, select {
 .action-row { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
 .action-hint { margin: 4px 0 0 74px; font-size: 12px; opacity: 0.7; }
 .action-hint.danger { color: var(--danger); opacity: 1; }
+
+/* Domain-list condition: the textarea takes its own line under the operator row. */
+textarea {
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: Canvas;
+  color: inherit;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+.condition { flex-wrap: wrap; }
+.cond-domains { flex-basis: 100%; margin: 2px 0 4px; }
+
+.allowlist { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.allowlist summary { cursor: pointer; opacity: 0.85; }
+.allowlist-hint { font-size: 12px; opacity: 0.7; margin: 8px 0; }
+.allowlist button { margin-top: 8px; }

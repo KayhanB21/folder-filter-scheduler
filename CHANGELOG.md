@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0]
+
+### Added
+- **Add spam domains to Folder Filter Scheduler**: a message-list context-menu
+  action that extracts sender domains from the selected messages and merges them
+  into a standing block rule. Matching uses `Reply-To`, well-known provider
+  domains are never blocked, and a confirmation dialog (with a "don't show this
+  again" opt-out) lists exactly what will be added before anything is written.
+- New `domainInList` condition operator, holding a whole domain list in one
+  editable box and matching subdomains automatically. An empty list never
+  matches, so a blank block list cannot affect a folder.
+- Editable protected-domains list on the options page, seeded with the major
+  freemail providers.
+- Stable per-rule ids, so run state survives renaming a rule.
+- `src/domains.js`: pure, unit-tested domain extraction, validation, and list
+  matching, following the same no-extension-APIs rule as `matcher.js`.
+
+### Changed
+- Scheduled runs are now incremental, examining only messages that arrived since
+  the previous run (with an overlap for clock skew and mildly backdated mail).
+  **Run all rules now** still scans folders in full, and is the escape hatch for
+  backlog or forged `Date` headers.
+- Header reads use `messages.getHeaders()` instead of `messages.getFull()`,
+  skipping MIME parsing.
+- Minimum supported Thunderbird raised from 128 to **147**. ESR 140 reached end
+  of life in August 2026.
+
 ## [0.1.1]
 
 First public release on addons.thunderbird.net. (0.1.0 was uploaded then deleted

@@ -11,9 +11,11 @@
  *
  * A normalized message is `{ fields: { <lowercased-name>: string[] } }`.
  * Header-like fields ("from", "subject", "reply-to", "x-anything") map to the
- * raw header values exactly as Thunderbird's `messages.getFull()` returns them
+ * raw header values exactly as Thunderbird's header APIs return them
  * (lowercased keys, array values because a header may legally repeat).
  */
+
+import { domainsFromHeaderValue, matchesDomainList, normalizeDomain } from './domains.js';
 
 /** Operators are positive predicates; negation is a separate flag on a condition. */
 export const OPERATORS = Object.freeze({
@@ -30,6 +32,13 @@ export const OPERATORS = Object.freeze({
     }
   },
 });
+
+/**
+ * The set-lookup operator, kept out of OPERATORS on purpose: those entries are
+ * `(value, needle)` string predicates and cannot express a lookup against a
+ * whole list. evaluateCondition branches on it before reaching them.
+ */
+export const DOMAIN_IN_LIST = 'domainInList';
 
 export const FIELDS = Object.freeze([
   'from',
@@ -76,7 +85,28 @@ function valuesFor(message, field) {
  * A field that is entirely absent counts as a single empty string, so
  * "does not contain X" is true for a message that lacks the header.
  */
+/**
+ * Evaluate a `domainInList` condition: does any address in the chosen header
+ * sit in (or under) the condition's domain list?
+ *
+ * An empty list NEVER matches. Without this a blank blocklist on a `match:
+ * "any"` rule would be true for every message, and a rule that deletes would
+ * empty the folder on the next scheduled run.
+ */
+function evaluateDomainCondition(message, condition) {
+  const domains = Array.isArray(condition.domains) ? condition.domains : [];
+  const list = new Set(domains.map(normalizeDomain).filter(Boolean));
+  if (list.size === 0) return false;
+
+  const anySatisfied = valuesFor(message, condition.field).some((value) =>
+    domainsFromHeaderValue(value).some((domain) => matchesDomainList(domain, list)),
+  );
+  return condition.negate ? !anySatisfied : anySatisfied;
+}
+
 export function evaluateCondition(message, condition) {
+  if (condition.operator === DOMAIN_IN_LIST) return evaluateDomainCondition(message, condition);
+
   const predicate = OPERATORS[condition.operator];
   if (!predicate) {
     throw new Error(`Unknown operator: ${condition.operator}`);

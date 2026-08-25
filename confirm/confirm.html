@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add spam domains</title>
+    <link rel="stylesheet" href="../options/options.css" />
+    <link rel="stylesheet" href="confirm.css" />
+  </head>
+  <body class="confirm-body">
+    <header>
+      <h1>Add spam domains</h1>
+      <p class="sub" id="summary">Reading the selected messages…</p>
+    </header>
+
+    <section id="domain-list" class="domain-list" hidden></section>
+
+    <p id="notes" class="notes"></p>
+
+    <section class="confirm-bar">
+      <label class="toggle">
+        <input id="skip-next-time" type="checkbox" /> Don’t show this again
+      </label>
+      <span class="spacer"></span>
+      <button id="cancel" type="button">Cancel</button>
+      <button id="add" type="button" class="primary" disabled>Add to filter</button>
+    </section>
+
+    <script type="module" src="confirm.js"></script>
+  </body>
+</html>

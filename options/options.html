@@ -31,12 +31,24 @@
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
 
+    <details id="allowlist-box" class="allowlist">
+      <summary>Protected domains (never blocked)</summary>
+      <p class="allowlist-hint">
+        Domains here are skipped when adding spam domains from the message list, so a
+        mistaken selection cannot block a major provider. One domain per line.
+      </p>
+      <textarea id="allowlist" rows="6" spellcheck="false"></textarea>
+      <button id="reset-allowlist" type="button">Restore defaults</button>
+    </details>
+
     <section id="rules"></section>
     <button id="add-rule" type="button" class="add">+ Add rule</button>
 
     <!-- Template for a single rule card. -->
     <template id="rule-template">
       <article class="rule">
+        <!-- Stable id, round-tripped so per-rule run state survives a rename. -->
+        <input class="rule-id" type="hidden" />
         <div class="rule-head">
           <input class="rule-name" type="text" placeholder="Rule name" />
           <label class="toggle"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
@@ -78,10 +90,18 @@
           <option value="startsWith">starts with</option>
           <option value="endsWith">ends with</option>
           <option value="matchesRegex">matches regex</option>
+          <option value="domainInList">domain is in list</option>
         </select>
         <label class="toggle"><input class="cond-negate" type="checkbox" /> not</label>
         <input class="cond-value" type="text" placeholder="value" />
         <button class="del-cond danger" type="button">×</button>
+        <!-- Shown only for the domainInList operator: one domain per line. -->
+        <textarea
+          class="cond-domains hidden"
+          rows="6"
+          spellcheck="false"
+          placeholder="One domain per line, e.g. evil.com&#10;Subdomains are matched automatically."
+        ></textarea>
       </div>
     </template>
 

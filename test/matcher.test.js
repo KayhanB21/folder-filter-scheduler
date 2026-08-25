@@ -4,7 +4,13 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateCondition, evaluateRule, requiresFullMessage, OPERATORS } from '../src/matcher.js';
+import {
+  DOMAIN_IN_LIST,
+  evaluateCondition,
+  evaluateRule,
+  requiresFullMessage,
+  OPERATORS,
+} from '../src/matcher.js';
 
 const msg = (fields) => ({ fields });
 
@@ -135,4 +141,126 @@ test('requiresFullMessage handles missing/empty conditions', () => {
 
 test('OPERATORS set is the documented contract', () => {
   assert.deepEqual(Object.keys(OPERATORS).sort(), ['contains', 'endsWith', 'is', 'matchesRegex', 'startsWith']);
+});
+
+// --- domainInList ---------------------------------------------------------
+
+const blocklisted = msg({ 'reply-to': ['"Spam" <noreply@evil.com>'] });
+
+test('domainInList matches the exact domain', () => {
+  assert.equal(
+    evaluateCondition(blocklisted, {
+      field: 'reply-to',
+      operator: DOMAIN_IN_LIST,
+      domains: ['evil.com'],
+    }),
+    true,
+  );
+});
+
+test('domainInList matches a subdomain of a listed domain', () => {
+  const m = msg({ 'reply-to': ['bounce@mail.evil.com'] });
+  assert.equal(
+    evaluateCondition(m, { field: 'reply-to', operator: DOMAIN_IN_LIST, domains: ['evil.com'] }),
+    true,
+  );
+});
+
+test('domainInList does not match a lookalike domain', () => {
+  assert.equal(
+    evaluateCondition(blocklisted, {
+      field: 'reply-to',
+      operator: DOMAIN_IN_LIST,
+      domains: ['notevil.com', 'evil.com.co'],
+    }),
+    false,
+  );
+});
+
+test('domainInList with an EMPTY list never matches', () => {
+  // The safety invariant: a blank blocklist on a match:"any" delete rule must
+  // not evaluate true for every message and empty the folder.
+  for (const domains of [[], ['', '  '], undefined]) {
+    assert.equal(
+      evaluateCondition(blocklisted, { field: 'reply-to', operator: DOMAIN_IN_LIST, domains }),
+      false,
+      `empty list matched: ${JSON.stringify(domains)}`,
+    );
+  }
+});
+
+test('domainInList on an empty list is false even when negated', () => {
+  // Negation must not resurrect the empty-list wildcard from the other side.
+  assert.equal(
+    evaluateCondition(blocklisted, {
+      field: 'reply-to',
+      operator: DOMAIN_IN_LIST,
+      domains: [],
+      negate: true,
+    }),
+    false,
+  );
+});
+
+test('domainInList negation inverts a real list', () => {
+  assert.equal(
+    evaluateCondition(blocklisted, {
+      field: 'reply-to',
+      operator: DOMAIN_IN_LIST,
+      domains: ['evil.com'],
+      negate: true,
+    }),
+    false,
+  );
+  assert.equal(
+    evaluateCondition(blocklisted, {
+      field: 'reply-to',
+      operator: DOMAIN_IN_LIST,
+      domains: ['other.com'],
+      negate: true,
+    }),
+    true,
+  );
+});
+
+test('domainInList is false when the header is missing entirely', () => {
+  assert.equal(
+    evaluateCondition(msg({ from: ['a@evil.com'] }), {
+      field: 'reply-to',
+      operator: DOMAIN_IN_LIST,
+      domains: ['evil.com'],
+    }),
+    false,
+  );
+});
+
+test('domainInList checks every address in a multi-address header', () => {
+  const m = msg({ 'reply-to': ['"Doe, John" <john@ok.com>, spam@evil.com'] });
+  assert.equal(
+    evaluateCondition(m, { field: 'reply-to', operator: DOMAIN_IN_LIST, domains: ['evil.com'] }),
+    true,
+  );
+});
+
+test('domainInList works against the cheap from field too', () => {
+  const rule = {
+    match: 'any',
+    conditions: [{ field: 'from', operator: DOMAIN_IN_LIST, domains: ['evil.com'] }],
+  };
+  assert.equal(evaluateRule(msg({ from: ['"X" <x@evil.com>'] }), rule), true);
+  // from is a cheap field, so such a rule still needs no full-message fetch.
+  assert.equal(requiresFullMessage(rule), false);
+});
+
+test('a domainInList rule on reply-to requires the full message', () => {
+  assert.equal(
+    requiresFullMessage({
+      conditions: [{ field: 'reply-to', operator: DOMAIN_IN_LIST, domains: ['evil.com'] }],
+    }),
+    true,
+  );
+});
+
+test('DOMAIN_IN_LIST is deliberately not one of the string OPERATORS', () => {
+  assert.equal(OPERATORS[DOMAIN_IN_LIST], undefined);
 });

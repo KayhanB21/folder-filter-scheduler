@@ -2,8 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { FIELDS } from '../src/matcher.js';
+import { FIELDS, DOMAIN_IN_LIST } from '../src/matcher.js';
 import { ACTIONS, ACTIONS_BY_ID } from '../src/actions.js';
+import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const rulesEl = $('#rules');
@@ -73,15 +74,29 @@ function fillFieldSelect(select, value) {
 function renderCondition(container, cond = {}) {
   const node = $('#condition-template').content.firstElementChild.cloneNode(true);
   fillFieldSelect($('.cond-field', node), cond.field ?? 'reply-to');
-  $('.cond-op', node).value = cond.operator ?? 'contains';
+  const op = $('.cond-op', node);
+  op.value = cond.operator ?? 'contains';
   $('.cond-negate', node).checked = !!cond.negate;
   $('.cond-value', node).value = cond.value ?? '';
+  $('.cond-domains', node).value = (cond.domains ?? []).join('\n');
+
+  // A domain list needs a textarea, not a one-line input: a harvested list runs
+  // to hundreds of entries and would otherwise be unreadable and uneditable.
+  const syncOperator = () => {
+    const isList = op.value === DOMAIN_IN_LIST;
+    $('.cond-domains', node).classList.toggle('hidden', !isList);
+    $('.cond-value', node).classList.toggle('hidden', isList);
+  };
+  op.addEventListener('change', syncOperator);
+  syncOperator();
+
   $('.del-cond', node).addEventListener('click', () => node.remove());
   container.append(node);
 }
 
 function renderRule(rule = {}) {
   const node = $('#rule-template').content.firstElementChild.cloneNode(true);
+  $('.rule-id', node).value = rule.id ?? crypto.randomUUID();
   $('.rule-name', node).value = rule.name ?? 'New rule';
   $('.rule-enabled', node).checked = rule.enabled !== false;
   $('.rule-match', node).value = rule.match ?? 'any';
@@ -120,7 +135,7 @@ function renderRule(rule = {}) {
 }
 
 /** Read the DOM back into a config object. */
-function collectConfig() {
+function collectConfig(rejected = []) {
   const rules = [...rulesEl.querySelectorAll('.rule')].map((node) => {
     const actionType = $('.rule-action-type', node).value;
     const action = { type: actionType };
@@ -128,20 +143,39 @@ function collectConfig() {
       action.folderId = $('.rule-action-folder', node).value;
     }
     return {
+      id: $('.rule-id', node).value || crypto.randomUUID(),
       name: $('.rule-name', node).value.trim() || 'Untitled rule',
       enabled: $('.rule-enabled', node).checked,
       match: $('.rule-match', node).value,
       folderIds: [...$('.rule-folders', node).selectedOptions].map((o) => o.value),
-      conditions: [...node.querySelectorAll('.condition')].map((c) => ({
-        field: $('.cond-field', c).value,
-        operator: $('.cond-op', c).value,
-        value: $('.cond-value', c).value,
-        negate: $('.cond-negate', c).checked,
-      })),
+      conditions: [...node.querySelectorAll('.condition')].map((c) => {
+        const operator = $('.cond-op', c).value;
+        const condition = {
+          field: $('.cond-field', c).value,
+          operator,
+          negate: $('.cond-negate', c).checked,
+        };
+        if (operator === DOMAIN_IN_LIST) {
+          // parseDomainList drops anything malformed, so a stray blank line can
+          // never become an entry that matches every message.
+          const { domains, invalid } = parseDomainList($('.cond-domains', c).value);
+          condition.domains = domains;
+          rejected.push(...invalid);
+        } else {
+          condition.value = $('.cond-value', c).value;
+        }
+        return condition;
+      }),
       action,
     };
   });
-  return { intervalMinutes: Math.max(1, Number($('#interval').value) || 10), rules };
+
+  const { domains: allowlist } = parseDomainList($('#allowlist').value);
+  return {
+    intervalMinutes: Math.max(1, Number($('#interval').value) || 10),
+    rules,
+    allowlist,
+  };
 }
 
 function flash(message, isError = false) {
@@ -150,10 +184,24 @@ function flash(message, isError = false) {
 }
 
 async function save() {
-  const config = collectConfig();
-  await messenger.storage.local.set({ config });
+  const rejected = [];
+  const collected = collectConfig(rejected);
+  // Merge, so keys the options page does not own (harvestRuleId,
+  // skipHarvestConfirm) survive a save.
+  const { config: stored } = await messenger.storage.local.get({ config: null });
+  await messenger.storage.local.set({ config: { ...stored, ...collected } });
   await messenger.runtime.sendMessage({ command: 'reschedule' });
-  flash('Saved. Schedule updated.');
+
+  // Re-render so the user sees exactly what was stored, dropped lines included.
+  rulesEl.innerHTML = '';
+  for (const rule of collected.rules) renderRule(rule);
+  $('#allowlist').value = collected.allowlist.join('\n');
+
+  flash(
+    rejected.length > 0
+      ? `Saved. Ignored ${rejected.length} unusable entr${rejected.length === 1 ? 'y' : 'ies'}: ${rejected.join(', ')}`
+      : 'Saved. Schedule updated.',
+  );
 }
 
 async function runNow() {
@@ -172,6 +220,12 @@ async function init() {
   $('#interval').value = config?.intervalMinutes ?? 10;
   const rules = config?.rules?.length ? config.rules : [{}];
   for (const r of rules) renderRule(r);
+
+  $('#allowlist').value = (config?.allowlist ?? DEFAULT_ALLOWLIST).join('\n');
+  $('#reset-allowlist').addEventListener('click', () => {
+    $('#allowlist').value = [...DEFAULT_ALLOWLIST].join('\n');
+    flash('Protected domains restored to defaults. Press Save to keep them.');
+  });
 
   $('#add-rule').addEventListener('click', () => renderRule({}));
   $('#save').addEventListener('click', () => save().catch((e) => flash(e.message, true)));

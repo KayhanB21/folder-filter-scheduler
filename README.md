@@ -52,6 +52,15 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   free indexed header and downloads nothing; only `reply-to`/`list-id`/`sender`
   rules pay for a full message fetch. Offline storage is therefore a performance
   choice, not a requirement.
+- **Right-click harvesting**: select spam in any folder, choose *Add spam domains to
+  Folder Filter Scheduler*, and the extracted sender domains are merged into a
+  standing block rule after a confirmation step. Well-known providers (gmail,
+  yahoo, outlook, …) are never blocked.
+- **Domain-list conditions** that match subdomains automatically (`evil.com` also
+  catches `bounce.evil.com`) and hold hundreds of entries in a single editable box.
+- **Incremental scheduled scans**: a scheduled run only examines messages that
+  arrived since the last one, so a per-message header read stays affordable.
+  **Run all rules now** always scans the whole folder.
 - **Run now** button for immediate, on-demand runs.
 
 ## Install (temporary / development)
@@ -91,8 +100,30 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
 - **Action** — e.g. *Move to Trash (each message's own account)*. The hint line
   under it explains exactly where matches go.
 
+### 3. Or build a block list by right-clicking
+
+Select one or more spam messages, right-click, and choose **Add spam domains to
+Folder Filter Scheduler**. The add-on reads each message's `Reply-To` header,
+extracts the sender domains, drops anything on the protected-domains list, and
+shows you what it found. Confirm, and the domains are merged into a rule named
+**Spam domains** that moves matches to Trash on the normal schedule.
+
+Two things worth knowing:
+
+- Matching uses `Reply-To`, which is harder to forge than `From` on bulk mail.
+  A message with no `Reply-To` contributes nothing, and the dialog says so.
+- The protected-domains list (editable on the options page) means this will not
+  block mail from gmail, yahoo, outlook and similar. That is deliberate: blocking
+  a whole provider would discard far more legitimate mail than spam.
+
 Click **Save**, then **Run all rules now** to test immediately — the status line
 reports how many messages were affected (e.g. *"Done — 1 message(s) affected."*).
+
+> **Speed of `Reply-To` rules.** A rule matching a non-indexed header reads the
+> headers of each candidate message. Scheduled runs are incremental, so in steady
+> state that is only the newly arrived mail, but the first run (and every manual
+> run) covers more. Enabling offline storage for the folder makes this local and
+> much faster.
 
 > **Header matching and offline storage.** Conditions on `from`/`to`/`cc`/`subject`
 > read the indexed header and need no download. Conditions on `reply-to` (or other
@@ -113,8 +144,11 @@ extension APIs precisely so it stays this easy to test.
 
 ## Compatibility
 
-Targets Thunderbird **128+** (uses the folder-`id`-based messages API). Built and
-tested against Thunderbird 152.
+Targets Thunderbird **147+**. Version 0.1.x supported 128+; 0.2.0 raised the floor
+to use `messengerUtilities.parseMailboxString()` (TB 137+) and
+`messages.getHeaders()` (TB 147+), the latter being substantially faster than
+`getFull()` for the header-only reads a `Reply-To` rule performs. ESR 140 reached
+end of life in August 2026, so supported installations are on 153 or newer.
 
 ## Privacy
 
