@@ -1,0 +1,12 @@
+Adds one-click spam domain blocking from the message list, rule import and export, and a tidier options page.
+
+<ul>
+<li>New right-click action, "Add spam domains to Folder Filter Scheduler": select spam in any folder and its sender domains are added to a block rule that moves matching mail to Trash on your schedule</li>
+<li>Domains are read from both Reply-To and From and shown in separate groups, so you can review them before anything is added. Nothing is written to a filter until you confirm</li>
+<li>Well-known providers such as Gmail, Yahoo, Outlook and iCloud are never blocked. The protected list is editable on the options page</li>
+<li>Subdomains match automatically, so blocking evil.com also catches bounce.evil.com</li>
+<li>Import and export rules as a JSON file, for backups or for moving them between profiles. A rule you already have is detected and skipped rather than duplicated</li>
+<li>Rules can be collapsed to a one-line summary, so a long list stays readable</li>
+<li>Scheduled runs now look only at mail that arrived since the previous run, which keeps them fast on large folders. "Run all rules now" still scans everything</li>
+<li>Requires Thunderbird 147 or newer. If you are on an older version, Thunderbird will keep you on 0.1.1</li>
+</ul>
