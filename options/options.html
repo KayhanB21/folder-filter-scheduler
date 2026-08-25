@@ -25,10 +25,6 @@
         <input id="interval" type="number" min="1" step="1" value="10" /> minutes
       </label>
       <span class="spacer"></span>
-      <button id="toggle-all" type="button">Collapse all</button>
-      <button id="export" type="button">Export…</button>
-      <button id="import" type="button">Import…</button>
-      <input id="import-file" type="file" accept="application/json,.json" hidden />
       <button id="run-now" type="button">Run all rules now</button>
       <button id="save" type="button" class="primary">Save</button>
     </section>
@@ -44,6 +40,14 @@
       <textarea id="allowlist" rows="6" spellcheck="false"></textarea>
       <button id="reset-allowlist" type="button">Restore defaults</button>
     </details>
+
+    <section class="rules-bar">
+      <button id="toggle-all" type="button">Collapse all</button>
+      <span class="spacer"></span>
+      <button id="export" type="button">Export…</button>
+      <button id="import" type="button">Import…</button>
+      <input id="import-file" type="file" accept="application/json,.json" hidden />
+    </section>
 
     <section id="rules"></section>
     <button id="add-rule" type="button" class="add">+ Add rule</button>

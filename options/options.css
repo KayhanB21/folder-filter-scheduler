@@ -120,3 +120,25 @@ textarea {
   overflow-wrap: anywhere;
 }
 .rule.collapsed .rule-summary { display: block; }
+
+/* Toolbars: labels must never wrap mid-button, and the bar wraps as a whole
+   onto a second row rather than squeezing its controls. */
+.bar { flex-wrap: wrap; row-gap: 8px; }
+.bar > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.bar input[type='number'] { width: 68px; }
+button { white-space: nowrap; flex: none; }
+.spacer { flex: 1 1 auto; min-width: 0; }
+
+.rules-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  margin-top: 18px;
+}

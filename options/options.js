@@ -198,7 +198,8 @@ function renderRule(rule = {}) {
 /** A one-line digest of a rule, shown while it is collapsed. */
 function ruleSummary(node) {
   const conditions = [...node.querySelectorAll('.condition')].map((c) => {
-    const field = $('.cond-field', c).value;
+    // A multi-field set is stored comma-joined; read it back as prose.
+    const field = $('.cond-field', c).value.split(',').join(' or ');
     const negate = $('.cond-negate', c).checked ? 'not ' : '';
     if ($('.cond-op', c).value === DOMAIN_IN_LIST) {
       const { domains } = parseDomainList($('.cond-domains', c).value);
