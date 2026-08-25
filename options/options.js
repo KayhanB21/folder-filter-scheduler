@@ -5,7 +5,7 @@
 import { FIELDS, DOMAIN_IN_LIST } from '../src/matcher.js';
 import { ACTIONS, ACTIONS_BY_ID } from '../src/actions.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
-import { buildExport, sanitizeImport } from '../src/rules.js';
+import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const rulesEl = $('#rules');
@@ -308,24 +308,20 @@ async function save() {
   );
 }
 
-function currentConfigForExport() {
-  const collected = collectConfig();
-  return buildExport(collected);
-}
-
 function exportRules() {
-  const blob = new Blob([JSON.stringify(currentConfigForExport(), null, 2)], {
+  const now = new Date();
+  const blob = new Blob([JSON.stringify(buildExport(collectConfig(), { exportedAt: now }), null, 2)], {
     type: 'application/json',
   });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'folder-filter-scheduler-rules.json';
+  link.download = exportFilename(now);
   document.body.append(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  flash('Exported the current rules. Unsaved edits on this page are included.');
+  flash(`Exported to ${exportFilename(now)}. Unsaved edits on this page are included.`);
 }
 
 /**

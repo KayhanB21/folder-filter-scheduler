@@ -77,11 +77,27 @@ export function ruleHash(rule) {
   return h.toString(16).padStart(8, '0');
 }
 
+/**
+ * Filename for an export, stamped with local date and time.
+ *
+ * Local rather than UTC because the user is naming a file on their own machine,
+ * and the field order sorts chronologically in a file listing. No colons: they
+ * are illegal in filenames on Windows and awkward elsewhere.
+ */
+export function exportFilename(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const stamp =
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `-${pad(date.getHours())}${pad(date.getMinutes())}`;
+  return `ffs-rules-${stamp}.json`;
+}
+
 /** The object written to a .json export. Run state is deliberately excluded. */
-export function buildExport(config) {
+export function buildExport(config, { exportedAt = new Date() } = {}) {
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
+    exportedAt: exportedAt.toISOString(),
     intervalMinutes: config?.intervalMinutes ?? 10,
     allowlist: config?.allowlist ?? [...DEFAULT_ALLOWLIST],
     rules: (config?.rules ?? []).map((rule) => ({

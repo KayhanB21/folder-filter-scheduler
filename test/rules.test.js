@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EXPORT_FORMAT, buildExport, ruleFingerprint, ruleHash, sanitizeImport } from '../src/rules.js';
+import { EXPORT_FORMAT, buildExport, exportFilename, ruleFingerprint, ruleHash, sanitizeImport } from '../src/rules.js';
 
 const validRule = {
   name: 'Spam domains',
@@ -207,4 +207,23 @@ test('a genuinely different rule still imports alongside a duplicate', () => {
   assert.equal(rules.length, 1);
   assert.equal(rules[0].name, 'Other');
   assert.equal(duplicates.length, 1);
+});
+
+test('the export filename carries a sortable local date and time', () => {
+  const name = exportFilename(new Date(2026, 7, 24, 20, 13));
+  assert.equal(name, 'ffs-rules-2026-08-24-2013.json');
+  // No characters that are illegal in a filename on Windows.
+  assert.equal(/[:*?"<>|]/.test(name), false);
+});
+
+test('export filenames sort chronologically as plain strings', () => {
+  const earlier = exportFilename(new Date(2026, 7, 24, 9, 5));
+  const later = exportFilename(new Date(2026, 7, 24, 20, 13));
+  assert.ok(earlier < later);
+  assert.ok(exportFilename(new Date(2026, 0, 2, 3, 4)).includes('2026-01-02-0304'));
+});
+
+test('the export records when it was written', () => {
+  const when = new Date('2026-08-24T18:13:00.000Z');
+  assert.equal(buildExport({ rules: [] }, { exportedAt: when }).exportedAt, when.toISOString());
 });

@@ -24,7 +24,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   that already exists skips it and names the rule it duplicates, so re-importing
   the same file is a no-op. The hash covers folders, conditions, and action but
   ignores name and enabled state, so renaming a rule does not change it.
-- Import and export of rule sets as JSON (`src/rules.js`). Imported rules are
+- Import and export of rule sets as JSON (`src/rules.js`). Exports are named with
+  the local date and time (`ffs-rules-YYYY-MM-DD-HHMM.json`) so successive backups
+  sort chronologically rather than overwriting each other, and the file records an `exportedAt` timestamp. Imported rules are
   rebuilt field by field from known-good values, so an unknown action, an empty
   domain list, an empty operator value, or a folder absent from this profile is
   dropped and reported instead of stored. Nothing is written until Save.

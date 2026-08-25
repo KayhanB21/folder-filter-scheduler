@@ -124,7 +124,9 @@ Two things worth knowing:
 ### Backing up and moving rules
 
 **Export…** writes the current rules, protected-domains list, and interval to a
-JSON file. **Import…** validates such a file and stages the rules on the page for
+JSON file named with the local date and time
+(`ffs-rules-2026-08-24-2013.json`), so successive backups sit
+side by side in chronological order instead of overwriting each other. **Import…** validates such a file and stages the rules on the page for
 review; nothing is stored until you press **Save**. Anything unrecognised (an
 unknown action, an empty domain list, a folder that does not exist in this
 profile) is dropped and reported rather than imported.
