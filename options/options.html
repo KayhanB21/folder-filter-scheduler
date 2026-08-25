@@ -31,18 +31,42 @@
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
 
+    <details id="allowlist-box" class="allowlist">
+      <summary>Protected domains (never blocked)</summary>
+      <p class="allowlist-hint">
+        Domains here are skipped when adding spam domains from the message list, so a
+        mistaken selection cannot block a major provider. One domain per line.
+      </p>
+      <textarea id="allowlist" rows="6" spellcheck="false"></textarea>
+      <button id="reset-allowlist" type="button">Restore defaults</button>
+    </details>
+
+    <section class="rules-bar">
+      <button id="toggle-all" type="button">Collapse all</button>
+      <span class="spacer"></span>
+      <button id="export" type="button">Export…</button>
+      <button id="import" type="button">Import…</button>
+      <input id="import-file" type="file" accept="application/json,.json" hidden />
+    </section>
+
     <section id="rules"></section>
     <button id="add-rule" type="button" class="add">+ Add rule</button>
 
     <!-- Template for a single rule card. -->
     <template id="rule-template">
       <article class="rule">
+        <!-- Stable id, round-tripped so per-rule run state survives a rename. -->
+        <input class="rule-id" type="hidden" />
         <div class="rule-head">
+          <button class="rule-collapse" type="button" aria-expanded="true" title="Collapse or expand this rule">▾</button>
           <input class="rule-name" type="text" placeholder="Rule name" />
           <label class="toggle"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
           <button class="del-rule danger" type="button">Delete</button>
         </div>
+        <!-- One-line digest, shown in place of the body while collapsed. -->
+        <p class="rule-summary"></p>
 
+        <div class="rule-body">
         <div class="row">
           <span class="lbl">Folders</span>
           <select class="rule-folders" multiple size="4"></select>
@@ -66,6 +90,7 @@
           <select class="rule-action-folder hidden"></select>
         </div>
         <p class="action-hint"></p>
+        </div>
       </article>
     </template>
 
@@ -78,10 +103,18 @@
           <option value="startsWith">starts with</option>
           <option value="endsWith">ends with</option>
           <option value="matchesRegex">matches regex</option>
+          <option value="domainInList">domain is in list</option>
         </select>
         <label class="toggle"><input class="cond-negate" type="checkbox" /> not</label>
         <input class="cond-value" type="text" placeholder="value" />
         <button class="del-cond danger" type="button">×</button>
+        <!-- Shown only for the domainInList operator: one domain per line. -->
+        <textarea
+          class="cond-domains hidden"
+          rows="6"
+          spellcheck="false"
+          placeholder="One domain per line, e.g. evil.com&#10;Subdomains are matched automatically."
+        ></textarea>
       </div>
     </template>
 

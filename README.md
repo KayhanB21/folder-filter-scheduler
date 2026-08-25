@@ -52,6 +52,18 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   free indexed header and downloads nothing; only `reply-to`/`list-id`/`sender`
   rules pay for a full message fetch. Offline storage is therefore a performance
   choice, not a requirement.
+- **Right-click harvesting**: select spam in any folder, choose *Add spam domains to
+  Folder Filter Scheduler*, and the extracted sender domains are merged into a
+  standing block rule after a confirmation step. Well-known providers (gmail,
+  yahoo, outlook, …) are never blocked.
+- **Import / export rules** as JSON, so a rule set can be backed up or moved
+  between profiles. Imported rules are validated field by field and staged on the
+  page for review before anything is stored.
+- **Domain-list conditions** that match subdomains automatically (`evil.com` also
+  catches `bounce.evil.com`) and hold hundreds of entries in a single editable box.
+- **Incremental scheduled scans**: a scheduled run only examines messages that
+  arrived since the last one, so a per-message header read stays affordable.
+  **Run all rules now** always scans the whole folder.
 - **Run now** button for immediate, on-demand runs.
 
 ## Install (temporary / development)
@@ -91,8 +103,51 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
 - **Action** — e.g. *Move to Trash (each message's own account)*. The hint line
   under it explains exactly where matches go.
 
+### 3. Or build a block list by right-clicking
+
+Select one or more spam messages, right-click, and choose **Add spam domains to
+Folder Filter Scheduler**. The add-on reads each message's `Reply-To` and `From`
+headers, extracts the sender domains, drops anything on the protected-domains
+list, and shows you what it found. Confirm, and the domains are merged into a rule
+named **Spam domains** that moves matches to Trash on the normal schedule.
+
+Two things worth knowing:
+
+- The dialog groups domains by the header they came from. `Reply-To` is harder to
+  forge on bulk mail, but plenty of spam carries none at all, so `From` is
+  harvested too and shown separately: a `From` domain can be forged to impersonate
+  a real company, so uncheck anything you do not recognise before adding.
+- The protected-domains list (editable on the options page) means this will not
+  block mail from gmail, yahoo, outlook and similar. That is deliberate: blocking
+  a whole provider would discard far more legitimate mail than spam.
+
+### Backing up and moving rules
+
+**Export…** writes the current rules, protected-domains list, and interval to a
+JSON file named with the local date and time
+(`ffs-rules-2026-08-24-2013.json`), so successive backups sit
+side by side in chronological order instead of overwriting each other. **Import…** validates such a file and stages the rules on the page for
+review; nothing is stored until you press **Save**. Anything unrecognised (an
+unknown action, an empty domain list, a folder that does not exist in this
+profile) is dropped and reported rather than imported.
+
+Each rule carries a short **hash** of what it does — its folders, conditions, and
+action, ignoring its name. Importing a rule whose hash already exists skips it and
+says which rule it duplicates, so re-importing the same file is a no-op instead of
+a way to accumulate copies. Renaming a rule does not change its hash.
+
+Rules can also be **collapsed** to a one-line summary, individually or with
+**Collapse all**. That is a view preference stored in the browser only: it never
+changes what is saved or exported.
+
 Click **Save**, then **Run all rules now** to test immediately — the status line
 reports how many messages were affected (e.g. *"Done — 1 message(s) affected."*).
+
+> **Speed of `Reply-To` rules.** A rule matching a non-indexed header reads the
+> headers of each candidate message. Scheduled runs are incremental, so in steady
+> state that is only the newly arrived mail, but the first run (and every manual
+> run) covers more. Enabling offline storage for the folder makes this local and
+> much faster.
 
 > **Header matching and offline storage.** Conditions on `from`/`to`/`cc`/`subject`
 > read the indexed header and need no download. Conditions on `reply-to` (or other
@@ -113,8 +168,11 @@ extension APIs precisely so it stays this easy to test.
 
 ## Compatibility
 
-Targets Thunderbird **128+** (uses the folder-`id`-based messages API). Built and
-tested against Thunderbird 152.
+Targets Thunderbird **147+**. Version 0.1.x supported 128+; 0.2.0 raised the floor
+to use `messengerUtilities.parseMailboxString()` (TB 137+) and
+`messages.getHeaders()` (TB 147+), the latter being substantially faster than
+`getFull()` for the header-only reads a `Reply-To` rule performs. ESR 140 reached
+end of life in August 2026, so supported installations are on 153 or newer.
 
 ## Privacy
 

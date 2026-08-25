@@ -80,3 +80,65 @@ input, select {
 .action-row { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
 .action-hint { margin: 4px 0 0 74px; font-size: 12px; opacity: 0.7; }
 .action-hint.danger { color: var(--danger); opacity: 1; }
+
+/* Domain-list condition: the textarea takes its own line under the operator row. */
+textarea {
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: Canvas;
+  color: inherit;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+.condition { flex-wrap: wrap; }
+.cond-domains { flex-basis: 100%; margin: 2px 0 4px; }
+
+.allowlist { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.allowlist summary { cursor: pointer; opacity: 0.85; }
+.allowlist-hint { font-size: 12px; opacity: 0.7; margin: 8px 0; }
+.allowlist button { margin-top: 8px; }
+
+/* Collapsible rules: a folder multi-select makes each card tall, so a page with
+   more than a handful of rules is unusable without this. */
+.rule-collapse {
+  flex: none;
+  width: 26px;
+  padding: 4px 0;
+  line-height: 1;
+  opacity: 0.7;
+}
+.rule.collapsed .rule-body { display: none; }
+.rule.collapsed { padding-bottom: 10px; }
+.rule-summary {
+  display: none;
+  margin: 2px 0 0 36px;
+  font-size: 12px;
+  opacity: 0.7;
+  overflow-wrap: anywhere;
+}
+.rule.collapsed .rule-summary { display: block; }
+
+/* Toolbars: labels must never wrap mid-button, and the bar wraps as a whole
+   onto a second row rather than squeezing its controls. */
+.bar { flex-wrap: wrap; row-gap: 8px; }
+.bar > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.bar input[type='number'] { width: 68px; }
+button { white-space: nowrap; flex: none; }
+.spacer { flex: 1 1 auto; min-width: 0; }
+
+.rules-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  margin-top: 18px;
+}

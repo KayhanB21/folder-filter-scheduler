@@ -1,12 +1,12 @@
 {
   "name": "folder-filter-scheduler",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Run message-filter rules on any Thunderbird folder on a schedule — the modern WebExtension successor to the abandoned Auto Filter Timer.",
   "type": "module",
   "private": true,
   "scripts": {
     "test": "node --test",
-    "lint": "for f in src/*.js options/options.js; do node --check \"$f\" || exit 1; done",
+    "lint": "for f in src/*.js options/options.js confirm/confirm.js; do node --check \"$f\" || exit 1; done",
     "package": "bash scripts/package.sh"
   },
   "license": "MPL-2.0",

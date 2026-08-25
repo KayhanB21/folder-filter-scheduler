@@ -1,0 +1,40 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+.confirm-body { padding: 18px 18px 16px; max-width: none; }
+
+.domain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--card);
+}
+.domain-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.notes { margin: 10px 2px 0; font-size: 12px; opacity: 0.75; }
+.notes:empty { margin: 0; }
+
+.confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.domain-group + .domain-group { margin-top: 14px; }
+.domain-group h2 { font-size: 13px; margin: 0 0 2px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; }
+.group-note { margin: 0 0 6px; font-size: 12px; opacity: 0.65; }

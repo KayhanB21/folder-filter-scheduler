@@ -11,9 +11,11 @@
  *
  * A normalized message is `{ fields: { <lowercased-name>: string[] } }`.
  * Header-like fields ("from", "subject", "reply-to", "x-anything") map to the
- * raw header values exactly as Thunderbird's `messages.getFull()` returns them
+ * raw header values exactly as Thunderbird's header APIs return them
  * (lowercased keys, array values because a header may legally repeat).
  */
+
+import { domainsFromHeaderValue, matchesDomainList, normalizeDomain } from './domains.js';
 
 /** Operators are positive predicates; negation is a separate flag on a condition. */
 export const OPERATORS = Object.freeze({
@@ -30,6 +32,13 @@ export const OPERATORS = Object.freeze({
     }
   },
 });
+
+/**
+ * The set-lookup operator, kept out of OPERATORS on purpose: those entries are
+ * `(value, needle)` string predicates and cannot express a lookup against a
+ * whole list. evaluateCondition branches on it before reaching them.
+ */
+export const DOMAIN_IN_LIST = 'domainInList';
 
 export const FIELDS = Object.freeze([
   'from',
@@ -49,6 +58,19 @@ export const FIELDS = Object.freeze([
  */
 export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject']);
 
+const foldCase = (s) => (s ?? '').toString().toLowerCase();
+
+/**
+ * The header(s) a condition reads. `fields` (plural) lets one domain-list
+ * condition watch both Reply-To and From, which matters because most spam
+ * carries only one of the two. Falls back to the singular `field` so rules
+ * written before this existed keep working.
+ */
+export function fieldsOf(condition) {
+  if (Array.isArray(condition?.fields) && condition.fields.length > 0) return condition.fields;
+  return condition?.field ? [condition.field] : [];
+}
+
 /**
  * True when a rule references at least one header that is NOT cheaply
  * available, so the engine must fetch the full message to evaluate it.
@@ -56,10 +78,13 @@ export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject']);
  */
 export function requiresFullMessage(rule) {
   const cheap = new Set(CHEAP_FIELDS);
-  return (rule?.conditions ?? []).some((c) => !cheap.has((c.field || '').toLowerCase()));
+  return (rule?.conditions ?? []).some((c) => {
+    // A condition naming no field at all is treated as expensive, erring toward
+    // fetching rather than silently evaluating against nothing.
+    const fields = fieldsOf(c);
+    return (fields.length > 0 ? fields : ['']).some((f) => !cheap.has(foldCase(f)));
+  });
 }
-
-const foldCase = (s) => (s ?? '').toString().toLowerCase();
 
 function valuesFor(message, field) {
   const key = foldCase(field);
@@ -76,7 +101,30 @@ function valuesFor(message, field) {
  * A field that is entirely absent counts as a single empty string, so
  * "does not contain X" is true for a message that lacks the header.
  */
+/**
+ * Evaluate a `domainInList` condition: does any address in the chosen header
+ * sit in (or under) the condition's domain list?
+ *
+ * An empty list NEVER matches. Without this a blank blocklist on a `match:
+ * "any"` rule would be true for every message, and a rule that deletes would
+ * empty the folder on the next scheduled run.
+ */
+function evaluateDomainCondition(message, condition) {
+  const domains = Array.isArray(condition.domains) ? condition.domains : [];
+  const list = new Set(domains.map(normalizeDomain).filter(Boolean));
+  if (list.size === 0) return false;
+
+  const anySatisfied = fieldsOf(condition).some((field) =>
+    valuesFor(message, field).some((value) =>
+      domainsFromHeaderValue(value).some((domain) => matchesDomainList(domain, list)),
+    ),
+  );
+  return condition.negate ? !anySatisfied : anySatisfied;
+}
+
 export function evaluateCondition(message, condition) {
+  if (condition.operator === DOMAIN_IN_LIST) return evaluateDomainCondition(message, condition);
+
   const predicate = OPERATORS[condition.operator];
   if (!predicate) {
     throw new Error(`Unknown operator: ${condition.operator}`);
