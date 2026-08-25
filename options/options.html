@@ -25,6 +25,7 @@
         <input id="interval" type="number" min="1" step="1" value="10" /> minutes
       </label>
       <span class="spacer"></span>
+      <button id="toggle-all" type="button">Collapse all</button>
       <button id="export" type="button">Export…</button>
       <button id="import" type="button">Import…</button>
       <input id="import-file" type="file" accept="application/json,.json" hidden />
@@ -53,11 +54,15 @@
         <!-- Stable id, round-tripped so per-rule run state survives a rename. -->
         <input class="rule-id" type="hidden" />
         <div class="rule-head">
+          <button class="rule-collapse" type="button" aria-expanded="true" title="Collapse or expand this rule">▾</button>
           <input class="rule-name" type="text" placeholder="Rule name" />
           <label class="toggle"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
           <button class="del-rule danger" type="button">Delete</button>
         </div>
+        <!-- One-line digest, shown in place of the body while collapsed. -->
+        <p class="rule-summary"></p>
 
+        <div class="rule-body">
         <div class="row">
           <span class="lbl">Folders</span>
           <select class="rule-folders" multiple size="4"></select>
@@ -81,6 +86,7 @@
           <select class="rule-action-folder hidden"></select>
         </div>
         <p class="action-hint"></p>
+        </div>
       </article>
     </template>
 

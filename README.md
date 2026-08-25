@@ -129,6 +129,15 @@ review; nothing is stored until you press **Save**. Anything unrecognised (an
 unknown action, an empty domain list, a folder that does not exist in this
 profile) is dropped and reported rather than imported.
 
+Each rule carries a short **hash** of what it does — its folders, conditions, and
+action, ignoring its name. Importing a rule whose hash already exists skips it and
+says which rule it duplicates, so re-importing the same file is a no-op instead of
+a way to accumulate copies. Renaming a rule does not change its hash.
+
+Rules can also be **collapsed** to a one-line summary, individually or with
+**Collapse all**. That is a view preference stored in the browser only: it never
+changes what is saved or exported.
+
 Click **Save**, then **Run all rules now** to test immediately — the status line
 reports how many messages were affected (e.g. *"Done — 1 message(s) affected."*).
 

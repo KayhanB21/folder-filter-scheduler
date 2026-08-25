@@ -17,6 +17,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   anything is written.
 - Conditions may watch several headers at once via `fields`, so one domain list
   can cover `reply-to` and `from` together.
+- Collapsible rule cards with a one-line summary, plus **Collapse all**. Stored
+  in `localStorage` as a view preference only, never in the saved config, and
+  rules default to collapsed on a first visit with more than three of them.
+- Content hashing of rules (`ruleFingerprint` / `ruleHash`). Importing a rule
+  that already exists skips it and names the rule it duplicates, so re-importing
+  the same file is a no-op. The hash covers folders, conditions, and action but
+  ignores name and enabled state, so renaming a rule does not change it.
 - Import and export of rule sets as JSON (`src/rules.js`). Imported rules are
   rebuilt field by field from known-good values, so an unknown action, an empty
   domain list, an empty operator value, or a folder absent from this profile is

@@ -13,6 +13,31 @@ const statusEl = $('#status');
 
 let folders = []; // [{ id, label }]
 
+/**
+ * Which rules are collapsed. This is a view preference only: it lives in
+ * localStorage, never in the stored config, so collapsing a rule cannot change
+ * what is saved or exported.
+ */
+const COLLAPSED_KEY = 'ffs.collapsedRules';
+
+function loadCollapsed() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCollapsed(ids) {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
+  } catch {
+    // A missing localStorage only costs the preference, never the rules.
+  }
+}
+
+let collapsed = loadCollapsed();
+
 /** Build a flat, labelled folder list for the <select>s, across all accounts. */
 async function loadFolders() {
   const accounts = await messenger.accounts.list();
@@ -154,8 +179,60 @@ function renderRule(rule = {}) {
   actionType.addEventListener('change', syncAction);
   syncAction();
 
-  $('.del-rule', node).addEventListener('click', () => node.remove());
+  $('.del-rule', node).addEventListener('click', () => {
+    collapsed.delete($('.rule-id', node).value);
+    saveCollapsed(collapsed);
+    node.remove();
+  });
+
+  const collapseButton = $('.rule-collapse', node);
+  collapseButton.addEventListener('click', () =>
+    setCollapsed(node, !node.classList.contains('collapsed')),
+  );
+
   rulesEl.append(node);
+  // Restore the remembered view state. A rule the user just added stays open.
+  if (rule.id && collapsed.has(rule.id)) setCollapsed(node, true);
+}
+
+/** A one-line digest of a rule, shown while it is collapsed. */
+function ruleSummary(node) {
+  const conditions = [...node.querySelectorAll('.condition')].map((c) => {
+    const field = $('.cond-field', c).value;
+    const negate = $('.cond-negate', c).checked ? 'not ' : '';
+    if ($('.cond-op', c).value === DOMAIN_IN_LIST) {
+      const { domains } = parseDomainList($('.cond-domains', c).value);
+      return `${field} ${negate}in list of ${domains.length}`;
+    }
+    return `${field} ${negate}${$('.cond-op', c).value} “${$('.cond-value', c).value}”`;
+  });
+
+  const joiner = $('.rule-match', node).value === 'all' ? ' AND ' : ' OR ';
+  const action = ACTIONS_BY_ID[$('.rule-action-type', node).value]?.label ?? 'no action';
+  const folderCount = $('.rule-folders', node).selectedOptions.length;
+  const where = `${folderCount} folder${folderCount === 1 ? '' : 's'}`;
+  const what = conditions.join(joiner) || 'no conditions';
+
+  return `${what} → ${action} · ${where}`;
+}
+
+function setCollapsed(node, isCollapsed) {
+  const id = $('.rule-id', node).value;
+  node.classList.toggle('collapsed', isCollapsed);
+  $('.rule-collapse', node).textContent = isCollapsed ? '▸' : '▾';
+  $('.rule-collapse', node).setAttribute('aria-expanded', String(!isCollapsed));
+  if (isCollapsed) {
+    $('.rule-summary', node).textContent = ruleSummary(node);
+    collapsed.add(id);
+  } else {
+    collapsed.delete(id);
+  }
+  saveCollapsed(collapsed);
+}
+
+function setAllCollapsed(isCollapsed) {
+  for (const node of rulesEl.querySelectorAll('.rule')) setCollapsed(node, isCollapsed);
+  $('#toggle-all').textContent = isCollapsed ? 'Expand all' : 'Collapse all';
 }
 
 /** Read the DOM back into a config object. */
@@ -264,11 +341,22 @@ async function importRules(file) {
     return;
   }
 
-  const knownFolderIds = folders.map((f) => f.id);
-  const { rules, allowlist, intervalMinutes, problems } = sanitizeImport(data, { knownFolderIds });
+  const { rules, duplicates, allowlist, intervalMinutes, problems } = sanitizeImport(data, {
+    knownFolderIds: folders.map((f) => f.id),
+    // Compare against what is on the page, including unsaved edits, so
+    // re-importing the same file does not pile up duplicate rules.
+    existingRules: collectConfig().rules,
+  });
+
+  const dupeNote = duplicates.length
+    ? ` Already present, skipped: ${duplicates
+        .map((d) => `“${d.name}” (${d.hash}, same as “${d.matches}”)`)
+        .join(', ')}.`
+    : '';
 
   if (rules.length === 0) {
-    flash(`Nothing imported. ${problems.join('; ') || 'The file contained no usable rules.'}`, true);
+    const why = problems.join('; ') || (duplicates.length ? '' : 'The file contained no usable rules.');
+    flash(`Nothing new to import.${why ? ` ${why}.` : ''}${dupeNote}`, !duplicates.length);
     return;
   }
 
@@ -278,7 +366,7 @@ async function importRules(file) {
 
   const skipped = problems.length > 0 ? ` Skipped: ${problems.join('; ')}.` : '';
   flash(
-    `Imported ${rules.length} rule(s) — review them, then press Save to keep them.${skipped}`,
+    `Imported ${rules.length} rule(s) — review them, then press Save to keep them.${skipped}${dupeNote}`,
     problems.length > 0,
   );
 }
@@ -298,7 +386,12 @@ async function init() {
   const { config } = await messenger.storage.local.get({ config: null });
   $('#interval').value = config?.intervalMinutes ?? 10;
   const rules = config?.rules?.length ? config.rules : [{}];
+
+  // On a first visit with many rules, start collapsed: a folder multi-select
+  // makes each card tall enough that a dozen rules cannot be scanned otherwise.
+  const firstVisit = localStorage.getItem(COLLAPSED_KEY) === null;
   for (const r of rules) renderRule(r);
+  if (firstVisit && rules.length > 3) setAllCollapsed(true);
 
   $('#allowlist').value = (config?.allowlist ?? DEFAULT_ALLOWLIST).join('\n');
   $('#reset-allowlist').addEventListener('click', () => {
@@ -307,6 +400,9 @@ async function init() {
   });
 
   $('#add-rule').addEventListener('click', () => renderRule({}));
+  $('#toggle-all').addEventListener('click', () =>
+    setAllCollapsed($('#toggle-all').textContent === 'Collapse all'),
+  );
   $('#save').addEventListener('click', () => save().catch((e) => flash(e.message, true)));
   $('#run-now').addEventListener('click', runNow);
   $('#export').addEventListener('click', () => {
