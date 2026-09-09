@@ -227,3 +227,51 @@ test('the export records when it was written', () => {
   const when = new Date('2026-08-24T18:13:00.000Z');
   assert.equal(buildExport({ rules: [] }, { exportedAt: when }).exportedAt, when.toISOString());
 });
+
+// --- Age conditions ---------------------------------------------------------
+
+const ageRule = {
+  ...validRule,
+  name: 'Archive old alerts',
+  match: 'all',
+  conditions: [
+    { field: 'subject', operator: 'contains', value: 'alert' },
+    { field: 'age', operator: 'olderThan', days: 30, negate: false },
+  ],
+};
+
+test('import accepts an age condition and normalises its day count', () => {
+  const { rules, problems } = sanitizeImport(file({ rules: [{ ...ageRule, conditions: [{ field: 'age', operator: 'olderThan', days: '30' }] }] }));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ field: 'age', operator: 'olderThan', negate: false, days: 30 }]);
+});
+
+test('import drops an age condition with an unusable day count', () => {
+  for (const days of [undefined, 0, -3, 1.5, 'lots']) {
+    const { rules, problems } = sanitizeImport(
+      file({ rules: [{ ...ageRule, conditions: [{ field: 'age', operator: 'olderThan', days }] }] }),
+    );
+    assert.equal(rules.length, 0, `days=${days}`);
+    assert.ok(problems.some((p) => /whole number of days/.test(p)), problems.join('; '));
+  }
+});
+
+test('import rejects an age operator on a header field and a string operator on age', () => {
+  const crossed = [
+    { field: 'subject', operator: 'olderThan', days: 3 },
+    { field: 'age', operator: 'contains', value: '3' },
+    { fields: ['age', 'from'], operator: 'olderThan', days: 3 },
+  ];
+  for (const c of crossed) {
+    const { rules, problems } = sanitizeImport(file({ rules: [{ ...ageRule, conditions: [c] }] }));
+    assert.equal(rules.length, 0, JSON.stringify(c));
+    assert.ok(problems.some((p) => /does not apply|no recognised/.test(p)), problems.join('; '));
+  }
+});
+
+test('the day count is part of the fingerprint', () => {
+  const thirty = ruleFingerprint(ageRule);
+  const sixty = ruleFingerprint({ ...ageRule, conditions: [ageRule.conditions[0], { ...ageRule.conditions[1], days: 60 }] });
+  assert.notEqual(thirty, sixty);
+  assert.equal(ruleHash(ageRule), ruleHash({ ...ageRule, name: 'renamed' }));
+});

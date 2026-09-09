@@ -15,14 +15,15 @@
  */
 
 import { ACTIONS_BY_ID } from './actions.js';
-import { OPERATORS, DOMAIN_IN_LIST, FIELDS } from './matcher.js';
+import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, ageDays } from './matcher.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 
 export const EXPORT_FORMAT = 'folder-filter-scheduler/rules';
 export const EXPORT_VERSION = 1;
 
 const KNOWN_FIELDS = new Set(FIELDS);
-const KNOWN_OPERATORS = new Set([...Object.keys(OPERATORS), DOMAIN_IN_LIST]);
+const KNOWN_OPERATORS = new Set([...Object.keys(OPERATORS), DOMAIN_IN_LIST, ...Object.keys(AGE_OPERATORS)]);
+const AGE_OPERATOR_SET = new Set(Object.keys(AGE_OPERATORS));
 
 /**
  * A canonical string capturing what a rule *does*, ignoring cosmetics.
@@ -45,6 +46,8 @@ export function ruleFingerprint(rule) {
       };
       if (c?.operator === DOMAIN_IN_LIST) {
         shape.domains = [...(c.domains ?? [])].map(normalizeDomain).filter(Boolean).sort();
+      } else if (AGE_OPERATOR_SET.has(shape.operator)) {
+        shape.days = ageDays(c);
       } else {
         shape.value = String(c?.value ?? '');
       }
@@ -139,6 +142,23 @@ function sanitizeCondition(raw, problems, where) {
   const condition = { operator, negate: raw?.negate === true };
   if (fields.length > 1) condition.fields = fields;
   else [condition.field] = fields;
+
+  // Age is a pseudo-field with its own operators; the two must travel together.
+  const ageField = fields.length === 1 && fields[0] === AGE_FIELD;
+  const ageOperator = AGE_OPERATOR_SET.has(operator);
+  if (ageField !== ageOperator) {
+    problems.push(`${where}: "${operator}" does not apply to "${fields.join(',')}"`);
+    return null;
+  }
+  if (ageField) {
+    const days = ageDays(raw);
+    if (days === null) {
+      problems.push(`${where}: age needs a whole number of days, 1 or more`);
+      return null;
+    }
+    condition.days = days;
+    return condition;
+  }
 
   if (operator === DOMAIN_IN_LIST) {
     // Re-validate every domain: an imported list must not be able to smuggle in

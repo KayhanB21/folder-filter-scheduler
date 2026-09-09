@@ -142,3 +142,7 @@ button { white-space: nowrap; flex: none; }
   row-gap: 8px;
   margin-top: 18px;
 }
+
+/* Age condition: a small day count with its unit, in place of the value box. */
+.cond-days { width: 72px; }
+.cond-days-unit { opacity: 0.7; }

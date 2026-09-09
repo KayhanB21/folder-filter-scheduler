@@ -98,3 +98,47 @@ test('state written by 0.2.0 (lastRunAt only) triggers a catch-up, then goes inc
   const later = new Date(now.getTime() + 2 * MINUTE);
   assert.equal(planScan(after, { now: later }).kind, SCAN_KINDS.incremental);
 });
+
+// --- Query bounds for age rules ---------------------------------------------
+
+import { queryBoundsFor } from '../src/scan.js';
+
+const DAY = 24 * 60 * MINUTE;
+const older = (days, extra = {}) => ({ field: 'age', operator: 'olderThan', days, ...extra });
+const newer = (days, extra = {}) => ({ field: 'age', operator: 'newerThan', days, ...extra });
+const subj = { field: 'subject', operator: 'contains', value: 'x' };
+const incrementalPlan = { kind: SCAN_KINDS.incremental, fromDate: minutesBefore(92) };
+
+test('a rule without an age condition keeps the plan lower bound', () => {
+  const b = queryBoundsFor({ match: 'any', conditions: [subj] }, incrementalPlan, now);
+  assert.equal(b.fromDate, incrementalPlan.fromDate);
+  assert.equal(b.toDate, undefined);
+});
+
+test('any rule with an age condition drops the lower bound entirely', () => {
+  const b = queryBoundsFor({ match: 'any', conditions: [subj, older(30)] }, incrementalPlan, now);
+  assert.equal(b.fromDate, undefined);
+  assert.equal(b.toDate, undefined);
+});
+
+test('all rule with olderThan narrows the query from above', () => {
+  const b = queryBoundsFor({ match: 'all', conditions: [subj, older(30)] }, incrementalPlan, now);
+  assert.equal(b.fromDate, undefined);
+  assert.equal(b.toDate.getTime(), now.getTime() - 30 * DAY);
+});
+
+test('the tightest olderThan wins, and a negated newerThan counts as olderThan', () => {
+  const both = queryBoundsFor({ match: 'all', conditions: [older(10), older(45)] }, incrementalPlan, now);
+  assert.equal(both.toDate.getTime(), now.getTime() - 45 * DAY);
+
+  const negated = queryBoundsFor({ match: 'all', conditions: [newer(7, { negate: true })] }, incrementalPlan, now);
+  assert.equal(negated.toDate.getTime(), now.getTime() - 7 * DAY);
+});
+
+test('newerThan, negated olderThan, or an unusable day count give no upper bound', () => {
+  for (const conds of [[newer(7)], [older(7, { negate: true })], [older(0)], [older('x')]]) {
+    const b = queryBoundsFor({ match: 'all', conditions: conds }, incrementalPlan, now);
+    assert.equal(b.fromDate, undefined);
+    assert.equal(b.toDate, undefined, JSON.stringify(conds));
+  }
+});

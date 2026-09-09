@@ -39,6 +39,9 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Conditions** on `from`, `to`, `cc`, `subject`, `reply-to`, `list-id`, `sender`
   with `contains` / `is` / `starts with` / `ends with` / `matches regex`, each
   optionally negated, combined with AND or OR.
+- **Age conditions**: `age` · `older than` / `newer than` · N days, for rules like
+  "move security alerts to Archive after 30 days". Something the built-in
+  retention policy cannot express, since it can only delete.
 - **Actions**: move to Trash, move/copy to a chosen folder (**including a folder
   in a different account** — e.g. Yahoo Bulk → Outlook Trash), mark read /
   flagged / junk, or delete permanently. Actions live in a single
@@ -101,6 +104,8 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
   can span multiple accounts.
 - **Match** — `any` (OR) or `all` (AND) of the conditions below.
 - **Condition** — e.g. `reply-to` · `contains` · a value. Tick **not** to negate.
+  Choosing the `age` field swaps the row to `older than` / `newer than` and a
+  number of days.
 - **Action** — e.g. *Move to Trash (each message's own account)*. The hint line
   under it explains exactly where matches go.
 
@@ -149,6 +154,14 @@ reports how many messages were affected (e.g. *"Done — 1 message(s) affected."
 > state that is only the newly arrived mail; the periodic catch-up scan (every 30
 > minutes, last 30 days) and every manual run cover more. Enabling offline
 > storage for the folder makes this local and much faster.
+
+> **Age conditions and scanning.** Age is measured from the message's `Date`
+> header, the same value Thunderbird's own "Age in Days" filter and folder
+> retention policy use. A rule with an age condition cannot be scanned
+> incrementally (a message that turns 30 days old today arrived 30 days ago), so
+> such rules always look at the whole folder. When the rule uses **all** with
+> `older than N`, only the part of the folder older than N days is queried, which
+> is the part a move action drains, so steady state stays cheap.
 
 > **Header matching and offline storage.** Conditions on `from`/`to`/`cc`/`subject`
 > read the indexed header and need no download. Conditions on `reply-to` (or other
