@@ -1,0 +1,7 @@
+Fixes scheduled runs missing spam that carries a backdated Date header.
+
+<ul>
+<li>Some spam arrives with a Date header hours behind its real arrival time. Scheduled runs only looked at mail dated since the previous run, so those messages were never picked up until you pressed "Run all rules now"</li>
+<li>Scheduled runs now do a wider catch-up scan every 30 minutes, so a backdated message is caught within half an hour at worst</li>
+<li>"Run all rules now" is unchanged and still scans the whole folder</li>
+</ul>

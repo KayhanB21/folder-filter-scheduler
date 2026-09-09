@@ -62,8 +62,9 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Domain-list conditions** that match subdomains automatically (`evil.com` also
   catches `bounce.evil.com`) and hold hundreds of entries in a single editable box.
 - **Incremental scheduled scans**: a scheduled run only examines messages that
-  arrived since the last one, so a per-message header read stays affordable.
-  **Run all rules now** always scans the whole folder.
+  arrived since the last one, so a per-message header read stays affordable. A
+  wider catch-up scan every 30 minutes picks up mail whose `Date` header lags
+  its real arrival. **Run all rules now** always scans the whole folder.
 - **Run now** button for immediate, on-demand runs.
 
 ## Install (temporary / development)
@@ -145,9 +146,9 @@ reports how many messages were affected (e.g. *"Done — 1 message(s) affected."
 
 > **Speed of `Reply-To` rules.** A rule matching a non-indexed header reads the
 > headers of each candidate message. Scheduled runs are incremental, so in steady
-> state that is only the newly arrived mail, but the first run (and every manual
-> run) covers more. Enabling offline storage for the folder makes this local and
-> much faster.
+> state that is only the newly arrived mail; the periodic catch-up scan (every 30
+> minutes, last 30 days) and every manual run cover more. Enabling offline
+> storage for the folder makes this local and much faster.
 
 > **Header matching and offline storage.** Conditions on `from`/`to`/`cc`/`subject`
 > read the indexed header and need no download. Conditions on `reply-to` (or other

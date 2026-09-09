@@ -5,7 +5,7 @@ Please report issues at <a href="https://github.com/KayhanB21/folder-filter-sche
 <ul>
 <li>Requires Thunderbird 147 or newer. Older versions stay on 0.1.1, which needs 128 or newer.</li>
 <li>Conditions on Reply-To and other non-indexed headers need the message available locally. For an IMAP folder, enable offline storage (Account Settings, Synchronization and Storage) for that folder, then run Repair Folder once.</li>
-<li>Scheduled runs pick up new mail using each message's Date header, which the sender controls. A backdated message can slip past a scheduled run. "Run all rules now" scans the whole folder and will catch it.</li>
+<li>Scheduled runs pick up new mail using each message's Date header, which the sender controls. A backdated message is caught by the catch-up scan that runs every 30 minutes, so it can be delayed by up to half an hour. Mail backdated by more than 30 days is only caught by "Run all rules now", which scans the whole folder.</li>
 <li>The store validator may show warnings for Thunderbird mail permissions such as messagesMove. These are expected: the validator is shared with Firefox, which does not have mail permissions. They do not affect the add-on.</li>
 </ul>
 
