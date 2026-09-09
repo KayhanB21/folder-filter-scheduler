@@ -4,6 +4,7 @@
 
 import { evaluateRule, requiresFullMessage, FIELDS, DOMAIN_IN_LIST } from './matcher.js';
 import { runAction } from './actions.js';
+import { SCAN_KINDS, planScan, stampScan } from './scan.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -37,28 +38,10 @@ const DEFAULT_INTERVAL_MINUTES = 10;
 const HARVEST_FIELDS = ['reply-to', 'from'];
 const HARVEST_RULE_NAME = 'Spam domains';
 
-/**
- * How far back a scheduled run looks when a rule has never run. Scheduled runs
- * are incremental so a Reply-To rule does not re-read every header in a large
- * folder every few minutes; see scanWindowFor().
- */
-const FIRST_RUN_LOOKBACK_DAYS = 30;
-
-/**
- * Overlap added to each incremental scan. `messages.query({fromDate})` filters
- * on the Date header, which a sender controls, so a small backdate would slip
- * past a window that started exactly at the last run. The overlap absorbs that
- * and any clock skew. A badly forged date can still evade a scheduled run,
- * which is why "Run all rules now" deliberately scans the whole folder.
- */
-const SCAN_OVERLAP_MINUTES = 90;
-
 const log = (...args) => console.log('[FolderFilterScheduler]', ...args);
 const warn = (...args) => console.warn('[FolderFilterScheduler]', ...args);
 
 const newId = () => globalThis.crypto.randomUUID();
-const minutesAgo = (n) => new Date(Date.now() - n * 60_000);
-const daysAgo = (n) => minutesAgo(n * 24 * 60);
 
 /**
  * Load config, assigning a stable id to any rule that lacks one.
@@ -184,28 +167,13 @@ async function* messagesInFolder(folderId, fromDate) {
   yield* eachMessage(await messenger.messages.query(query));
 }
 
-/**
- * The lower bound for a rule's scan.
- *
- * A manual run always scans the whole folder: it is the user's escape hatch for
- * backlog and for spam with a forged Date header. Scheduled runs stay
- * incremental so a per-message header read is affordable every few minutes.
- */
-function scanWindowFor(rule, runState, full) {
-  if (full) return undefined;
-  const last = runState[rule.id]?.lastRunAt;
-  if (!last) return daysAgo(FIRST_RUN_LOOKBACK_DAYS);
-  const since = new Date(new Date(last).getTime() - SCAN_OVERLAP_MINUTES * 60_000);
-  return Number.isNaN(since.getTime()) ? daysAgo(FIRST_RUN_LOOKBACK_DAYS) : since;
-}
-
 /** Run one rule across all its source folders. Returns count of affected messages. */
-async function runRule(rule, runState, full) {
+async function runRule(rule, runState, manual) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
-  const fromDate = scanWindowFor(rule, runState, full);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
   const startedAt = new Date();
+  const { kind, fromDate } = planScan(runState[rule.id], { manual, now: startedAt });
   let affected = 0;
   let scanFailed = false;
 
@@ -233,8 +201,9 @@ async function runRule(rule, runState, full) {
   // Only advance the watermark on a clean pass, so a transient failure does not
   // permanently skip the messages it could not read.
   if (!scanFailed && rule.id) {
-    runState[rule.id] = { lastRunAt: startedAt.toISOString() };
+    runState[rule.id] = stampScan(runState[rule.id], kind, startedAt);
   }
+  if (kind !== SCAN_KINDS.incremental) log(`rule "${rule.name}" ran a ${kind} scan`);
   return affected;
 }
 
@@ -242,20 +211,17 @@ async function runRule(rule, runState, full) {
 async function runAllRules(reason = 'manual') {
   const { rules } = await loadConfig();
   const runState = await loadRunState();
-  const full = reason === 'manual';
+  const manual = reason === 'manual';
   let total = 0;
 
   for (const rule of rules) {
-    const n = await runRule(rule, runState, full);
+    const n = await runRule(rule, runState, manual);
     if (n) log(`rule "${rule.name}" affected ${n} message(s)`);
     total += n;
   }
 
   await saveRunState(runState);
-  log(
-    `run (${reason}, ${full ? 'full' : 'incremental'}) complete — ` +
-      `${total} message(s) affected across ${rules.length} rule(s)`,
-  );
+  log(`run (${reason}) complete: ${total} message(s) affected across ${rules.length} rule(s)`);
   return total;
 }
 

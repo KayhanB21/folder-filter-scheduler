@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1]
+
+### Fixed
+- Scheduled runs could permanently miss mail whose `Date` header sits hours
+  behind its real arrival time. Incremental scans filter on that header, which
+  the sender controls, so such a message never fell inside the window and was
+  only ever caught by a manual run. Scheduled runs now do a wider catch-up scan
+  (the last 30 days of the folder) on the first pass and then every 30 minutes,
+  bounding the worst case to half an hour. **Run all rules now** is unchanged
+  and still scans everything. Reported against a Hotmail Junk folder where
+  spam arrived with a `Date` seven hours old.
+
 ## [0.2.0]
 
 ### Added
