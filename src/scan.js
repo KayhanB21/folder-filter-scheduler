@@ -25,6 +25,8 @@
  *   catch-up lookback.
  */
 
+import { AGE_OPERATORS, ageDays, isAgeCondition } from './matcher.js';
+
 export const SCAN_OVERLAP_MINUTES = 90;
 export const CATCH_UP_EVERY_MINUTES = 30;
 export const CATCH_UP_LOOKBACK_DAYS = 30;
@@ -90,4 +92,38 @@ export function stampScan(state, kind, startedAt) {
   const next = { ...(state ?? {}), lastRunAt: at };
   if (kind === SCAN_KINDS.full || kind === SCAN_KINDS.catchUp) next.lastCatchUpAt = at;
   return next;
+}
+
+const DAY = 24 * 60 * MINUTE;
+
+/**
+ * Translate a scan plan into `messages.query` bounds for one rule.
+ *
+ * An age condition is the inverse of an incremental scan: a message that turns
+ * N days old today arrived N days ago, so it never sits inside a window that
+ * starts at the previous run. Any rule with an age condition therefore drops
+ * `fromDate` altogether. When the rule is `all` (AND) and demands "older than
+ * N", the query can be bounded from above instead, so Thunderbird returns only
+ * the old tail of the folder rather than the whole thing. A negated "newer
+ * than N" is the same demand and gets the same bound. The matcher re-checks
+ * every message, so these bounds only ever narrow the work, never decide it.
+ */
+export function queryBoundsFor(rule, plan, now = new Date()) {
+  const conditions = Array.isArray(rule?.conditions) ? rule.conditions : [];
+  const ages = conditions.filter(isAgeCondition);
+  if (ages.length === 0) return { fromDate: plan?.fromDate };
+
+  const bounds = { fromDate: undefined, toDate: undefined };
+  if (rule.match !== 'all') return bounds;
+
+  const olderThan = ages
+    .filter(
+      (c) =>
+        (c.operator === AGE_OPERATORS.olderThan && !c.negate) ||
+        (c.operator === AGE_OPERATORS.newerThan && c.negate === true),
+    )
+    .map(ageDays)
+    .filter((n) => n !== null);
+  if (olderThan.length > 0) bounds.toDate = new Date(now.getTime() - Math.max(...olderThan) * DAY);
+  return bounds;
 }

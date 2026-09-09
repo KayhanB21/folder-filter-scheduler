@@ -264,3 +264,70 @@ test('a domainInList rule on reply-to requires the full message', () => {
 test('DOMAIN_IN_LIST is deliberately not one of the string OPERATORS', () => {
   assert.equal(OPERATORS[DOMAIN_IN_LIST], undefined);
 });
+
+// --- Age conditions ---------------------------------------------------------
+
+import { AGE_FIELD, AGE_OPERATORS, CHEAP_FIELDS, ageDays } from '../src/matcher.js';
+
+const now = new Date('2026-09-09T12:00:00Z');
+const daysOld = (n) => ({ fields: {}, date: new Date(now.getTime() - n * 24 * 60 * 60 * 1000) });
+const older = (days, extra = {}) => ({ field: AGE_FIELD, operator: AGE_OPERATORS.olderThan, days, ...extra });
+const newer = (days, extra = {}) => ({ field: AGE_FIELD, operator: AGE_OPERATORS.newerThan, days, ...extra });
+
+test('olderThan matches at and beyond the threshold, not before it', () => {
+  assert.equal(evaluateCondition(daysOld(31), older(30), { now }), true);
+  assert.equal(evaluateCondition(daysOld(30), older(30), { now }), true);
+  assert.equal(evaluateCondition(daysOld(29.9), older(30), { now }), false);
+});
+
+test('newerThan is the exact complement of olderThan', () => {
+  for (const age of [0, 29.9, 30, 31]) {
+    assert.notEqual(
+      evaluateCondition(daysOld(age), older(30), { now }),
+      evaluateCondition(daysOld(age), newer(30), { now }),
+    );
+  }
+});
+
+test('negate flips an age condition', () => {
+  assert.equal(evaluateCondition(daysOld(40), older(30, { negate: true }), { now }), false);
+  assert.equal(evaluateCondition(daysOld(10), older(30, { negate: true }), { now }), true);
+});
+
+test('an age condition without a usable day count never matches, even negated', () => {
+  for (const days of [undefined, null, '', 0, -1, 1.5, 'abc']) {
+    assert.equal(evaluateCondition(daysOld(400), older(days), { now }), false, `days=${days}`);
+    assert.equal(evaluateCondition(daysOld(400), older(days, { negate: true }), { now }), false);
+  }
+});
+
+test('a message with no usable date never matches an age condition', () => {
+  assert.equal(evaluateCondition({ fields: {} }, older(1), { now }), false);
+  assert.equal(evaluateCondition({ fields: {}, date: 'garbage' }, older(1), { now }), false);
+});
+
+test('age accepts a timestamp string as well as a Date', () => {
+  const msgIso = { fields: {}, date: daysOld(45).date.toISOString() };
+  assert.equal(evaluateCondition(msgIso, older(30), { now }), true);
+});
+
+test('ageDays accepts numeric strings and rejects everything unusable', () => {
+  assert.equal(ageDays({ days: '30' }), 30);
+  assert.equal(ageDays({ days: 7 }), 7);
+  assert.equal(ageDays({ days: '0' }), null);
+  assert.equal(ageDays({ days: '2.5' }), null);
+  assert.equal(ageDays({}), null);
+});
+
+test('evaluateRule threads `now` through to age conditions', () => {
+  const rule = { match: 'all', conditions: [older(30), { field: 'subject', operator: 'contains', value: 'alert' }] };
+  const m = { ...daysOld(45), fields: { subject: ['Security alert'] } };
+  assert.equal(evaluateRule(m, rule, { now }), true);
+  assert.equal(evaluateRule(m, rule, { now: daysOld(20).date }), false);
+});
+
+test('an age-only rule is cheap: no full message fetch', () => {
+  assert.ok(CHEAP_FIELDS.includes(AGE_FIELD));
+  assert.equal(requiresFullMessage({ conditions: [older(30)] }), false);
+  assert.equal(requiresFullMessage({ conditions: [older(30), { field: 'reply-to', operator: 'is', value: 'x' }] }), true);
+});

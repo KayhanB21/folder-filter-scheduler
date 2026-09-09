@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0]
+
+### Added
+- **Age conditions**: `age` · `older than` / `newer than` · N days. Lets a rule
+  express "move mail to Archive after 30 days" or "mark anything older than a
+  week as read", which the built-in retention policy cannot, since it only
+  deletes. Age is measured from the `Date` header, as Thunderbird's own "Age in
+  Days" filter does. A condition with a blank or zero day count never matches.
+  Requested in [#2](https://github.com/KayhanB21/folder-filter-scheduler/issues/2).
+
+### Changed
+- Rules with an age condition are not scanned incrementally, since the messages
+  they target are by definition old. An `all` rule with `older than N` is
+  queried with an upper Date bound instead, so only the old tail of the folder
+  is read.
+
 ## [0.2.1]
 
 ### Fixed

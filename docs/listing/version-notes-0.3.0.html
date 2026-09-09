@@ -1,0 +1,8 @@
+Adds age conditions, so a rule can act on mail by how old it is.
+
+<ul>
+<li>New "age" field with "older than" and "newer than" a number of days. Combine it with any action: move security alerts to an Archive folder after 30 days, mark newsletters older than a week as read, or trash anything in a Junk folder older than 60 days</li>
+<li>This covers what the folder retention policy cannot: retention can only delete, while a rule here can move, copy, mark, or delete</li>
+<li>Age is measured from the message Date header, the same value Thunderbird's own "Age in Days" filter uses</li>
+<li>Rules with an age condition are exempt from incremental scanning, since the mail they target is by definition not new</li>
+</ul>

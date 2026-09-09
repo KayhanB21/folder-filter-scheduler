@@ -4,7 +4,7 @@
 
 import { evaluateRule, requiresFullMessage, FIELDS, DOMAIN_IN_LIST } from './matcher.js';
 import { runAction } from './actions.js';
-import { SCAN_KINDS, planScan, stampScan } from './scan.js';
+import { SCAN_KINDS, planScan, queryBoundsFor, stampScan } from './scan.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -147,7 +147,8 @@ async function normalize(messageHeader, fetchFull) {
   if (!fields.to) for (const r of messageHeader.recipients ?? []) push('to', r);
   if (!fields.cc) for (const c of messageHeader.ccList ?? []) push('cc', c);
 
-  return { fields, _header: messageHeader };
+  // The indexed Date, for age conditions. Free, no fetch.
+  return { fields, date: messageHeader.date, _header: messageHeader };
 }
 
 /** Walk any paginated MessageList (a query result or a menu selection). */
@@ -160,10 +161,11 @@ async function* eachMessage(list) {
   }
 }
 
-/** Iterate a folder, optionally only messages dated on or after `fromDate`. */
-async function* messagesInFolder(folderId, fromDate) {
+/** Iterate a folder, optionally bounded by Date on either side. */
+async function* messagesInFolder(folderId, { fromDate, toDate } = {}) {
   const query = { folderId, autoPaginationTimeout: 0 };
   if (fromDate instanceof Date) query.fromDate = fromDate;
+  if (toDate instanceof Date) query.toDate = toDate;
   yield* eachMessage(await messenger.messages.query(query));
 }
 
@@ -173,16 +175,18 @@ async function runRule(rule, runState, manual) {
   const fetchFull = requiresFullMessage(rule);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
   const startedAt = new Date();
-  const { kind, fromDate } = planScan(runState[rule.id], { manual, now: startedAt });
+  const plan = planScan(runState[rule.id], { manual, now: startedAt });
+  const { kind } = plan;
+  const bounds = queryBoundsFor(rule, plan, startedAt);
   let affected = 0;
   let scanFailed = false;
 
   for (const folderId of rule.folderIds ?? []) {
     const matchedIds = [];
     try {
-      for await (const header of messagesInFolder(folderId, fromDate)) {
+      for await (const header of messagesInFolder(folderId, bounds)) {
         const message = await normalize(header, fetchFull);
-        if (evaluateRule(message, rule)) matchedIds.push(header.id);
+        if (evaluateRule(message, rule, { now: startedAt })) matchedIds.push(header.id);
       }
     } catch (e) {
       warn(`scan failed for folder ${folderId} in rule "${rule.name}"`, e);

@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { FIELDS, DOMAIN_IN_LIST } from '../src/matcher.js';
+import { FIELDS, DOMAIN_IN_LIST, AGE_FIELD, AGE_OPERATORS, ageDays } from '../src/matcher.js';
 import { ACTIONS, ACTIONS_BY_ID } from '../src/actions.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
@@ -117,27 +117,50 @@ function fillFieldSelect(select, value) {
   }
 }
 
+const AGE_OPERATOR_LABELS = { olderThan: 'older than', newerThan: 'newer than' };
+
 function renderCondition(container, cond = {}) {
   const node = $('#condition-template').content.firstElementChild.cloneNode(true);
-  fillFieldSelect($('.cond-field', node), cond.field ?? 'reply-to');
+  const fieldSelect = $('.cond-field', node);
   const op = $('.cond-op', node);
+  fillFieldSelect(fieldSelect, cond.field ?? 'reply-to');
   op.value = cond.operator ?? 'contains';
   $('.cond-negate', node).checked = !!cond.negate;
   $('.cond-value', node).value = cond.value ?? '';
   $('.cond-domains', node).value = (cond.domains ?? []).join('\n');
+  $('.cond-days', node).value = ageDays(cond) ?? '';
 
-  // A domain list needs a textarea, not a one-line input: a harvested list runs
-  // to hundreds of entries and would otherwise be unreadable and uneditable.
-  const fieldSelect = $('.cond-field', node);
-  const syncOperator = () => {
+  // The row changes shape with its field and operator. A domain list needs a
+  // textarea, not a one-line input: a harvested list runs to hundreds of
+  // entries. The age field needs a day count and only its own two operators,
+  // since "age contains 3" is meaningless, and the string operators must never
+  // be offered for it.
+  let listMode = null;
+  const syncRow = () => {
     const isList = op.value === DOMAIN_IN_LIST;
+    if (isList !== listMode) {
+      if (isList) fillDomainFieldSelect(fieldSelect, cond);
+      else fillFieldSelect(fieldSelect, listMode === null ? (cond.field ?? 'reply-to') : 'reply-to');
+      listMode = isList;
+    }
+
+    const isAge = fieldSelect.value === AGE_FIELD;
+    for (const option of op.options) {
+      const ageOp = option.value in AGE_OPERATORS;
+      option.hidden = isAge ? !ageOp : ageOp;
+      option.disabled = option.hidden;
+    }
+    if (isAge && !(op.value in AGE_OPERATORS)) op.value = AGE_OPERATORS.olderThan;
+    if (!isAge && op.value in AGE_OPERATORS) op.value = 'contains';
+
     $('.cond-domains', node).classList.toggle('hidden', !isList);
-    $('.cond-value', node).classList.toggle('hidden', isList);
-    if (isList) fillDomainFieldSelect(fieldSelect, cond);
-    else fillFieldSelect(fieldSelect, cond.field ?? 'reply-to');
+    $('.cond-value', node).classList.toggle('hidden', isList || isAge);
+    $('.cond-days', node).classList.toggle('hidden', !isAge);
+    $('.cond-days-unit', node).classList.toggle('hidden', !isAge);
   };
-  op.addEventListener('change', syncOperator);
-  syncOperator();
+  op.addEventListener('change', syncRow);
+  fieldSelect.addEventListener('change', syncRow);
+  syncRow();
 
   $('.del-cond', node).addEventListener('click', () => node.remove());
   container.append(node);
@@ -201,6 +224,11 @@ function ruleSummary(node) {
     // A multi-field set is stored comma-joined; read it back as prose.
     const field = $('.cond-field', c).value.split(',').join(' or ');
     const negate = $('.cond-negate', c).checked ? 'not ' : '';
+    if (field === AGE_FIELD) {
+      const opLabel = AGE_OPERATOR_LABELS[$('.cond-op', c).value] ?? $('.cond-op', c).value;
+      const days = $('.cond-days', c).value || '?';
+      return `age ${negate}${opLabel} ${days} day${days === '1' ? '' : 's'}`;
+    }
     if ($('.cond-op', c).value === DOMAIN_IN_LIST) {
       const { domains } = parseDomainList($('.cond-domains', c).value);
       return `${field} ${negate}in list of ${domains.length}`;
@@ -257,7 +285,14 @@ function collectConfig(rejected = []) {
           operator,
           negate: $('.cond-negate', c).checked,
         };
-        if (operator === DOMAIN_IN_LIST) {
+        if (condition.field === AGE_FIELD) {
+          // A missing or zero day count is stored as-is and never matches (the
+          // matcher guards it); the user is told rather than silently fixed.
+          const raw = $('.cond-days', c).value.trim();
+          const days = ageDays({ days: raw });
+          condition.days = days ?? 0;
+          if (days === null) rejected.push(`age condition needs a whole number of days (got "${raw || 'nothing'}")`);
+        } else if (operator === DOMAIN_IN_LIST) {
           condition.fields = $('.cond-field', c).value.split(',');
           delete condition.field;
           // parseDomainList drops anything malformed, so a stray blank line can
