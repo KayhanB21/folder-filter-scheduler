@@ -2,7 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { FIELDS, DOMAIN_IN_LIST, AGE_FIELD, AGE_OPERATORS, ageDays } from '../src/matcher.js';
+import { FIELDS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, AGE_FIELD, AGE_OPERATORS, ageDays } from '../src/matcher.js';
+import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
+import { diagnosticsFilename } from '../src/diagnostics.js';
 import { ACTIONS, ACTIONS_BY_ID } from '../src/actions.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
@@ -12,6 +14,80 @@ const rulesEl = $('#rules');
 const statusEl = $('#status');
 
 let folders = []; // [{ id, label }]
+
+/**
+ * Address-book access is an optional permission, asked for only when someone
+ * uses an address-book condition, so existing users never see an update
+ * prompt. Without it the conditions are still saved; they just never match.
+ */
+let bookAccess = false;
+let addressBooks = []; // local (non-LDAP) AddressBookNodes
+
+async function loadAddressBooks() {
+  try {
+    bookAccess = await messenger.permissions.contains({ permissions: ['addressBooks'] });
+  } catch {
+    bookAccess = false;
+  }
+  addressBooks = [];
+  if (!bookAccess || !messenger.addressBooks?.list) return;
+  try {
+    addressBooks = (await messenger.addressBooks.list(false)).filter((b) => !b.remote);
+  } catch (e) {
+    console.warn('[FolderFilterScheduler] could not list address books', e);
+  }
+}
+
+function bookLabel(id) {
+  if (id === ALL_ADDRESS_BOOKS) return 'All address books';
+  return addressBooks.find((b) => b.id === id)?.name ?? '(missing address book)';
+}
+
+function fillBookSelect(select, currentId) {
+  select.innerHTML = '';
+  const ids = [ALL_ADDRESS_BOOKS, ...addressBooks.map((b) => b.id)];
+  // Keep an id from another profile visible rather than silently replacing it.
+  if (currentId && !ids.includes(currentId)) ids.push(currentId);
+  for (const id of ids) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = bookLabel(id);
+    select.append(opt);
+  }
+  select.value = currentId || ALL_ADDRESS_BOOKS;
+}
+
+function fillBookFieldSelect(select, current) {
+  select.innerHTML = '';
+  for (const field of ADDRESS_BOOK_FIELDS) {
+    const opt = document.createElement('option');
+    opt.value = field;
+    opt.textContent = field;
+    select.append(opt);
+  }
+  select.value = ADDRESS_BOOK_FIELDS.includes(current) ? current : 'from';
+}
+
+function refreshBookRows() {
+  for (const row of rulesEl.querySelectorAll('.condition')) row.syncBooks?.();
+}
+
+function requestBookAccess() {
+  // permissions.request must be called directly from the click, before any await.
+  messenger.permissions
+    .request({ permissions: ['addressBooks'] })
+    .then(async (granted) => {
+      await loadAddressBooks();
+      refreshBookRows();
+      flash(
+        granted
+          ? 'Address book access allowed. Pick a book and press Save.'
+          : 'Address book access was not allowed. Address book conditions will not match until it is.',
+        !granted,
+      );
+    })
+    .catch((e) => flash(`Could not request address book access: ${e.message}`, true));
+}
 
 /**
  * Which rules are collapsed. This is a view preference only: it lives in
@@ -135,13 +211,32 @@ function renderCondition(container, cond = {}) {
   // entries. The age field needs a day count and only its own two operators,
   // since "age contains 3" is meaningless, and the string operators must never
   // be offered for it.
-  let listMode = null;
+  // The address-book id lives on the row so it survives while access is missing.
+  node.dataset.bookId = cond.addressBookId ?? ALL_ADDRESS_BOOKS;
+  const bookSelect = $('.cond-book', node);
+  const bookGrant = $('.cond-book-grant', node);
+  bookSelect.addEventListener('change', () => {
+    node.dataset.bookId = bookSelect.value;
+  });
+  bookGrant.addEventListener('click', requestBookAccess);
+  node.syncBooks = () => {
+    const isBook = op.value === IN_ADDRESS_BOOK;
+    bookSelect.classList.toggle('hidden', !isBook || !bookAccess);
+    bookGrant.classList.toggle('hidden', !isBook || bookAccess);
+    if (isBook && bookAccess) fillBookSelect(bookSelect, node.dataset.bookId);
+  };
+
+  let mode = null; // 'list' | 'book' | 'plain': decides which fields are offered
   const syncRow = () => {
     const isList = op.value === DOMAIN_IN_LIST;
-    if (isList !== listMode) {
+    const isBook = op.value === IN_ADDRESS_BOOK;
+    const nextMode = isList ? 'list' : isBook ? 'book' : 'plain';
+    if (nextMode !== mode) {
+      const previous = mode === null ? (cond.field ?? cond.fields?.[0]) : fieldSelect.value;
       if (isList) fillDomainFieldSelect(fieldSelect, cond);
-      else fillFieldSelect(fieldSelect, listMode === null ? (cond.field ?? 'reply-to') : 'reply-to');
-      listMode = isList;
+      else if (isBook) fillBookFieldSelect(fieldSelect, previous);
+      else fillFieldSelect(fieldSelect, FIELDS.includes(previous) ? previous : 'reply-to');
+      mode = nextMode;
     }
 
     const isAge = fieldSelect.value === AGE_FIELD;
@@ -154,9 +249,10 @@ function renderCondition(container, cond = {}) {
     if (!isAge && op.value in AGE_OPERATORS) op.value = 'contains';
 
     $('.cond-domains', node).classList.toggle('hidden', !isList);
-    $('.cond-value', node).classList.toggle('hidden', isList || isAge);
+    $('.cond-value', node).classList.toggle('hidden', isList || isAge || isBook);
     $('.cond-days', node).classList.toggle('hidden', !isAge);
     $('.cond-days-unit', node).classList.toggle('hidden', !isAge);
+    node.syncBooks();
   };
   op.addEventListener('change', syncRow);
   fieldSelect.addEventListener('change', syncRow);
@@ -229,6 +325,9 @@ function ruleSummary(node) {
       const days = $('.cond-days', c).value || '?';
       return `age ${negate}${opLabel} ${days} day${days === '1' ? '' : 's'}`;
     }
+    if ($('.cond-op', c).value === IN_ADDRESS_BOOK) {
+      return `${field} ${negate}in ${bookLabel(c.dataset.bookId)}`;
+    }
     if ($('.cond-op', c).value === DOMAIN_IN_LIST) {
       const { domains } = parseDomainList($('.cond-domains', c).value);
       return `${field} ${negate}in list of ${domains.length}`;
@@ -292,6 +391,8 @@ function collectConfig(rejected = []) {
           const days = ageDays({ days: raw });
           condition.days = days ?? 0;
           if (days === null) rejected.push(`age condition needs a whole number of days (got "${raw || 'nothing'}")`);
+        } else if (operator === IN_ADDRESS_BOOK) {
+          condition.addressBookId = c.dataset.bookId || ALL_ADDRESS_BOOKS;
         } else if (operator === DOMAIN_IN_LIST) {
           condition.fields = $('.cond-field', c).value.split(',');
           delete condition.field;
@@ -336,11 +437,68 @@ async function save() {
   for (const rule of collected.rules) renderRule(rule);
   $('#allowlist').value = collected.allowlist.join('\n');
 
+  // Address-book conditions are kept even when they cannot run yet, but the
+  // user must be told, since a condition that never matches looks like a bug.
+  const bookConds = collected.rules.flatMap((r) => r.conditions.filter((c) => c.operator === IN_ADDRESS_BOOK));
+  const knownBooks = new Set([ALL_ADDRESS_BOOKS, ...addressBooks.map((b) => b.id)]);
+  let bookNote = '';
+  if (bookConds.length > 0 && !bookAccess) {
+    bookNote = ' Address book conditions will not match until you allow address book access.';
+  } else if (bookConds.some((c) => !knownBooks.has(c.addressBookId))) {
+    bookNote = ' An address book condition points at a book that no longer exists; it will not match.';
+  }
+
   flash(
-    rejected.length > 0
-      ? `Saved. Ignored ${rejected.length} unusable entr${rejected.length === 1 ? 'y' : 'ies'}: ${rejected.join(', ')}`
-      : 'Saved. Schedule updated.',
+    (rejected.length > 0
+      ? `Saved. Ignored ${rejected.length} unusable entr${rejected.length === 1 ? 'y' : 'ies'}: ${rejected.join(', ')}.`
+      : 'Saved. Schedule updated.') + bookNote,
+    bookNote !== '',
   );
+}
+
+// --- Diagnostics -------------------------------------------------------------
+
+async function refreshDiagnostics() {
+  try {
+    const res = await messenger.runtime.sendMessage({
+      command: 'diagnostics',
+      includeValues: $('#diag-values').checked,
+    });
+    $('#diag-report').value = res?.report ?? '';
+  } catch (e) {
+    $('#diag-report').value = `Could not build the report: ${e.message}`;
+  }
+}
+
+async function copyDiagnostics() {
+  const text = $('#diag-report').value;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    $('#diag-report').select();
+    document.execCommand('copy');
+  }
+  flash('Diagnostics copied. Paste it into your email or GitHub issue.');
+}
+
+function saveDiagnostics() {
+  const now = new Date();
+  const blob = new Blob([$('#diag-report').value], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = diagnosticsFilename(now);
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  flash(`Saved ${diagnosticsFilename(now)}.`);
+}
+
+async function clearDiagnostics() {
+  await messenger.runtime.sendMessage({ command: 'clearDiagnostics' });
+  await refreshDiagnostics();
+  flash('Diagnostics log cleared.');
 }
 
 function exportRules() {
@@ -375,6 +533,8 @@ async function importRules(file) {
 
   const { rules, duplicates, allowlist, intervalMinutes, problems } = sanitizeImport(data, {
     knownFolderIds: folders.map((f) => f.id),
+    // Only checkable with access; otherwise ids are kept and checked on use.
+    knownAddressBookIds: bookAccess ? addressBooks.map((b) => b.id) : undefined,
     // Compare against what is on the page, including unsaved edits, so
     // re-importing the same file does not pile up duplicate rules.
     existingRules: collectConfig().rules,
@@ -415,6 +575,7 @@ async function runNow() {
 
 async function init() {
   await loadFolders();
+  await loadAddressBooks();
   const { config } = await messenger.storage.local.get({ config: null });
   $('#interval').value = config?.intervalMinutes ?? 10;
   const rules = config?.rules?.length ? config.rules : [{}];
@@ -451,6 +612,29 @@ async function init() {
     event.target.value = '';
     if (file) importRules(file).catch((e) => flash(`Import failed: ${e.message}`, true));
   });
+
+  // Keep book rows honest if access is granted or revoked in the Add-ons Manager
+  // while this page is open.
+  const onPermissionsChanged = () => loadAddressBooks().then(refreshBookRows);
+  messenger.permissions.onAdded?.addListener(onPermissionsChanged);
+  messenger.permissions.onRemoved?.addListener(onPermissionsChanged);
+
+  $('#diagnostics-box').addEventListener('toggle', () => {
+    if ($('#diagnostics-box').open) refreshDiagnostics();
+  });
+  $('#diag-values').addEventListener('change', refreshDiagnostics);
+  $('#diag-refresh').addEventListener('click', refreshDiagnostics);
+  $('#diag-copy').addEventListener('click', () => copyDiagnostics());
+  $('#diag-save').addEventListener('click', () => {
+    try {
+      saveDiagnostics();
+    } catch (e) {
+      flash(`Could not save the report: ${e.message}`, true);
+    }
+  });
+  $('#diag-clear').addEventListener('click', () =>
+    clearDiagnostics().catch((e) => flash(e.message, true)),
+  );
 
   if (folders.length === 0) {
     flash('No folders found — check the “accountsRead” permission and reload the add-on.', true);

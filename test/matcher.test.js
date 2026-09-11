@@ -331,3 +331,60 @@ test('an age-only rule is cheap: no full message fetch', () => {
   assert.equal(requiresFullMessage({ conditions: [older(30)] }), false);
   assert.equal(requiresFullMessage({ conditions: [older(30), { field: 'reply-to', operator: 'is', value: 'x' }] }), true);
 });
+
+// --- Address-book conditions -------------------------------------------------
+
+import { IN_ADDRESS_BOOK, addressBookIdsOf } from '../src/matcher.js';
+
+const books = new Map([
+  ['all', new Set(['alice@example.com', 'bob@example.org'])],
+  ['empty', new Set()],
+  ['broken', null],
+]);
+const inBook = (id, extra = {}) => ({ field: 'from', operator: IN_ADDRESS_BOOK, addressBookId: id, ...extra });
+const fromMsg = (...from) => ({ fields: { from } });
+
+test('inAddressBook matches a known sender regardless of display name or case', () => {
+  assert.equal(evaluateCondition(fromMsg('"Alice" <ALICE@example.com>'), inBook('all'), { addressBooks: books }), true);
+  assert.equal(evaluateCondition(fromMsg('stranger@spam.example'), inBook('all'), { addressBooks: books }), false);
+});
+
+test('negated inAddressBook matches strangers only', () => {
+  const notIn = inBook('all', { negate: true });
+  assert.equal(evaluateCondition(fromMsg('stranger@spam.example'), notIn, { addressBooks: books }), true);
+  assert.equal(evaluateCondition(fromMsg('bob@example.org'), notIn, { addressBooks: books }), false);
+});
+
+test('an unreadable, empty, missing, or unloaded book never matches, negated or not', () => {
+  const m = fromMsg('stranger@spam.example');
+  for (const negate of [false, true]) {
+    for (const id of ['empty', 'broken', 'nope']) {
+      assert.equal(evaluateCondition(m, inBook(id, { negate }), { addressBooks: books }), false, `${id} negate=${negate}`);
+    }
+    assert.equal(evaluateCondition(m, inBook('all', { negate })), false, `no books passed, negate=${negate}`);
+  }
+});
+
+test('a message with no usable sender address never matches, negated or not', () => {
+  for (const negate of [false, true]) {
+    assert.equal(evaluateCondition({ fields: {} }, inBook('all', { negate }), { addressBooks: books }), false);
+    assert.equal(evaluateCondition(fromMsg('undisclosed'), inBook('all', { negate }), { addressBooks: books }), false);
+  }
+});
+
+test('any known address in a multi-address header counts as known', () => {
+  const m = { fields: { 'reply-to': ['x@spam.example, "Bob" <bob@example.org>'] } };
+  const cond = { field: 'reply-to', operator: IN_ADDRESS_BOOK, addressBookId: 'all' };
+  assert.equal(evaluateCondition(m, cond, { addressBooks: books }), true);
+  assert.equal(evaluateCondition(m, { ...cond, negate: true }, { addressBooks: books }), false);
+});
+
+test('addressBookIdsOf lists each needed book once', () => {
+  const rule = { conditions: [inBook('a'), inBook('a'), inBook('b'), { field: 'from', operator: 'contains', value: 'x' }] };
+  assert.deepEqual(addressBookIdsOf(rule).sort(), ['a', 'b']);
+});
+
+test('an address-book rule on from stays on the cheap path', () => {
+  assert.equal(requiresFullMessage({ conditions: [inBook('all')] }), false);
+  assert.equal(requiresFullMessage({ conditions: [{ ...inBook('all'), field: 'reply-to' }] }), true);
+});

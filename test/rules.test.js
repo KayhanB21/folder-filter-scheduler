@@ -275,3 +275,41 @@ test('the day count is part of the fingerprint', () => {
   assert.notEqual(thirty, sixty);
   assert.equal(ruleHash(ageRule), ruleHash({ ...ageRule, name: 'renamed' }));
 });
+
+// --- Address-book conditions -------------------------------------------------
+
+const bookRule = {
+  ...validRule,
+  name: 'Strangers to Junk',
+  match: 'all',
+  conditions: [{ field: 'from', operator: 'inAddressBook', addressBookId: 'all', negate: true }],
+};
+
+test('import accepts an address-book condition', () => {
+  const { rules, problems } = sanitizeImport(file({ rules: [bookRule] }));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ field: 'from', operator: 'inAddressBook', negate: true, addressBookId: 'all' }]);
+});
+
+test('import keeps an unknown book id but reports it', () => {
+  const raw = { ...bookRule, conditions: [{ ...bookRule.conditions[0], addressBookId: 'ldap-elsewhere' }] };
+  const { rules, problems } = sanitizeImport(file({ rules: [raw] }), { knownAddressBookIds: ['book-1'] });
+  assert.equal(rules[0].conditions[0].addressBookId, 'ldap-elsewhere');
+  assert.ok(problems.some((p) => /address book not in this profile/.test(p)), problems.join('; '));
+});
+
+test('import rejects an address-book condition on a non-sender field or with no book', () => {
+  for (const c of [
+    { field: 'subject', operator: 'inAddressBook', addressBookId: 'all' },
+    { field: 'from', operator: 'inAddressBook' },
+    { field: 'from', operator: 'inAddressBook', addressBookId: '   ' },
+  ]) {
+    const { rules } = sanitizeImport(file({ rules: [{ ...bookRule, conditions: [c] }] }));
+    assert.equal(rules.length, 0, JSON.stringify(c));
+  }
+});
+
+test('the address-book id is part of the fingerprint', () => {
+  const other = { ...bookRule, conditions: [{ ...bookRule.conditions[0], addressBookId: 'book-2' }] };
+  assert.notEqual(ruleFingerprint(bookRule), ruleFingerprint(other));
+});

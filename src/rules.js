@@ -15,14 +15,20 @@
  */
 
 import { ACTIONS_BY_ID } from './actions.js';
-import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, ageDays } from './matcher.js';
+import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, ageDays } from './matcher.js';
+import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 
 export const EXPORT_FORMAT = 'folder-filter-scheduler/rules';
 export const EXPORT_VERSION = 1;
 
 const KNOWN_FIELDS = new Set(FIELDS);
-const KNOWN_OPERATORS = new Set([...Object.keys(OPERATORS), DOMAIN_IN_LIST, ...Object.keys(AGE_OPERATORS)]);
+const KNOWN_OPERATORS = new Set([
+  ...Object.keys(OPERATORS),
+  DOMAIN_IN_LIST,
+  IN_ADDRESS_BOOK,
+  ...Object.keys(AGE_OPERATORS),
+]);
 const AGE_OPERATOR_SET = new Set(Object.keys(AGE_OPERATORS));
 
 /**
@@ -48,6 +54,8 @@ export function ruleFingerprint(rule) {
         shape.domains = [...(c.domains ?? [])].map(normalizeDomain).filter(Boolean).sort();
       } else if (AGE_OPERATOR_SET.has(shape.operator)) {
         shape.days = ageDays(c);
+      } else if (shape.operator === IN_ADDRESS_BOOK) {
+        shape.addressBookId = String(c?.addressBookId ?? '');
       } else {
         shape.value = String(c?.value ?? '');
       }
@@ -129,7 +137,7 @@ function sanitizeFields(raw, problems, where) {
   return fields;
 }
 
-function sanitizeCondition(raw, problems, where) {
+function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
   const operator = String(raw?.operator ?? '');
   if (!KNOWN_OPERATORS.has(operator)) {
     problems.push(`${where}: unknown operator "${operator}"`);
@@ -160,6 +168,26 @@ function sanitizeCondition(raw, problems, where) {
     return condition;
   }
 
+  if (operator === IN_ADDRESS_BOOK) {
+    if (!fields.every((f) => ADDRESS_BOOK_FIELDS.includes(f))) {
+      problems.push(`${where}: address book checks only apply to ${ADDRESS_BOOK_FIELDS.join(', ')}`);
+      return null;
+    }
+    const id = typeof raw?.addressBookId === 'string' ? raw.addressBookId.trim() : '';
+    if (!id) {
+      problems.push(`${where}: no address book chosen`);
+      return null;
+    }
+    // Book ids are per profile, like folder ids. An unknown one is kept, not
+    // remapped: it never matches until the user picks a book, whereas quietly
+    // widening it to "all" could turn a small blocklist book into every contact.
+    if (id !== ALL_ADDRESS_BOOKS && knownAddressBookIds && !knownAddressBookIds.has(id)) {
+      problems.push(`${where}: address book not in this profile, choose one before saving`);
+    }
+    condition.addressBookId = id;
+    return condition;
+  }
+
   if (operator === DOMAIN_IN_LIST) {
     // Re-validate every domain: an imported list must not be able to smuggle in
     // a blank or malformed entry that would match every message.
@@ -180,7 +208,7 @@ function sanitizeCondition(raw, problems, where) {
   return condition;
 }
 
-function sanitizeRule(raw, index, problems, knownFolderIds) {
+function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds) {
   const where = `Rule ${index + 1}${raw?.name ? ` ("${raw.name}")` : ''}`;
 
   const action = ACTIONS_BY_ID[raw?.action?.type];
@@ -194,7 +222,7 @@ function sanitizeRule(raw, index, problems, knownFolderIds) {
   }
 
   const conditions = (Array.isArray(raw?.conditions) ? raw.conditions : [])
-    .map((c, i) => sanitizeCondition(c, problems, `${where} condition ${i + 1}`))
+    .map((c, i) => sanitizeCondition(c, problems, `${where} condition ${i + 1}`, knownAddressBookIds))
     .filter(Boolean);
 
   // A rule with no usable conditions is dropped rather than imported inert.
@@ -231,7 +259,7 @@ function sanitizeRule(raw, index, problems, knownFolderIds) {
  * Validate a parsed export file. Returns the rules worth keeping plus a
  * human-readable list of everything that was rejected and why.
  */
-export function sanitizeImport(data, { knownFolderIds, existingRules } = {}) {
+export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, existingRules } = {}) {
   const problems = [];
   const duplicates = [];
   const empty = { rules: [], duplicates, allowlist: null, intervalMinutes: null };
@@ -247,6 +275,7 @@ export function sanitizeImport(data, { knownFolderIds, existingRules } = {}) {
   }
 
   const known = knownFolderIds ? new Set(knownFolderIds) : null;
+  const knownBooks = knownAddressBookIds ? new Set(knownAddressBookIds) : null;
 
   // Fingerprint what is already present so re-importing the same file is a
   // no-op rather than a way to accumulate duplicate rules.
@@ -257,7 +286,7 @@ export function sanitizeImport(data, { knownFolderIds, existingRules } = {}) {
 
   const rules = [];
   for (const [i, raw] of data.rules.entries()) {
-    const rule = sanitizeRule(raw, i, problems, known);
+    const rule = sanitizeRule(raw, i, problems, known, knownBooks);
     if (!rule) continue;
 
     const fingerprint = ruleFingerprint(rule);

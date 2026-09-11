@@ -2,9 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { evaluateRule, requiresFullMessage, FIELDS, DOMAIN_IN_LIST } from './matcher.js';
+import { evaluateRule, requiresFullMessage, addressBookIdsOf, FIELDS, DOMAIN_IN_LIST } from './matcher.js';
+import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
+import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { runAction } from './actions.js';
-import { SCAN_KINDS, planScan, queryBoundsFor, stampScan } from './scan.js';
+import { planScan, queryBoundsFor, stampScan } from './scan.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -38,8 +40,45 @@ const DEFAULT_INTERVAL_MINUTES = 10;
 const HARVEST_FIELDS = ['reply-to', 'from'];
 const HARVEST_RULE_NAME = 'Spam domains';
 
-const log = (...args) => console.log('[FolderFilterScheduler]', ...args);
-const warn = (...args) => console.warn('[FolderFilterScheduler]', ...args);
+/**
+ * Logging goes to the console and to a persistent ring buffer, so a user can
+ * send a diagnostics report without opening the developer tools. Entries are
+ * batched and written on a short debounce, and flushed at the end of every run.
+ * Callers must never log addresses, domains, or subjects: the log ends up in
+ * shared reports. Rule names, counts, ids, and timestamps are fine.
+ */
+const pendingLog = [];
+let flushTimer = null;
+let flushChain = Promise.resolve();
+
+function record(level, args) {
+  pendingLog.push(makeEntry(level, args));
+  clearTimeout(flushTimer);
+  flushTimer = setTimeout(flushLog, 2000);
+}
+
+/** Serialised so two flushes can never interleave their read and write. */
+function flushLog() {
+  clearTimeout(flushTimer);
+  flushChain = flushChain
+    .then(async () => {
+      if (pendingLog.length === 0) return;
+      const batch = pendingLog.splice(0);
+      const { diagnostics } = await messenger.storage.local.get({ diagnostics: [] });
+      await messenger.storage.local.set({ diagnostics: appendEntries(diagnostics, batch, LOG_CAP) });
+    })
+    .catch((e) => console.warn('[FolderFilterScheduler] could not persist log', e));
+  return flushChain;
+}
+
+const log = (...args) => {
+  console.log('[FolderFilterScheduler]', ...args);
+  record('info', args);
+};
+const warn = (...args) => {
+  console.warn('[FolderFilterScheduler]', ...args);
+  record('warn', args);
+};
 
 const newId = () => globalThis.crypto.randomUUID();
 
@@ -170,7 +209,7 @@ async function* messagesInFolder(folderId, { fromDate, toDate } = {}) {
 }
 
 /** Run one rule across all its source folders. Returns count of affected messages. */
-async function runRule(rule, runState, manual) {
+async function runRule(rule, runState, manual, addressBooks) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
@@ -179,14 +218,17 @@ async function runRule(rule, runState, manual) {
   const { kind } = plan;
   const bounds = queryBoundsFor(rule, plan, startedAt);
   let affected = 0;
+  let scanned = 0;
+  let matched = 0;
   let scanFailed = false;
 
   for (const folderId of rule.folderIds ?? []) {
     const matchedIds = [];
     try {
       for await (const header of messagesInFolder(folderId, bounds)) {
+        scanned += 1;
         const message = await normalize(header, fetchFull);
-        if (evaluateRule(message, rule, { now: startedAt })) matchedIds.push(header.id);
+        if (evaluateRule(message, rule, { now: startedAt, addressBooks })) matchedIds.push(header.id);
       }
     } catch (e) {
       warn(`scan failed for folder ${folderId} in rule "${rule.name}"`, e);
@@ -194,6 +236,7 @@ async function runRule(rule, runState, manual) {
       continue;
     }
     try {
+      matched += matchedIds.length;
       await runAction(messenger, matchedIds, rule.action);
       affected += matchedIds.length;
     } catch (e) {
@@ -207,7 +250,14 @@ async function runRule(rule, runState, manual) {
   if (!scanFailed && rule.id) {
     runState[rule.id] = stampScan(runState[rule.id], kind, startedAt);
   }
-  if (kind !== SCAN_KINDS.incremental) log(`rule "${rule.name}" ran a ${kind} scan`);
+  const range = [
+    bounds.fromDate ? `from ${bounds.fromDate.toISOString()}` : 'from start',
+    bounds.toDate ? `to ${bounds.toDate.toISOString()}` : null,
+  ].filter(Boolean).join(' ');
+  log(
+    `rule "${rule.name}": ${kind} scan (${range}), ${scanned} scanned, ${matched} matched, ` +
+      `${affected} actioned, ${Date.now() - startedAt.getTime()} ms${scanFailed ? ', WITH ERRORS' : ''}`,
+  );
   return affected;
 }
 
@@ -216,17 +266,120 @@ async function runAllRules(reason = 'manual') {
   const { rules } = await loadConfig();
   const runState = await loadRunState();
   const manual = reason === 'manual';
+  const addressBooks = await loadAddressBooks(rules);
   let total = 0;
 
   for (const rule of rules) {
-    const n = await runRule(rule, runState, manual);
-    if (n) log(`rule "${rule.name}" affected ${n} message(s)`);
-    total += n;
+    total += await runRule(rule, runState, manual, addressBooks);
   }
 
   await saveRunState(runState);
   log(`run (${reason}) complete: ${total} message(s) affected across ${rules.length} rule(s)`);
+  await flushLog();
   return total;
+}
+
+// --- Address books -----------------------------------------------------------
+
+async function hasAddressBookAccess() {
+  try {
+    return await messenger.permissions.contains({ permissions: ['addressBooks'] });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Load every address book an enabled rule refers to, once per run, as Sets of
+ * lowercased addresses. A book that cannot be read maps to null, which the
+ * matcher treats as "never matches" in both polarities. For "all address
+ * books" a single unreadable book makes the whole union null: a partial union
+ * would make some contacts look like strangers to a "not in address book" rule.
+ *
+ * Remote (LDAP) books are skipped: they cannot be enumerated.
+ */
+async function loadAddressBooks(rules) {
+  const books = new Map();
+  const ids = new Set(rules.filter((r) => r.enabled !== false).flatMap(addressBookIdsOf));
+  if (ids.size === 0) return books;
+
+  if (!(await hasAddressBookAccess()) || !messenger.addressBooks?.list) {
+    warn(`address book access not granted; ${ids.size} address book condition(s) will not match`);
+    return books;
+  }
+
+  let local;
+  try {
+    local = (await messenger.addressBooks.list(false)).filter((b) => !b.remote);
+  } catch (e) {
+    warn('could not list address books', e);
+    return books;
+  }
+
+  const cache = new Map();
+  const read = async (id) => {
+    if (!cache.has(id)) {
+      try {
+        const contacts = await messenger.addressBooks.contacts.list(id);
+        cache.set(id, addressSetFromVCards(contacts.map((c) => c.vCard)));
+      } catch (e) {
+        warn(`could not read address book ${id}`, e);
+        cache.set(id, null);
+      }
+    }
+    return cache.get(id);
+  };
+
+  for (const id of ids) {
+    if (id === ALL_ADDRESS_BOOKS) {
+      const union = new Set();
+      let failed = false;
+      for (const book of local) {
+        const set = await read(book.id);
+        if (set === null) {
+          failed = true;
+          break;
+        }
+        for (const address of set) union.add(address);
+      }
+      books.set(id, failed ? null : union);
+    } else if (!local.some((b) => b.id === id)) {
+      warn(`address book ${id} not found; its conditions will not match`);
+      books.set(id, null);
+    } else {
+      books.set(id, await read(id));
+    }
+  }
+
+  log(
+    'address books loaded: ' +
+      [...books].map(([id, set]) => `${id}=${set ? `${set.size} address(es)` : 'unreadable'}`).join(', '),
+  );
+  return books;
+}
+
+// --- Diagnostics ---------------------------------------------------------------
+
+async function diagnosticsReport(includeValues) {
+  await flushLog();
+  const [{ config, runState, diagnostics }, alarm, browser, platform, addressBooks] = await Promise.all([
+    messenger.storage.local.get({ config: null, runState: {}, diagnostics: [] }),
+    messenger.alarms.get(ALARM_NAME).catch(() => null),
+    messenger.runtime.getBrowserInfo?.().catch(() => null) ?? null,
+    messenger.runtime.getPlatformInfo?.().catch(() => null) ?? null,
+    hasAddressBookAccess(),
+  ]);
+  return buildReport({
+    version: messenger.runtime.getManifest().version,
+    browser,
+    platform,
+    config,
+    runState,
+    alarm,
+    permissions: { addressBooks },
+    entries: diagnostics,
+    includeValues: includeValues === true,
+  });
 }
 
 // --- Right-click domain harvesting ----------------------------------------
@@ -357,6 +510,7 @@ async function handleHarvest(info) {
 
   const total = groups.reduce((n, g) => n + g.accepted.length, 0);
   log(`harvest scanned ${scanned} message(s), found ${total} candidate domain(s)`);
+  flushLog();
 
   const payload = {
     groups,
@@ -412,6 +566,13 @@ messenger.runtime.onMessage.addListener((msg) => {
   }
   if (msg?.command === 'reschedule') {
     return ensureAlarm().then(() => ({ ok: true }));
+  }
+  if (msg?.command === 'diagnostics') {
+    return diagnosticsReport(msg.includeValues).then((report) => ({ ok: true, report }));
+  }
+  if (msg?.command === 'clearDiagnostics') {
+    pendingLog.length = 0;
+    return messenger.storage.local.set({ diagnostics: [] }).then(() => ({ ok: true }));
   }
   if (msg?.command === 'harvestPayload') {
     return takePayload(msg.token).then((payload) => ({ ok: true, payload }));
