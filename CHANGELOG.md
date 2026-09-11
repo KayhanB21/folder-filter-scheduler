@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1]
+
+### Added
+- **Address-book conditions**: `from` / `reply-to` / `sender` · `is in address
+  book` · a chosen book or all local books, negatable. Books are loaded once per
+  run into a set, so each message is a single lookup. A book that cannot be
+  read, is empty, or no longer exists never matches in either polarity, nor does
+  a message with no usable sender address; with "all books", one unreadable book
+  makes the whole condition inert. LDAP books are skipped since they cannot be
+  enumerated. The `addressBooks` permission is optional and requested from the
+  options page only when this condition is used, so existing users see no update
+  prompt.
+- **Diagnostics**: a persistent log of the last 1000 engine events and a
+  plain-text report (copy or save) on the options page, including Thunderbird
+  version, interval, next alarm, each rule's shape and run state, and the log.
+  Condition values, domain lists and folder ids are redacted unless the user
+  opts in.
+
+### Changed
+- Every run now logs one line per rule: scan kind, date range, messages scanned,
+  matched and actioned, duration, and whether errors occurred.
+
 ## [0.3.0]
 
 ### Added

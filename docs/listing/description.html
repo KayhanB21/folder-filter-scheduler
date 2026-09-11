@@ -12,7 +12,7 @@ Folder Filter Scheduler runs your message-filter rules on any folder, automatica
 Select spam anywhere in the message list, right-click, and choose "Add spam domains to Folder Filter Scheduler". The sender domains are read from both Reply-To and From, shown to you in separate groups for review, and added to a rule that moves matching mail to Trash on your normal schedule. Subdomains are covered automatically, so blocking evil.com also catches bounce.evil.com. Well-known providers such as Gmail, Yahoo, Outlook and iCloud are never blocked, and that protected list is yours to edit.
 
 <strong>Conditions</strong>
-Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is, starts with, ends with, or matches regex. Match on message age with older than or newer than N days, for rules such as "move alerts to Archive after 30 days". Each condition can be negated and combined with AND or OR. A single condition can also hold a whole list of domains, which is what the right-click action fills in.
+Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is, starts with, ends with, or matches regex. Match on message age with older than or newer than N days, for rules such as "move alerts to Archive after 30 days". Check whether the sender is in one of your address books, or in none of them. Each condition can be negated and combined with AND or OR. A single condition can also hold a whole list of domains, which is what the right-click action fills in.
 
 <strong>Actions</strong>
 <ul>
@@ -29,7 +29,7 @@ Rules export to a JSON file and import back. A rule you already have is recognis
 Conditions on From, To, Cc, and Subject use indexed data and download nothing. Conditions on Reply-To, or other non-indexed headers, need the message itself, which is fetched on demand on an online IMAP folder. For speed and offline use, enable offline storage for that folder. Scheduled runs look only at mail that arrived since the previous run, plus a wider catch-up pass every 30 minutes for mail whose Date header lags its real arrival, so a large folder stays cheap. "Run all rules now" always scans everything.
 
 <strong>Privacy</strong>
-No data is collected or transmitted. Everything runs locally inside Thunderbird, and the add-on makes no network requests of its own.
+No data is collected or transmitted. Everything runs locally inside Thunderbird, and the add-on makes no network requests of its own. Address book access is optional and only requested if you use an address-book condition. The diagnostics report is only ever shared by you, and hides addresses, domains, patterns and folder names unless you choose to include them.
 
 <strong>Open source</strong>
 Licensed under MPL-2.0. Source, issues, and contributions welcome at <a href="https://github.com/KayhanB21/folder-filter-scheduler">github.com/KayhanB21/folder-filter-scheduler</a>

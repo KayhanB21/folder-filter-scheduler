@@ -52,6 +52,28 @@
     <section id="rules"></section>
     <button id="add-rule" type="button" class="add">+ Add rule</button>
 
+    <details id="diagnostics-box" class="allowlist diagnostics">
+      <summary>Diagnostics</summary>
+      <p class="allowlist-hint">
+        If something does not behave as expected, send this report along with your message. It
+        lists your Thunderbird version, the shape of each rule, and what recent runs did.
+        Addresses, domains, patterns and folder names are left out unless you tick the box below.
+        What you see here is exactly what will be shared.
+      </p>
+      <label class="toggle">
+        <input id="diag-values" type="checkbox" /> Include rule values (addresses, domains,
+        patterns, folders)
+      </label>
+      <textarea id="diag-report" rows="14" readonly spellcheck="false"></textarea>
+      <div class="diag-actions">
+        <button id="diag-copy" type="button">Copy report</button>
+        <button id="diag-save" type="button">Save report…</button>
+        <button id="diag-refresh" type="button">Refresh</button>
+        <span class="spacer"></span>
+        <button id="diag-clear" type="button" class="danger">Clear log</button>
+      </div>
+    </details>
+
     <!-- Template for a single rule card. -->
     <template id="rule-template">
       <article class="rule">
@@ -104,6 +126,7 @@
           <option value="endsWith">ends with</option>
           <option value="matchesRegex">matches regex</option>
           <option value="domainInList">domain is in list</option>
+          <option value="inAddressBook">is in address book</option>
           <!-- Shown only for the age field. -->
           <option value="olderThan" class="op-age">older than</option>
           <option value="newerThan" class="op-age">newer than</option>
@@ -113,6 +136,10 @@
         <!-- Shown only for the age field: a whole number of days. -->
         <input class="cond-days hidden" type="number" min="1" step="1" placeholder="30" />
         <span class="cond-days-unit hidden">days</span>
+        <!-- Shown only for the inAddressBook operator. Without access, the
+             button asks for the optional addressBooks permission instead. -->
+        <select class="cond-book hidden"></select>
+        <button class="cond-book-grant hidden" type="button">Allow address book access…</button>
         <button class="del-cond danger" type="button">×</button>
         <!-- Shown only for the domainInList operator: one domain per line. -->
         <textarea

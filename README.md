@@ -42,6 +42,13 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Age conditions**: `age` · `older than` / `newer than` · N days, for rules like
   "move security alerts to Archive after 30 days". Something the built-in
   retention policy cannot express, since it can only delete.
+- **Address-book conditions**: `from` / `reply-to` / `sender` · `is in address
+  book` · one book or all of them, negatable. "Move mail from people I don't know
+  out of this folder" becomes one condition. Access to address books is an
+  optional permission, asked for only when you use it.
+- **Diagnostics**: a report you can copy or save from the options page, with
+  your Thunderbird version, the shape of each rule, and what recent runs did.
+  Addresses, domains, patterns and folder names are left out unless you opt in.
 - **Actions**: move to Trash, move/copy to a chosen folder (**including a folder
   in a different account** — e.g. Yahoo Bulk → Outlook Trash), mark read /
   flagged / junk, or delete permanently. Actions live in a single
@@ -105,7 +112,8 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
 - **Match** — `any` (OR) or `all` (AND) of the conditions below.
 - **Condition** — e.g. `reply-to` · `contains` · a value. Tick **not** to negate.
   Choosing the `age` field swaps the row to `older than` / `newer than` and a
-  number of days.
+  number of days. Choosing `is in address book` swaps the value for a book picker;
+  the first time, it shows **Allow address book access…** instead.
 - **Action** — e.g. *Move to Trash (each message's own account)*. The hint line
   under it explains exactly where matches go.
 
@@ -163,12 +171,29 @@ reports how many messages were affected (e.g. *"Done — 1 message(s) affected."
 > `older than N`, only the part of the folder older than N days is queried, which
 > is the part a move action drains, so steady state stays cheap.
 
+> **Address-book conditions and safety.** Books are read once per run. A
+> condition whose book cannot be read, is empty, or was deleted **never matches**,
+> negated or not, and so does a message with no usable sender address. That is
+> what keeps "From is not in my address book → Trash" from emptying a folder
+> when a book fails to load. With "All address books", one unreadable book makes
+> the whole condition inert rather than treating its contacts as strangers.
+> Remote (LDAP) books cannot be enumerated and are skipped.
+
 > **Header matching and offline storage.** Conditions on `from`/`to`/`cc`/`subject`
 > read the indexed header and need no download. Conditions on `reply-to` (or other
 > non-indexed headers) require the full message: on an online IMAP folder it is
 > fetched on demand, so it works either way. For speed and offline use, enable
 > offline storage for the folder (Account Settings → Synchronization & Storage) and
 > run **Repair Folder** once.
+
+## Reporting a problem
+
+Open the options page, expand **Diagnostics** at the bottom, and press **Copy
+report** or **Save report…**. Paste it into your email or a
+[GitHub issue](https://github.com/KayhanB21/folder-filter-scheduler/issues). The
+report shows every scheduled and manual run of the last few hours: which scan
+ran, over what date range, how many messages were scanned and matched, and any
+errors. It is plain text and shown in full before you send it.
 
 ## Develop
 
