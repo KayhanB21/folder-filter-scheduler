@@ -74,6 +74,52 @@
       </div>
     </details>
 
+    <details id="advanced-box" class="allowlist">
+      <summary>Advanced</summary>
+      <p class="allowlist-hint">
+        Timings for the scan engine. The defaults suit most people; change them only
+        if you know why. Every value is clamped to a safe range when you save.
+      </p>
+      <label class="toggle adv-row">
+        <input id="adv-new-mail" type="checkbox" checked /> Also run when new mail arrives
+      </label>
+      <p class="adv-hint">
+        Without this, rules only run on the timer above, so new mail waits up to that
+        long. Thunderbird reports each arrival as it happens.
+      </p>
+
+      <label class="adv-row">
+        Wait <input id="adv-new-mail-delay" type="number" min="1" max="15" step="1" />
+        seconds after the last arrival before running
+      </label>
+      <p class="adv-hint">
+        One mail sync reports many messages. Waiting collapses the whole batch into a
+        single run. Capped at 15 seconds because Thunderbird suspends idle add-ons.
+      </p>
+
+      <label class="adv-row">
+        Catch-up scan every <input id="adv-catchup-every" type="number" min="1" max="1440" step="1" />
+        minutes, covering the last
+        <input id="adv-catchup-days" type="number" min="1" max="365" step="1" /> days
+      </label>
+      <p class="adv-hint">
+        Normal runs only look at mail dated since the previous run. A sender can
+        backdate the Date header, so this wider pass catches mail those runs missed.
+        Raising either number costs more work per pass.
+      </p>
+
+      <label class="adv-row">
+        Overlap each normal scan by <input id="adv-overlap" type="number" min="0" max="1440" step="1" />
+        minutes
+      </label>
+      <p class="adv-hint">
+        How far before the previous run each scan starts, so mail arriving mid-scan or
+        dated slightly early is not missed.
+      </p>
+
+      <button id="reset-advanced" type="button">Restore defaults</button>
+    </details>
+
     <!-- Template for a single rule card. -->
     <template id="rule-template">
       <article class="rule">

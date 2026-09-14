@@ -18,6 +18,7 @@
 
 import { AGE_OPERATORS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, fieldsOf, isAgeCondition } from './matcher.js';
 import { actionsOf, orderActions } from './actions.js';
+import { ADVANCED_DEFAULTS } from './settings.js';
 
 /** Most recent log entries kept. At a 2-minute interval that is several hours. */
 export const LOG_CAP = 1000;
@@ -131,6 +132,8 @@ export function buildReport(input) {
   } = input ?? {};
 
   const rules = Array.isArray(config?.rules) ? config.rules : [];
+  // Advanced settings are timings, never user content, so they are always shown.
+  const adv = { ...ADVANCED_DEFAULTS, ...(config?.advanced ?? {}) };
   const lines = [
     'Folder Filter Scheduler diagnostics',
     `generated: ${generatedAt.toISOString()}`,
@@ -141,6 +144,9 @@ export function buildReport(input) {
     '',
     `interval: every ${config?.intervalMinutes ?? '?'} min`,
     `next scheduled run: ${alarm?.scheduledTime ? new Date(alarm.scheduledTime).toISOString() : 'none scheduled'}`,
+    `run on new mail: ${adv.runOnNewMail ? `yes, ${adv.newMailDelaySeconds}s after the last arrival` : 'no'}`,
+    `scan overlap: ${adv.scanOverlapMinutes} min`,
+    `catch-up: every ${adv.catchUpEveryMinutes} min over the last ${adv.catchUpLookbackDays} day(s)`,
     `address book access: ${permissions?.addressBooks ? 'granted' : 'not granted'}`,
     `tag list access: ${permissions?.messagesTagsList ? 'granted' : 'not granted'}`,
     `protected domains: ${Array.isArray(config?.allowlist) ? config.allowlist.length : '?'}`,

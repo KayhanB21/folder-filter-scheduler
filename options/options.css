@@ -95,6 +95,11 @@ input, select {
 .condition .cond-value { flex: 1; }
 
 .toggle { display: inline-flex; align-items: center; gap: 4px; opacity: 0.85; white-space: nowrap; }
+
+/* Advanced: one setting per line, its explanation directly underneath. */
+.adv-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 14px 0 2px; }
+.adv-row input[type='number'] { width: 5.5em; }
+.adv-hint { margin: 0; font-size: 12px; opacity: 0.7; max-width: 70ch; }
 .hidden { display: none; }
 .actions { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
 /* Each action is one row plus its hint on a line of its own underneath. */

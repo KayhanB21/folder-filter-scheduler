@@ -63,6 +63,15 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   watch Yahoo Bulk *and* Outlook Junk at once, and "Move to Trash" routes each
   match to its own account's Trash.
 - **Any folder, on a timer** — not just the Inbox.
+- **Runs on new mail too.** Thunderbird reports each arrival through
+  `messages.onNewMailReceived`, so a rule fires seconds after mail lands instead
+  of waiting out the interval. Arrivals are debounced, so one mail sync causes
+  one run, and only the rules watching the folders that got mail are checked.
+  The timer stays as the backstop, and the trigger can be turned off under
+  **Advanced**.
+- **Advanced settings** at the bottom of the options page: the new-mail trigger
+  and its debounce, the catch-up interval and lookback, and the incremental scan
+  overlap. Every value is clamped to a safe range on save.
 - **Lazy fetching**: a rule that only uses `from`/`to`/`cc`/`subject` reads the
   free indexed header and downloads nothing; only `reply-to`/`list-id`/`sender`
   rules pay for a full message fetch. Offline storage is therefore a performance

@@ -6,6 +6,7 @@ import { FIELDS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, AGE_FIELD, AGE_OPERATORS, ageD
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
 import { diagnosticsFilename } from '../src/diagnostics.js';
 import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } from '../src/actions.js';
+import { ADVANCED_DEFAULTS, sanitizeAdvanced } from '../src/settings.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
 
@@ -570,11 +571,43 @@ function collectConfig(rejected = []) {
   });
 
   const { domains: allowlist } = parseDomainList($('#allowlist').value);
+  const advanced = sanitizeAdvanced(collectAdvanced());
+  rejected.push(...advanced.problems);
   return {
     intervalMinutes: Math.max(1, Number($('#interval').value) || 10),
+    advanced: advanced.settings,
     rules,
     allowlist,
   };
+}
+
+// --- Advanced ----------------------------------------------------------------
+
+/** Each advanced setting and the input that holds it. */
+const ADVANCED_INPUTS = {
+  runOnNewMail: '#adv-new-mail',
+  newMailDelaySeconds: '#adv-new-mail-delay',
+  catchUpEveryMinutes: '#adv-catchup-every',
+  catchUpLookbackDays: '#adv-catchup-days',
+  scanOverlapMinutes: '#adv-overlap',
+};
+
+function fillAdvanced(settings) {
+  for (const [key, selector] of Object.entries(ADVANCED_INPUTS)) {
+    const el = $(selector);
+    if (key === 'runOnNewMail') el.checked = settings[key] !== false;
+    else el.value = settings[key];
+  }
+}
+
+/** Raw values straight from the inputs; settings.js does the clamping. */
+function collectAdvanced() {
+  const raw = {};
+  for (const [key, selector] of Object.entries(ADVANCED_INPUTS)) {
+    const el = $(selector);
+    raw[key] = key === 'runOnNewMail' ? el.checked : el.value.trim();
+  }
+  return raw;
 }
 
 function flash(message, isError = false) {
@@ -595,6 +628,7 @@ async function save() {
   rulesEl.innerHTML = '';
   for (const rule of collected.rules) renderRule(rule);
   $('#allowlist').value = collected.allowlist.join('\n');
+  fillAdvanced(collected.advanced);
 
   // Address-book conditions are kept even when they cannot run yet, but the
   // user must be told, since a condition that never matches looks like a bug.
@@ -614,7 +648,7 @@ async function save() {
 
   flash(
     (rejected.length > 0
-      ? `Saved. Ignored ${rejected.length} unusable entr${rejected.length === 1 ? 'y' : 'ies'}: ${rejected.join(', ')}.`
+      ? `Saved, with ${rejected.length} correction${rejected.length === 1 ? '' : 's'}: ${rejected.join('; ')}.`
       : 'Saved. Schedule updated.') + note,
     note !== '',
   );
@@ -695,7 +729,7 @@ async function importRules(file) {
     return;
   }
 
-  const { rules, duplicates, allowlist, intervalMinutes, problems } = sanitizeImport(data, {
+  const { rules, duplicates, allowlist, intervalMinutes, advanced, problems } = sanitizeImport(data, {
     knownFolderIds: folders.map((f) => f.id),
     // Only checkable with access; otherwise ids are kept and checked on use.
     knownAddressBookIds: bookAccess ? addressBooks.map((b) => b.id) : undefined,
@@ -719,6 +753,7 @@ async function importRules(file) {
   for (const rule of rules) renderRule(rule);
   if (allowlist?.length) $('#allowlist').value = allowlist.join('\n');
   if (intervalMinutes) $('#interval').value = intervalMinutes;
+  if (advanced) fillAdvanced(advanced);
 
   const skipped = problems.length > 0 ? ` Skipped: ${problems.join('; ')}.` : '';
   flash(
@@ -755,6 +790,12 @@ async function init() {
   $('#reset-allowlist').addEventListener('click', () => {
     $('#allowlist').value = [...DEFAULT_ALLOWLIST].join('\n');
     flash('Protected domains restored to defaults. Press Save to keep them.');
+  });
+
+  fillAdvanced(sanitizeAdvanced(config?.advanced).settings);
+  $('#reset-advanced').addEventListener('click', () => {
+    fillAdvanced(ADVANCED_DEFAULTS);
+    flash('Advanced settings restored to defaults. Press Save to keep them.');
   });
 
   $('#add-rule').addEventListener('click', () => renderRule({}));

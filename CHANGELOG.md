@@ -15,6 +15,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   does not need it, so a rule keeps working if the permission is later revoked.
 - **Several actions per rule.** "If from is in address book Friends, tag as
   Friends and move to the Friends folder" is now one rule instead of two.
+- **Runs on new mail**, alongside the timer, as suggested by the Thunderbird
+  reviewer. `messages.onNewMailReceived` is registered with `monitorAllFolders`,
+  since the folders this add-on exists for are the ones that are not the Inbox.
+  Arrivals arm a debounce (10s by default), so one mail sync produces one run,
+  and the run is scoped to the rules watching the folders that received mail.
+  Needs no new permission: `accountsRead` and `messagesRead` are already held.
+- **A re-entrancy gate** (`src/runner.js`) in front of every run. Two runs can
+  no longer overlap and corrupt the per-rule run state, triggers arriving during
+  a run collapse into a single follow-up, and a manual "Run all rules now" is
+  never answered by an incremental pass that happened to be underway.
+- **Advanced settings** at the bottom of the options page: the new-mail trigger
+  and its delay, the catch-up interval and lookback, and the scan overlap. What
+  were constants in `scan.js` are now configurable, clamped in `src/settings.js`
+  so no value can make every run a full folder scan. They travel with rule
+  export and import.
 
 ### Changed
 - A rule stores `actions` (a list) instead of `action`. Existing rules are

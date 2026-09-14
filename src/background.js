@@ -7,6 +7,8 @@ import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
+import { ADVANCED_DEFAULTS, sanitizeAdvanced } from './settings.js';
+import { createRunner } from './runner.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -23,6 +25,13 @@ import {
  * reimplement the matching (see matcher.js) and the actions here, and drive them
  * from the `alarms` API to get the periodic-on-any-folder behaviour that stock
  * Thunderbird only offers for the Inbox.
+ *
+ * Two triggers, not one. The alarm is the backstop: it covers mail that arrived
+ * while Thunderbird was closed, rules that match on age, and the periodic
+ * catch-up for mail whose Date header lags its arrival. On top of that,
+ * `messages.onNewMailReceived` starts a run within seconds of mail landing, so
+ * a rule does not have to wait out the interval. Both go through `runner`,
+ * which keeps two runs from overlapping and corrupting the per-rule run state.
  */
 
 const ALARM_NAME = 'folder-filter-scheduler.tick';
@@ -111,6 +120,7 @@ async function loadConfig() {
 
   const loaded = {
     intervalMinutes: config?.intervalMinutes ?? DEFAULT_INTERVAL_MINUTES,
+    advanced: sanitizeAdvanced(config?.advanced).settings,
     rules,
     allowlist: Array.isArray(config?.allowlist) ? config.allowlist : [...DEFAULT_ALLOWLIST],
     skipHarvestConfirm: config?.skipHarvestConfirm === true,
@@ -143,12 +153,26 @@ async function saveRunState(runState) {
   await messenger.storage.local.set({ runState });
 }
 
-async function ensureAlarm() {
-  const { intervalMinutes } = await loadConfig();
+/**
+ * The advanced settings, cached for the new-mail listener.
+ *
+ * That listener fires once per arriving message and must decide in microseconds
+ * whether to arm its timer, so it cannot await storage. `applySettings` runs on
+ * install, on startup, on wake, and whenever the options page saves, which is
+ * every occasion the values can change.
+ */
+let advancedCache = { ...ADVANCED_DEFAULTS };
+
+async function applySettings() {
+  const { intervalMinutes, advanced } = await loadConfig();
+  advancedCache = advanced;
   const minutes = Math.max(1, Number(intervalMinutes) || DEFAULT_INTERVAL_MINUTES);
   await messenger.alarms.clear(ALARM_NAME);
   messenger.alarms.create(ALARM_NAME, { periodInMinutes: minutes });
-  log(`scheduled every ${minutes} min`);
+  log(
+    `scheduled every ${minutes} min; new-mail trigger ` +
+      (advanced.runOnNewMail ? `on (${advanced.newMailDelaySeconds}s)` : 'off'),
+  );
 }
 
 /** Read a message's headers without paying for MIME parsing (TB 147+). */
@@ -217,12 +241,12 @@ async function* messagesInFolder(folderId, { fromDate, toDate } = {}) {
 }
 
 /** Run one rule across all its source folders. Returns count of affected messages. */
-async function runRule(rule, runState, manual, addressBooks) {
+async function runRule(rule, runState, manual, addressBooks, settings) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
   const startedAt = new Date();
-  const plan = planScan(runState[rule.id], { manual, now: startedAt });
+  const plan = planScan(runState[rule.id], { manual, now: startedAt, settings });
   const { kind } = plan;
   const bounds = queryBoundsFor(rule, plan, startedAt);
   let affected = 0;
@@ -269,23 +293,53 @@ async function runRule(rule, runState, manual, addressBooks) {
   return affected;
 }
 
-/** Run every enabled rule. Exposed to the options page via runtime messaging. */
-async function runAllRules(reason = 'manual') {
-  const { rules } = await loadConfig();
+/**
+ * Run the enabled rules. Exposed to the options page via runtime messaging.
+ *
+ * `folderIds` narrows the run to the rules watching those folders, which is how
+ * a new-mail trigger avoids re-querying every folder of every rule because one
+ * message landed somewhere. A rule left out keeps its watermark, so the next
+ * scheduled run still covers it.
+ */
+async function runAllRules(reason = 'manual', { folderIds = null } = {}) {
+  const { rules, advanced } = await loadConfig();
   const runState = await loadRunState();
   const manual = reason === 'manual';
-  const addressBooks = await loadAddressBooks(rules);
+  const selected = folderIds
+    ? rules.filter((rule) => (rule.folderIds ?? []).some((id) => folderIds.has(id)))
+    : rules;
+
+  // Mail landed somewhere no rule watches. Return before touching the run
+  // state: stamping watermarks for a scan that never happened would be wrong,
+  // and writing storage on every unrelated arrival is pure noise.
+  if (folderIds && selected.length === 0) {
+    log(`run (${reason}) skipped: no rule watches the ${folderIds.size} folder(s) involved`);
+    await flushLog();
+    return 0;
+  }
+
+  const addressBooks = await loadAddressBooks(selected);
   let total = 0;
 
-  for (const rule of rules) {
-    total += await runRule(rule, runState, manual, addressBooks);
+  for (const rule of selected) {
+    total += await runRule(rule, runState, manual, addressBooks, advanced);
   }
 
   await saveRunState(runState);
-  log(`run (${reason}) complete: ${total} message(s) affected across ${rules.length} rule(s)`);
+  log(
+    `run (${reason}) complete: ${total} message(s) affected across ` +
+      `${selected.length} of ${rules.length} rule(s)`,
+  );
   await flushLog();
   return total;
 }
+
+/**
+ * Every trigger goes through here. See runner.js: it serialises runs so the
+ * alarm and a new-mail trigger cannot both read and write the run state, and
+ * collapses a burst of triggers into a single follow-up run.
+ */
+const runner = createRunner(runAllRules);
 
 // --- Address books -----------------------------------------------------------
 
@@ -569,15 +623,54 @@ messenger.menus.onClicked.addListener((info) => {
 });
 
 messenger.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM_NAME) runAllRules('scheduled');
+  if (alarm.name !== ALARM_NAME) return;
+  runner.request('scheduled').catch((e) => warn('scheduled run failed', e));
 });
+
+// --- New mail ----------------------------------------------------------------
+
+/**
+ * Arm and disarm, as the Thunderbird reviewer suggested.
+ *
+ * One sync fires this event once per message, so running on each would be
+ * absurd. Every event pushes the timer out instead, and the run happens once
+ * the arrivals stop. The folders seen meanwhile are collected so the run can
+ * skip rules that watch none of them.
+ *
+ * The timer is a plain setTimeout because `alarms` cannot go below a minute.
+ * That is safe only because the delay is capped at 15 seconds (see
+ * settings.js): an event page is suspended after about 30 seconds idle, and
+ * each arriving message resets that clock.
+ */
+let newMailTimer = null;
+const newMailFolders = new Set();
+
+function fireNewMailRun() {
+  newMailTimer = null;
+  const folderIds = new Set(newMailFolders);
+  newMailFolders.clear();
+  if (folderIds.size === 0) return;
+  log(`new mail in ${folderIds.size} folder(s), running`);
+  runner.request('newMail', { folderIds }).catch((e) => warn('new-mail run failed', e));
+}
+
+if (messenger.messages?.onNewMailReceived?.addListener) {
+  // monitorAllFolders: the whole point of this add-on is the folders that are
+  // not the Inbox, and without it the event covers only inbox-like folders.
+  messenger.messages.onNewMailReceived.addListener((folder) => {
+    if (!advancedCache.runOnNewMail) return;
+    if (folder?.id) newMailFolders.add(folder.id);
+    clearTimeout(newMailTimer);
+    newMailTimer = setTimeout(fireNewMailRun, advancedCache.newMailDelaySeconds * 1000);
+  }, true);
+}
 
 messenger.runtime.onMessage.addListener((msg) => {
   if (msg?.command === 'runNow') {
-    return runAllRules('manual').then((affected) => ({ ok: true, affected }));
+    return runner.request('manual').then((affected) => ({ ok: true, affected }));
   }
   if (msg?.command === 'reschedule') {
-    return ensureAlarm().then(() => ({ ok: true }));
+    return applySettings().then(() => ({ ok: true }));
   }
   if (msg?.command === 'diagnostics') {
     return diagnosticsReport(msg.includeValues).then((report) => ({ ok: true, report }));
@@ -599,9 +692,9 @@ messenger.runtime.onMessage.addListener((msg) => {
   return undefined;
 });
 
-messenger.runtime.onInstalled.addListener(ensureAlarm);
-messenger.runtime.onStartup.addListener(ensureAlarm);
-ensureAlarm();
+messenger.runtime.onInstalled.addListener(applySettings);
+messenger.runtime.onStartup.addListener(applySettings);
+applySettings();
 registerMenu();
 
 // Re-exported so the options UI can render the supported field list from one source of truth.

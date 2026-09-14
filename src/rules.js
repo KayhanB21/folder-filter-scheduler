@@ -18,6 +18,7 @@ import { ACTIONS_BY_ID, actionsOf, orderActions } from './actions.js';
 import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, ageDays } from './matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
+import { sanitizeAdvanced } from './settings.js';
 
 export const EXPORT_FORMAT = 'folder-filter-scheduler/rules';
 export const EXPORT_VERSION = 1;
@@ -118,6 +119,7 @@ export function buildExport(config, { exportedAt = new Date() } = {}) {
     version: EXPORT_VERSION,
     exportedAt: exportedAt.toISOString(),
     intervalMinutes: config?.intervalMinutes ?? 10,
+    advanced: sanitizeAdvanced(config?.advanced).settings,
     allowlist: config?.allowlist ?? [...DEFAULT_ALLOWLIST],
     rules: (config?.rules ?? []).map((rule) => ({
       // Informational only: import recomputes it rather than trusting the file.
@@ -315,7 +317,7 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
 export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, existingRules } = {}) {
   const problems = [];
   const duplicates = [];
-  const empty = { rules: [], duplicates, allowlist: null, intervalMinutes: null };
+  const empty = { rules: [], duplicates, allowlist: null, intervalMinutes: null, advanced: null };
 
   if (!data || typeof data !== 'object') {
     return { ...empty, problems: ['Not a valid JSON object'] };
@@ -363,5 +365,14 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
   const interval = Number(data.intervalMinutes);
   const intervalMinutes = Number.isFinite(interval) && interval >= 1 ? Math.floor(interval) : null;
 
-  return { rules, duplicates, allowlist, intervalMinutes, problems };
+  // Absent in files written before 0.3.2, and left alone rather than reset to
+  // defaults: an import should not quietly retune someone's scan engine.
+  let advanced = null;
+  if (data.advanced && typeof data.advanced === 'object') {
+    const sanitized = sanitizeAdvanced(data.advanced);
+    advanced = sanitized.settings;
+    problems.push(...sanitized.problems.map((p) => `Advanced: ${p}`));
+  }
+
+  return { rules, duplicates, allowlist, intervalMinutes, advanced, problems };
 }

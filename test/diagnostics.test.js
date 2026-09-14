@@ -37,6 +37,7 @@ test('appendEntries keeps only the newest entries and never mutates', () => {
 
 const config = {
   intervalMinutes: 2,
+  advanced: { runOnNewMail: true, newMailDelaySeconds: 10, scanOverlapMinutes: 90, catchUpEveryMinutes: 30, catchUpLookbackDays: 30 },
   allowlist: ['gmail.com'],
   rules: [
     {
@@ -80,6 +81,9 @@ test('the default report carries no addresses, domains, patterns, or folders', (
   assert.match(report, /interval: every 2 min/);
   assert.match(report, /address book access: granted/);
   assert.match(report, /tag list access: not granted/);
+  assert.match(report, /run on new mail: yes, 10s after the last arrival/);
+  assert.match(report, /scan overlap: 90 min/);
+  assert.match(report, /catch-up: every 30 min over the last 30 day\(s\)/);
   // Actions in execution order: the move consumes the message, so it is last.
   assert.match(report, /then: tag -> \(tag\)\n\s+then: move -> \(folder\)/);
   assert.match(report, /from matchesRegex <\d+ chars>/);
@@ -103,6 +107,17 @@ test('buildReport survives missing everything', () => {
   const report = buildReport({ config: null, runState: null, entries: [] });
   assert.match(report, /rules \(0\)/);
   assert.match(report, /next scheduled run: none scheduled/);
+  // A config written before 0.3.2 has no advanced block; the defaults stand in.
+  assert.match(report, /run on new mail: yes, 10s after the last arrival/);
+});
+
+test('the report shows the advanced settings actually in force', () => {
+  const report = buildReport({
+    ...base,
+    config: { ...config, advanced: { runOnNewMail: false, catchUpEveryMinutes: 120, catchUpLookbackDays: 7 } },
+  });
+  assert.match(report, /run on new mail: no/);
+  assert.match(report, /catch-up: every 120 min over the last 7 day\(s\)/);
 });
 
 test('describeCondition and formatEntry read as plain text', () => {
