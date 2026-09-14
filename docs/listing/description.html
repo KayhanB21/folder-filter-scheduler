@@ -18,9 +18,11 @@ Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is
 <ul>
 <li>Move to Trash, routed to each message's own account</li>
 <li>Move or copy to any folder, including a folder in a different account</li>
+<li>Tag with one of your Thunderbird tags, keeping any tags already on the message</li>
 <li>Mark as read, flagged, or junk</li>
 <li>Delete permanently</li>
 </ul>
+A rule can carry several actions, so "tag as Friends and move to the Friends folder" is one rule. Whatever order you put them in, the action that moves or deletes runs last, so the others still see the message.
 
 <strong>Backups and moving between profiles</strong>
 Rules export to a JSON file and import back. A rule you already have is recognised and skipped rather than duplicated, so importing a shared file is safe.

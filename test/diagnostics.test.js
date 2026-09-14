@@ -8,6 +8,7 @@ import {
   LOG_CAP,
   appendEntries,
   buildReport,
+  describeAction,
   describeCondition,
   diagnosticsFilename,
   formatEntry,
@@ -50,7 +51,7 @@ const config = {
         { field: 'from', operator: 'inAddressBook', addressBookId: 'all', negate: true },
         { field: 'age', operator: 'olderThan', days: 30 },
       ],
-      action: { type: 'move', folderId: 'account1://Archive' },
+      actions: [{ type: 'tag', tagKey: 'Family secrets' }, { type: 'move', folderId: 'account1://Archive' }],
     },
   ],
 };
@@ -64,20 +65,23 @@ const base = {
   config,
   runState,
   alarm: { scheduledTime: now.getTime() + 60_000 },
-  permissions: { addressBooks: true },
+  permissions: { addressBooks: true, messagesTagsList: false },
   entries,
   generatedAt: now,
 };
 
 test('the default report carries no addresses, domains, patterns, or folders', () => {
   const report = buildReport(base);
-  for (const secret of ['spammer', 'evil.example', 'bad.example', 'Junk"', 'account1://', 'Archive']) {
+  for (const secret of ['spammer', 'evil.example', 'bad.example', 'Junk"', 'account1://', 'Archive', 'Family secrets']) {
     assert.ok(!report.includes(secret), `leaked ${secret}`);
   }
   assert.match(report, /Thunderbird 152\.0/);
   assert.match(report, /extension: 0\.3\.1/);
   assert.match(report, /interval: every 2 min/);
   assert.match(report, /address book access: granted/);
+  assert.match(report, /tag list access: not granted/);
+  // Actions in execution order: the move consumes the message, so it is last.
+  assert.match(report, /then: tag -> \(tag\)\n\s+then: move -> \(folder\)/);
   assert.match(report, /from matchesRegex <\d+ chars>/);
   assert.match(report, /domain in list of 2/);
   assert.match(report, /from not in address book \(all\)/);
@@ -91,6 +95,7 @@ test('opting in includes the values', () => {
   assert.ok(report.includes('info@spammer'));
   assert.ok(report.includes('evil.example'));
   assert.ok(report.includes('account1://Junk'));
+  assert.ok(report.includes('Family secrets'));
   assert.match(report, /values included: yes/);
 });
 
@@ -103,6 +108,17 @@ test('buildReport survives missing everything', () => {
 test('describeCondition and formatEntry read as plain text', () => {
   assert.equal(describeCondition({ field: 'subject', operator: 'contains', value: 'abc' }), 'subject contains <3 chars>');
   assert.equal(formatEntry({ t: 'T', level: 'warn', msg: 'm' }), 'T WARN m');
+  assert.equal(describeAction({ type: 'tag', tagKey: '$label1' }), 'tag -> (tag)');
+  assert.equal(describeAction({ type: 'tag', tagKey: '$label1' }, { includeValues: true }), 'tag -> $label1');
+  assert.equal(describeAction({ type: 'markRead' }), 'markRead');
+});
+
+test('a pre-0.3.2 single-action rule still shows its action', () => {
+  const report = buildReport({
+    ...base,
+    config: { ...config, rules: [{ id: 'x', name: 'Old', action: { type: 'trash' } }] },
+  });
+  assert.match(report, /then: trash/);
 });
 
 test('diagnosticsFilename is timestamped like rule exports', () => {

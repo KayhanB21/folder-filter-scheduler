@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2]
+
+### Added
+- **Tag action**: apply one of your Thunderbird tags to matched mail. Tags
+  already on a message are preserved, since `messages.update` replaces the whole
+  tag array, so several rules can tag the same message. Listing your tags for
+  the picker needs the `messagesTagsList` permission, which is optional and
+  requested from the options page only when you add a tag action; applying a tag
+  does not need it, so a rule keeps working if the permission is later revoked.
+- **Several actions per rule.** "If from is in address book Friends, tag as
+  Friends and move to the Friends folder" is now one rule instead of two.
+
+### Changed
+- A rule stores `actions` (a list) instead of `action`. Existing rules are
+  migrated on first load and older export files still import.
+- Execution order is derived, not stored: the action that consumes the message
+  (move, Trash, delete permanently) always runs last, and at most one such action
+  is allowed per rule. A move invalidates the message ids, so "move then tag"
+  would otherwise tag nothing.
+
 ## [0.3.1]
 
 ### Added

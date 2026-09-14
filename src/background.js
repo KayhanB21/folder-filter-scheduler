@@ -5,7 +5,7 @@
 import { evaluateRule, requiresFullMessage, addressBookIdsOf, FIELDS, DOMAIN_IN_LIST } from './matcher.js';
 import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
-import { runAction } from './actions.js';
+import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
 import {
   DEFAULT_ALLOWLIST,
@@ -83,11 +83,14 @@ const warn = (...args) => {
 const newId = () => globalThis.crypto.randomUUID();
 
 /**
- * Load config, assigning a stable id to any rule that lacks one.
+ * Load config, bringing older rules up to the current shape.
  *
  * Rules need an identity that survives a rename because per-rule run state is
  * keyed by it. The options page rebuilds rules from the DOM on every save, so
  * the id is round-tripped through a hidden field there.
+ *
+ * Rules written before 0.3.2 carry a single `action`; they are rewritten to the
+ * `actions` list once, here, so nothing downstream has to know about both.
  */
 async function loadConfig() {
   const { config } = await messenger.storage.local.get({ config: null });
@@ -97,6 +100,11 @@ async function loadConfig() {
   for (const rule of rules) {
     if (!rule.id) {
       rule.id = newId();
+      migrated = true;
+    }
+    if (!Array.isArray(rule.actions)) {
+      rule.actions = actionsOf(rule);
+      delete rule.action;
       migrated = true;
     }
   }
@@ -237,7 +245,7 @@ async function runRule(rule, runState, manual, addressBooks) {
     }
     try {
       matched += matchedIds.length;
-      await runAction(messenger, matchedIds, rule.action);
+      await runActions(messenger, matchedIds, actionsOf(rule));
       affected += matchedIds.length;
     } catch (e) {
       warn(`action failed for rule "${rule.name}"`, e);
@@ -281,13 +289,15 @@ async function runAllRules(reason = 'manual') {
 
 // --- Address books -----------------------------------------------------------
 
-async function hasAddressBookAccess() {
+async function hasPermission(name) {
   try {
-    return await messenger.permissions.contains({ permissions: ['addressBooks'] });
+    return await messenger.permissions.contains({ permissions: [name] });
   } catch {
     return false;
   }
 }
+
+const hasAddressBookAccess = () => hasPermission('addressBooks');
 
 /**
  * Load every address book an enabled rule refers to, once per run, as Sets of
@@ -362,13 +372,15 @@ async function loadAddressBooks(rules) {
 
 async function diagnosticsReport(includeValues) {
   await flushLog();
-  const [{ config, runState, diagnostics }, alarm, browser, platform, addressBooks] = await Promise.all([
-    messenger.storage.local.get({ config: null, runState: {}, diagnostics: [] }),
-    messenger.alarms.get(ALARM_NAME).catch(() => null),
-    messenger.runtime.getBrowserInfo?.().catch(() => null) ?? null,
-    messenger.runtime.getPlatformInfo?.().catch(() => null) ?? null,
-    hasAddressBookAccess(),
-  ]);
+  const [{ config, runState, diagnostics }, alarm, browser, platform, addressBooks, messagesTagsList] =
+    await Promise.all([
+      messenger.storage.local.get({ config: null, runState: {}, diagnostics: [] }),
+      messenger.alarms.get(ALARM_NAME).catch(() => null),
+      messenger.runtime.getBrowserInfo?.().catch(() => null) ?? null,
+      messenger.runtime.getPlatformInfo?.().catch(() => null) ?? null,
+      hasAddressBookAccess(),
+      hasPermission('messagesTagsList'),
+    ]);
   return buildReport({
     version: messenger.runtime.getManifest().version,
     browser,
@@ -376,7 +388,7 @@ async function diagnosticsReport(includeValues) {
     config,
     runState,
     alarm,
-    permissions: { addressBooks },
+    permissions: { addressBooks, messagesTagsList },
     entries: diagnostics,
     includeValues: includeValues === true,
   });
@@ -409,7 +421,7 @@ function harvestRuleFor(config) {
       conditions: [
         { fields: [...HARVEST_FIELDS], operator: DOMAIN_IN_LIST, domains: [], negate: false },
       ],
-      action: { type: 'trash' },
+      actions: [{ type: 'trash' }],
     },
   };
 }

@@ -5,7 +5,7 @@
 import { FIELDS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, AGE_FIELD, AGE_OPERATORS, ageDays } from '../src/matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
 import { diagnosticsFilename } from '../src/diagnostics.js';
-import { ACTIONS, ACTIONS_BY_ID } from '../src/actions.js';
+import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } from '../src/actions.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
 
@@ -87,6 +87,70 @@ function requestBookAccess() {
       );
     })
     .catch((e) => flash(`Could not request address book access: ${e.message}`, true));
+}
+
+/**
+ * Listing the user's tags needs its own optional permission, asked for only
+ * when someone adds a tag action. Applying a tag does not: that goes through
+ * messages.update, which the add-on already holds. So a rule whose tag was
+ * chosen before the permission was revoked keeps working.
+ */
+let tagAccess = false;
+let tags = []; // MessageTag: { key, tag, color, ordinal }
+
+async function loadTags() {
+  try {
+    tagAccess = await messenger.permissions.contains({ permissions: ['messagesTagsList'] });
+  } catch {
+    tagAccess = false;
+  }
+  tags = [];
+  if (!tagAccess || !messenger.messages?.tags?.list) return;
+  try {
+    tags = await messenger.messages.tags.list();
+  } catch (e) {
+    console.warn('[FolderFilterScheduler] could not list tags', e);
+  }
+}
+
+function tagLabel(key) {
+  if (!key) return '(no tag)';
+  return tags.find((t) => t.key === key)?.tag ?? key;
+}
+
+function fillTagSelect(select, currentKey) {
+  select.innerHTML = '';
+  const keys = tags.map((t) => t.key);
+  // Keep a key from another profile visible rather than silently replacing it.
+  if (currentKey && !keys.includes(currentKey)) keys.push(currentKey);
+  for (const key of keys) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = tagLabel(key);
+    select.append(opt);
+  }
+  select.value = currentKey || keys[0] || '';
+}
+
+function refreshTagRows() {
+  for (const row of rulesEl.querySelectorAll('.action')) row.syncTags?.();
+}
+
+function requestTagAccess() {
+  // permissions.request must be called directly from the click, before any await.
+  messenger.permissions
+    .request({ permissions: ['messagesTagsList'] })
+    .then(async (granted) => {
+      await loadTags();
+      refreshTagRows();
+      flash(
+        granted
+          ? 'Tag access allowed. Pick a tag and press Save.'
+          : 'Tag access was not allowed, so your tags cannot be listed here.',
+        !granted,
+      );
+    })
+    .catch((e) => flash(`Could not request tag access: ${e.message}`, true));
 }
 
 /**
@@ -262,6 +326,66 @@ function renderCondition(container, cond = {}) {
   container.append(node);
 }
 
+/**
+ * One action row. A rule may hold several; the engine forces the one that moves
+ * or deletes to run last, so the order of the rows here is presentational.
+ */
+function renderAction(container, action = {}) {
+  const node = $('#action-template').content.firstElementChild.cloneNode(true);
+  const type = $('.action-type', node);
+  const folder = $('.action-folder', node);
+  const tag = $('.action-tag', node);
+  const tagGrant = $('.action-tag-grant', node);
+  const hint = $('.action-hint', node);
+
+  // Populate from the registry — the UI stays in lockstep with the engine.
+  for (const def of ACTIONS) {
+    const opt = document.createElement('option');
+    opt.value = def.id;
+    opt.textContent = def.label;
+    type.append(opt);
+  }
+  type.value = ACTIONS_BY_ID[action.type] ? action.type : 'trash';
+  fillFolderSelect(folder, action.folderId ? [action.folderId] : []);
+
+  // The chosen tag lives on the row so it survives while access is missing.
+  node.dataset.tagKey = action.tagKey ?? '';
+  tag.addEventListener('change', () => {
+    node.dataset.tagKey = tag.value;
+  });
+  tagGrant.addEventListener('click', requestTagAccess);
+  node.syncTags = () => {
+    const needsTag = ACTIONS_BY_ID[type.value]?.needsTag === true;
+    tag.classList.toggle('hidden', !needsTag || !tagAccess);
+    tagGrant.classList.toggle('hidden', !needsTag || tagAccess);
+    if (needsTag && tagAccess) {
+      fillTagSelect(tag, node.dataset.tagKey);
+      node.dataset.tagKey = tag.value;
+    }
+  };
+
+  const sync = () => {
+    const def = ACTIONS_BY_ID[type.value];
+    folder.classList.toggle('hidden', !def?.needsFolder);
+    hint.textContent = def?.hint ?? '';
+    hint.classList.toggle('danger', !!def?.danger);
+    node.syncTags();
+  };
+  type.addEventListener('change', sync);
+  sync();
+
+  $('.del-action', node).addEventListener('click', () => {
+    // A rule with no action would do nothing but still scan every folder.
+    if (container.querySelectorAll('.action').length <= 1) {
+      flash('A rule needs at least one action.', true);
+      return;
+    }
+    node.remove();
+  });
+
+  container.append(node);
+}
+
 function renderRule(rule = {}) {
   const node = $('#rule-template').content.firstElementChild.cloneNode(true);
   $('.rule-id', node).value = rule.id ?? crypto.randomUUID();
@@ -275,28 +399,19 @@ function renderRule(rule = {}) {
   for (const c of conds) renderCondition(condContainer, c);
   $('.add-cond', node).addEventListener('click', () => renderCondition(condContainer, {}));
 
-  const actionType = $('.rule-action-type', node);
-  const actionFolder = $('.rule-action-folder', node);
-  const actionHint = $('.action-hint', node);
-
-  // Populate the action dropdown from the registry — UI stays in lockstep with the engine.
-  for (const def of ACTIONS) {
-    const opt = document.createElement('option');
-    opt.value = def.id;
-    opt.textContent = def.label;
-    actionType.append(opt);
+  const actionContainer = $('.actions', node);
+  const actions = actionsOf(rule);
+  for (const a of orderActions(actions.length ? actions : [{ type: 'trash' }])) {
+    renderAction(actionContainer, a);
   }
-  fillFolderSelect(actionFolder, rule.action?.folderId ? [rule.action.folderId] : []);
-
-  const syncAction = () => {
-    const def = ACTIONS_BY_ID[actionType.value];
-    actionFolder.classList.toggle('hidden', !def?.needsFolder);
-    actionHint.textContent = def?.hint ?? '';
-    actionHint.classList.toggle('danger', !!def?.danger);
-  };
-  actionType.value = rule.action?.type ?? 'trash';
-  actionType.addEventListener('change', syncAction);
-  syncAction();
+  $('.add-action', node).addEventListener('click', () => {
+    // Default a second action to one that leaves the message in place: only one
+    // action per rule may move or delete it.
+    const hasTerminal = [...actionContainer.querySelectorAll('.action')].some((row) =>
+      isTerminalAction({ type: $('.action-type', row).value }),
+    );
+    renderAction(actionContainer, { type: hasTerminal ? 'markRead' : 'trash' });
+  });
 
   $('.del-rule', node).addEventListener('click', () => {
     collapsed.delete($('.rule-id', node).value);
@@ -336,12 +451,23 @@ function ruleSummary(node) {
   });
 
   const joiner = $('.rule-match', node).value === 'all' ? ' AND ' : ' OR ';
-  const action = ACTIONS_BY_ID[$('.rule-action-type', node).value]?.label ?? 'no action';
+  // Listed in execution order, not row order, so the digest matches what runs.
+  const actions = orderActions(
+    [...node.querySelectorAll('.action')].map((a) => ({
+      type: $('.action-type', a).value,
+      tagKey: a.dataset.tagKey,
+    })),
+  ).map((a) => {
+    const def = ACTIONS_BY_ID[a.type];
+    if (!def) return 'no action';
+    // "Tag as…" reads badly with the tag appended; the ellipsis means "picker".
+    return def.needsTag ? `${def.label.replace(/…$/, '')} ${tagLabel(a.tagKey)}` : def.label;
+  });
   const folderCount = $('.rule-folders', node).selectedOptions.length;
   const where = `${folderCount} folder${folderCount === 1 ? '' : 's'}`;
   const what = conditions.join(joiner) || 'no conditions';
 
-  return `${what} → ${action} · ${where}`;
+  return `${what} → ${actions.join(' + ') || 'no action'} · ${where}`;
 }
 
 function setCollapsed(node, isCollapsed) {
@@ -363,17 +489,50 @@ function setAllCollapsed(isCollapsed) {
   $('#toggle-all').textContent = isCollapsed ? 'Expand all' : 'Collapse all';
 }
 
+/**
+ * Read one rule's action rows back, in execution order.
+ *
+ * Only one action may consume the message: after a move or a delete the ids are
+ * no longer valid, so a second such action would fail silently at 3am. Extras
+ * are dropped here, while the user is still looking at the page.
+ */
+function collectActions(node, ruleName, rejected) {
+  const fromRows = [...node.querySelectorAll('.action')].map((row) => {
+    const type = $('.action-type', row).value;
+    const def = ACTIONS_BY_ID[type];
+    const action = { type };
+    if (def?.needsFolder) action.folderId = $('.action-folder', row).value;
+    if (def?.needsTag) action.tagKey = row.dataset.tagKey || '';
+    return action;
+  });
+
+  const actions = [];
+  let terminal = null;
+  for (const action of orderActions(fromRows)) {
+    if (ACTIONS_BY_ID[action.type]?.needsTag && !action.tagKey) {
+      rejected.push(`rule “${ruleName}”: tag action with no tag chosen`);
+      continue;
+    }
+    if (isTerminalAction(action)) {
+      if (terminal) {
+        rejected.push(`rule “${ruleName}”: only one action can move or delete, dropped “${action.type}”`);
+        continue;
+      }
+      terminal = action.type;
+    }
+    actions.push(action);
+  }
+  return actions;
+}
+
 /** Read the DOM back into a config object. */
 function collectConfig(rejected = []) {
   const rules = [...rulesEl.querySelectorAll('.rule')].map((node) => {
-    const actionType = $('.rule-action-type', node).value;
-    const action = { type: actionType };
-    if (actionType === 'move' || actionType === 'copy') {
-      action.folderId = $('.rule-action-folder', node).value;
-    }
+    const name = $('.rule-name', node).value.trim() || 'Untitled rule';
+    const actions = collectActions(node, name, rejected);
     return {
       id: $('.rule-id', node).value || crypto.randomUUID(),
-      name: $('.rule-name', node).value.trim() || 'Untitled rule',
+      name,
       enabled: $('.rule-enabled', node).checked,
       match: $('.rule-match', node).value,
       folderIds: [...$('.rule-folders', node).selectedOptions].map((o) => o.value),
@@ -406,7 +565,7 @@ function collectConfig(rejected = []) {
         }
         return condition;
       }),
-      action,
+      actions,
     };
   });
 
@@ -439,20 +598,25 @@ async function save() {
 
   // Address-book conditions are kept even when they cannot run yet, but the
   // user must be told, since a condition that never matches looks like a bug.
+  const tagActions = collected.rules.flatMap((r) => r.actions.filter((a) => a.type === 'tag'));
   const bookConds = collected.rules.flatMap((r) => r.conditions.filter((c) => c.operator === IN_ADDRESS_BOOK));
   const knownBooks = new Set([ALL_ADDRESS_BOOKS, ...addressBooks.map((b) => b.id)]);
-  let bookNote = '';
+  let note = '';
   if (bookConds.length > 0 && !bookAccess) {
-    bookNote = ' Address book conditions will not match until you allow address book access.';
+    note = ' Address book conditions will not match until you allow address book access.';
   } else if (bookConds.some((c) => !knownBooks.has(c.addressBookId))) {
-    bookNote = ' An address book condition points at a book that no longer exists; it will not match.';
+    note = ' An address book condition points at a book that no longer exists; it will not match.';
+  }
+  // Tagging itself works without messagesTagsList; only the picker needs it.
+  if (tagActions.length > 0 && tagAccess && tagActions.some((a) => !tags.some((t) => t.key === a.tagKey))) {
+    note += ' A tag action points at a tag that no longer exists.';
   }
 
   flash(
     (rejected.length > 0
       ? `Saved. Ignored ${rejected.length} unusable entr${rejected.length === 1 ? 'y' : 'ies'}: ${rejected.join(', ')}.`
-      : 'Saved. Schedule updated.') + bookNote,
-    bookNote !== '',
+      : 'Saved. Schedule updated.') + note,
+    note !== '',
   );
 }
 
@@ -576,6 +740,7 @@ async function runNow() {
 async function init() {
   await loadFolders();
   await loadAddressBooks();
+  await loadTags();
   const { config } = await messenger.storage.local.get({ config: null });
   $('#interval').value = config?.intervalMinutes ?? 10;
   const rules = config?.rules?.length ? config.rules : [{}];
@@ -615,7 +780,8 @@ async function init() {
 
   // Keep book rows honest if access is granted or revoked in the Add-ons Manager
   // while this page is open.
-  const onPermissionsChanged = () => loadAddressBooks().then(refreshBookRows);
+  const onPermissionsChanged = () =>
+    Promise.all([loadAddressBooks().then(refreshBookRows), loadTags().then(refreshTagRows)]);
   messenger.permissions.onAdded?.addListener(onPermissionsChanged);
   messenger.permissions.onRemoved?.addListener(onPermissionsChanged);
 

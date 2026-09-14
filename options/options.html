@@ -105,15 +105,27 @@
         <div class="conditions"></div>
         <button class="add-cond" type="button">+ Add condition</button>
 
-        <div class="row action-row">
-          <span class="lbl">Action</span>
-          <!-- Options are rendered from src/actions.js (single source of truth). -->
-          <select class="rule-action-type"></select>
-          <select class="rule-action-folder hidden"></select>
-        </div>
-        <p class="action-hint"></p>
+        <div class="actions"></div>
+        <button class="add-action" type="button">+ Add action</button>
         </div>
       </article>
+    </template>
+
+    <!-- One action of a rule. A rule may carry several; the engine runs the one
+         that moves or deletes last, so "tag, then move" keeps the tag. -->
+    <template id="action-template">
+      <div class="action">
+        <span class="lbl">Then</span>
+        <!-- Options are rendered from src/actions.js (single source of truth). -->
+        <select class="action-type"></select>
+        <select class="action-folder hidden"></select>
+        <!-- Shown only for the tag action. Without access, the button asks for
+             the optional messagesTagsList permission instead. -->
+        <select class="action-tag hidden"></select>
+        <button class="action-tag-grant hidden" type="button">Allow tag access…</button>
+        <button class="del-action danger" type="button">×</button>
+        <p class="action-hint"></p>
+      </div>
     </template>
 
     <template id="condition-template">
