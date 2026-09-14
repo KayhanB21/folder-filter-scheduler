@@ -7,7 +7,7 @@ only does for the Inbox.
 [![CI](https://github.com/KayhanB21/folder-filter-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/KayhanB21/folder-filter-scheduler/actions/workflows/ci.yml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://www.mozilla.org/MPL/2.0/)
 
-![The options page: a rule scheduled every few minutes, matching on Reply-To, moving matches to each account's Trash](docs/images/04-options-page.png)
+![The options page: a rule matching mail from an address book, tagging it and moving it to a folder, with two more rules collapsed to one-line summaries](docs/images/04-options-page.png)
 
 ## The gap this fills
 
@@ -128,8 +128,25 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
   Choosing the `age` field swaps the row to `older than` / `newer than` and a
   number of days. Choosing `is in address book` swaps the value for a book picker;
   the first time, it shows **Allow address book access…** instead.
-- **Action** — e.g. *Move to Trash (each message's own account)*. The hint line
-  under it explains exactly where matches go.
+- **Then** — one or more actions, e.g. *Tag as… Friends* followed by *Move to
+  folder…*. The hint line under each explains exactly what it does. **+ Add
+  action** adds another; the action that moves or deletes always runs last, so
+  the others still see the message.
+
+### Advanced settings
+
+![The Advanced section: the new-mail trigger and the scan timings](docs/images/07-advanced-settings.png)
+
+At the bottom of the options page. The defaults suit most people:
+
+- **Also run when new mail arrives** — on by default. Without it, rules only run
+  on the timer, so new mail waits up to that long.
+- **Wait N seconds** — one mail sync reports many messages; waiting collapses the
+  batch into a single run. Capped at 15 seconds, because Thunderbird suspends an
+  idle add-on after about 30.
+- **Catch-up scan** — how often, and how far back, the wider pass runs that
+  catches mail whose `Date` header lags its real arrival.
+- **Overlap** — how far before the previous run each normal scan starts.
 
 ### 3. Or build a block list by right-clicking
 
