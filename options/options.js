@@ -579,7 +579,7 @@ function collectConfig(rejected = []) {
 
 function flash(message, isError = false) {
   statusEl.textContent = message;
-  statusEl.style.color = isError ? 'var(--danger)' : 'var(--accent)';
+  statusEl.style.color = isError ? 'var(--danger)' : 'var(--accent-text)';
 }
 
 async function save() {

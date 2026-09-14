@@ -24,6 +24,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is allowed per rule. A move invalidates the message ids, so "move then tag"
   would otherwise tag nothing.
 
+### Fixed
+- Dark mode. The options and confirmation pages already followed Thunderbird's
+  theme through `color-scheme` and the system colours, but the two fixed accents
+  did not: the danger red (`#d70022`) and the accent blue used as text were both
+  close to unreadable on a dark background. Each now has a dark variant, and the
+  accent is split into a button-background colour and a text colour, which need
+  contrast in opposite directions.
+
 ## [0.3.1]
 
 ### Added

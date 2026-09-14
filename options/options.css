@@ -2,12 +2,31 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+/*
+ * Light and dark both come from Thunderbird: `color-scheme` opts the page into
+ * the host theme, and every surface is painted with a system colour (Canvas) or
+ * a mix of `currentColor`, so backgrounds, borders and text follow it with no
+ * second palette to keep in step.
+ *
+ * The fixed accents are the exception, and they need one variant each. A filled
+ * button carries white text, so its background must stay dark enough in both
+ * themes; the same colour used as *text* needs the opposite treatment, hence the
+ * separate --accent-text.
+ */
 :root {
   color-scheme: light dark;
   --accent: #0a84ff;
+  --accent-text: #0060df;
   --danger: #d70022;
   --border: color-mix(in srgb, currentColor 22%, transparent);
   --card: color-mix(in srgb, currentColor 4%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-text: #80c8ff;
+    --danger: #ff6a75;
+  }
 }
 
 body {
@@ -45,7 +64,7 @@ button.primary { background: var(--accent); color: #fff; border-color: transpare
 button.danger { color: var(--danger); }
 button.add { margin-top: 14px; }
 
-.status { min-height: 18px; margin: 10px 0; color: var(--accent); }
+.status { min-height: 18px; margin: 10px 0; color: var(--accent-text); }
 
 .rule {
   border: 1px solid var(--border);
