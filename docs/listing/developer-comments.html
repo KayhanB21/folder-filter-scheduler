@@ -5,14 +5,14 @@ Please report issues at <a href="https://github.com/KayhanB21/folder-filter-sche
 <ul>
 <li>Requires Thunderbird 147 or newer. Older versions stay on 0.1.1, which needs 128 or newer.</li>
 <li>Conditions on Reply-To and other non-indexed headers need the message available locally. For an IMAP folder, enable offline storage (Account Settings, Synchronization and Storage) for that folder, then run Repair Folder once.</li>
-<li>Scheduled runs pick up new mail using each message's Date header, which the sender controls. A backdated message is caught by the catch-up scan that runs every 30 minutes, so it can be delayed by up to half an hour. Mail backdated by more than 30 days is only caught by "Run all rules now", which scans the whole folder.</li>
+<li>Scheduled runs pick up new mail using each message's Date header, which the sender controls. A backdated message is caught by the catch-up scan, which runs every 30 minutes by default, so it can be delayed by up to that long. The interval is adjustable under Advanced. Mail backdated by more than the catch-up lookback is only caught by "Run all rules now", which scans the whole folder.</li>
 <li>Address-book conditions read local address books only. LDAP directories cannot be listed, so they are not offered.</li>
+<li>A rule may carry only one action that moves or deletes the message, since the first such action invalidates the message ids the rest would need.</li>
 <li>The store validator may show warnings for Thunderbird mail permissions such as messagesMove. These are expected: the validator is shared with Firefox, which does not have mail permissions. They do not affect the add-on.</li>
 </ul>
 
 <strong>Planned for future versions</strong>
 <ul>
-<li>Multiple actions per rule (for example, mark as read and move)</li>
 <li>Conditions on the message body</li>
 <li>Per-rule schedule intervals</li>
 <li>Translations for the options page, which is English only today</li>

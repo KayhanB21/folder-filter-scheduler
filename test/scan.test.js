@@ -71,6 +71,40 @@ test('garbage timestamps fall back to a catch-up rather than throwing', () => {
   );
 });
 
+test('the advanced settings override the default timings', () => {
+  const settings = { scanOverlapMinutes: 5, catchUpEveryMinutes: 120, catchUpLookbackDays: 2 };
+  const lastRun = minutesBefore(10);
+
+  // The catch-up is not due yet at 60 minutes when the interval is 120.
+  const state = { lastRunAt: iso(lastRun), lastCatchUpAt: iso(minutesBefore(60)) };
+  const incremental = planScan(state, { now, settings });
+  assert.equal(incremental.kind, SCAN_KINDS.incremental);
+  assert.equal(incremental.fromDate.getTime(), lastRun.getTime() - 5 * MINUTE);
+
+  const due = planScan({ ...state, lastCatchUpAt: iso(minutesBefore(120)) }, { now, settings });
+  assert.equal(due.kind, SCAN_KINDS.catchUp);
+  assert.equal(due.fromDate.getTime(), now.getTime() - 2 * 24 * 60 * MINUTE);
+});
+
+test('an overlap of zero starts the scan exactly at the previous run', () => {
+  const lastRun = minutesBefore(10);
+  const plan = planScan(
+    { lastRunAt: iso(lastRun), lastCatchUpAt: iso(minutesBefore(1)) },
+    { now, settings: { scanOverlapMinutes: 0 } },
+  );
+  assert.equal(plan.fromDate.getTime(), lastRun.getTime());
+});
+
+test('a manual run ignores the advanced settings entirely', () => {
+  const plan = planScan({ lastRunAt: iso(minutesBefore(1)) }, {
+    manual: true,
+    now,
+    settings: { catchUpLookbackDays: 1 },
+  });
+  assert.equal(plan.kind, SCAN_KINDS.full);
+  assert.equal(plan.fromDate, undefined);
+});
+
 test('stampScan advances lastRunAt on every kind and lastCatchUpAt only on wide scans', () => {
   const prior = { lastRunAt: iso(minutesBefore(10)), lastCatchUpAt: iso(minutesBefore(20)) };
 

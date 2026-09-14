@@ -8,6 +8,7 @@ import {
   LOG_CAP,
   appendEntries,
   buildReport,
+  describeAction,
   describeCondition,
   diagnosticsFilename,
   formatEntry,
@@ -36,6 +37,7 @@ test('appendEntries keeps only the newest entries and never mutates', () => {
 
 const config = {
   intervalMinutes: 2,
+  advanced: { runOnNewMail: true, newMailDelaySeconds: 10, scanOverlapMinutes: 90, catchUpEveryMinutes: 30, catchUpLookbackDays: 30 },
   allowlist: ['gmail.com'],
   rules: [
     {
@@ -50,7 +52,7 @@ const config = {
         { field: 'from', operator: 'inAddressBook', addressBookId: 'all', negate: true },
         { field: 'age', operator: 'olderThan', days: 30 },
       ],
-      action: { type: 'move', folderId: 'account1://Archive' },
+      actions: [{ type: 'tag', tagKey: 'Family secrets' }, { type: 'move', folderId: 'account1://Archive' }],
     },
   ],
 };
@@ -64,20 +66,26 @@ const base = {
   config,
   runState,
   alarm: { scheduledTime: now.getTime() + 60_000 },
-  permissions: { addressBooks: true },
+  permissions: { addressBooks: true, messagesTagsList: false },
   entries,
   generatedAt: now,
 };
 
 test('the default report carries no addresses, domains, patterns, or folders', () => {
   const report = buildReport(base);
-  for (const secret of ['spammer', 'evil.example', 'bad.example', 'Junk"', 'account1://', 'Archive']) {
+  for (const secret of ['spammer', 'evil.example', 'bad.example', 'Junk"', 'account1://', 'Archive', 'Family secrets']) {
     assert.ok(!report.includes(secret), `leaked ${secret}`);
   }
   assert.match(report, /Thunderbird 152\.0/);
   assert.match(report, /extension: 0\.3\.1/);
   assert.match(report, /interval: every 2 min/);
   assert.match(report, /address book access: granted/);
+  assert.match(report, /tag list access: not granted/);
+  assert.match(report, /run on new mail: yes, 10s after the last arrival/);
+  assert.match(report, /scan overlap: 90 min/);
+  assert.match(report, /catch-up: every 30 min over the last 30 day\(s\)/);
+  // Actions in execution order: the move consumes the message, so it is last.
+  assert.match(report, /then: tag -> \(tag\)\n\s+then: move -> \(folder\)/);
   assert.match(report, /from matchesRegex <\d+ chars>/);
   assert.match(report, /domain in list of 2/);
   assert.match(report, /from not in address book \(all\)/);
@@ -91,6 +99,7 @@ test('opting in includes the values', () => {
   assert.ok(report.includes('info@spammer'));
   assert.ok(report.includes('evil.example'));
   assert.ok(report.includes('account1://Junk'));
+  assert.ok(report.includes('Family secrets'));
   assert.match(report, /values included: yes/);
 });
 
@@ -98,11 +107,33 @@ test('buildReport survives missing everything', () => {
   const report = buildReport({ config: null, runState: null, entries: [] });
   assert.match(report, /rules \(0\)/);
   assert.match(report, /next scheduled run: none scheduled/);
+  // A config written before 0.3.2 has no advanced block; the defaults stand in.
+  assert.match(report, /run on new mail: yes, 10s after the last arrival/);
+});
+
+test('the report shows the advanced settings actually in force', () => {
+  const report = buildReport({
+    ...base,
+    config: { ...config, advanced: { runOnNewMail: false, catchUpEveryMinutes: 120, catchUpLookbackDays: 7 } },
+  });
+  assert.match(report, /run on new mail: no/);
+  assert.match(report, /catch-up: every 120 min over the last 7 day\(s\)/);
 });
 
 test('describeCondition and formatEntry read as plain text', () => {
   assert.equal(describeCondition({ field: 'subject', operator: 'contains', value: 'abc' }), 'subject contains <3 chars>');
   assert.equal(formatEntry({ t: 'T', level: 'warn', msg: 'm' }), 'T WARN m');
+  assert.equal(describeAction({ type: 'tag', tagKey: '$label1' }), 'tag -> (tag)');
+  assert.equal(describeAction({ type: 'tag', tagKey: '$label1' }, { includeValues: true }), 'tag -> $label1');
+  assert.equal(describeAction({ type: 'markRead' }), 'markRead');
+});
+
+test('a pre-0.3.2 single-action rule still shows its action', () => {
+  const report = buildReport({
+    ...base,
+    config: { ...config, rules: [{ id: 'x', name: 'Old', action: { type: 'trash' } }] },
+  });
+  assert.match(report, /then: trash/);
 });
 
 test('diagnosticsFilename is timestamped like rule exports', () => {

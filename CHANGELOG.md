@@ -4,6 +4,49 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2]
+
+### Added
+- **Tag action**: apply one of your Thunderbird tags to matched mail. Tags
+  already on a message are preserved, since `messages.update` replaces the whole
+  tag array, so several rules can tag the same message. Listing your tags for
+  the picker needs the `messagesTagsList` permission, which is optional and
+  requested from the options page only when you add a tag action; applying a tag
+  does not need it, so a rule keeps working if the permission is later revoked.
+- **Several actions per rule.** "If from is in address book Friends, tag as
+  Friends and move to the Friends folder" is now one rule instead of two.
+- **Runs on new mail**, alongside the timer, as suggested by the Thunderbird
+  reviewer. `messages.onNewMailReceived` is registered with `monitorAllFolders`,
+  since the folders this add-on exists for are the ones that are not the Inbox.
+  Arrivals arm a debounce (10s by default), so one mail sync produces one run,
+  and the run is scoped to the rules watching the folders that received mail.
+  Needs no new permission: `accountsRead` and `messagesRead` are already held.
+- **A re-entrancy gate** (`src/runner.js`) in front of every run. Two runs can
+  no longer overlap and corrupt the per-rule run state, triggers arriving during
+  a run collapse into a single follow-up, and a manual "Run all rules now" is
+  never answered by an incremental pass that happened to be underway.
+- **Advanced settings** at the bottom of the options page: the new-mail trigger
+  and its delay, the catch-up interval and lookback, and the scan overlap. What
+  were constants in `scan.js` are now configurable, clamped in `src/settings.js`
+  so no value can make every run a full folder scan. They travel with rule
+  export and import.
+
+### Changed
+- A rule stores `actions` (a list) instead of `action`. Existing rules are
+  migrated on first load and older export files still import.
+- Execution order is derived, not stored: the action that consumes the message
+  (move, Trash, delete permanently) always runs last, and at most one such action
+  is allowed per rule. A move invalidates the message ids, so "move then tag"
+  would otherwise tag nothing.
+
+### Fixed
+- Dark mode. The options and confirmation pages already followed Thunderbird's
+  theme through `color-scheme` and the system colours, but the two fixed accents
+  did not: the danger red (`#d70022`) and the accent blue used as text were both
+  close to unreadable on a dark background. Each now has a dark variant, and the
+  accent is split into a button-background colour and a text colour, which need
+  contrast in opposite directions.
+
 ## [0.3.1]
 
 ### Added

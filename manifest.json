@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
   "description": "__MSG_extensionDescription__",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "author": "Kayhan",
   "default_locale": "en",
   "browser_specific_settings": {
@@ -25,7 +25,7 @@
     "storage",
     "alarms"
   ],
-  "optional_permissions": ["addressBooks"],
+  "optional_permissions": ["addressBooks", "messagesTagsList"],
   "background": {
     "scripts": ["src/background.js"],
     "type": "module"

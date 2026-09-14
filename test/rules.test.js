@@ -30,7 +30,52 @@ test('a round trip preserves a valid rule', () => {
   assert.equal(rules.length, 1);
   assert.deepEqual(rules[0].conditions[0].fields, ['reply-to', 'from']);
   assert.deepEqual(rules[0].conditions[0].domains, ['evil.com']);
-  assert.equal(rules[0].action.type, 'trash');
+  // The pre-0.3.2 single-action shape is read back as a one-entry list.
+  assert.deepEqual(rules[0].actions, [{ type: 'trash' }]);
+});
+
+test('multiple actions survive a round trip, terminal action last', () => {
+  const rule = {
+    ...validRule,
+    action: undefined,
+    actions: [{ type: 'move', folderId: 'friends' }, { type: 'tag', tagKey: '$label1' }],
+  };
+  const { rules, problems } = sanitizeImport(buildExport({ rules: [rule] }));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].actions, [
+    { type: 'tag', tagKey: '$label1' },
+    { type: 'move', folderId: 'friends' },
+  ]);
+});
+
+test('only one action that consumes the message is kept', () => {
+  const { rules, problems } = sanitizeImport(
+    file({
+      rules: [{
+        ...validRule,
+        action: undefined,
+        actions: [{ type: 'trash' }, { type: 'deletePermanently' }, { type: 'markRead' }],
+      }],
+    }),
+  );
+  assert.deepEqual(rules[0].actions, [{ type: 'markRead' }, { type: 'trash' }]);
+  assert.ok(problems.some((p) => /only end in one action/.test(p)));
+});
+
+test('a tag action without a tag is dropped', () => {
+  const { rules, problems } = sanitizeImport(
+    file({ rules: [{ ...validRule, action: undefined, actions: [{ type: 'tag' }, { type: 'trash' }] }] }),
+  );
+  assert.deepEqual(rules[0].actions, [{ type: 'trash' }]);
+  assert.ok(problems.some((p) => /needs a tag/.test(p)));
+});
+
+test('a rule left with no usable action is skipped entirely', () => {
+  const { rules, problems } = sanitizeImport(
+    file({ rules: [{ ...validRule, action: undefined, actions: [{ type: 'tag' }] }] }),
+  );
+  assert.deepEqual(rules, []);
+  assert.ok(problems.some((p) => /no usable action/.test(p)));
 });
 
 test('export never includes run state or rule ids', () => {
@@ -77,6 +122,23 @@ test('an unknown action is refused rather than imported', () => {
 test('a folder-requiring action without a folder is refused', () => {
   const { rules } = sanitizeImport(file({ rules: [{ ...validRule, action: { type: 'move' } }] }));
   assert.deepEqual(rules, []);
+});
+
+test('the fingerprint ignores the order actions were written in', () => {
+  const a = { ...validRule, action: undefined, actions: [{ type: 'tag', tagKey: '$label1' }, { type: 'trash' }] };
+  const b = { ...validRule, action: undefined, actions: [{ type: 'trash' }, { type: 'tag', tagKey: '$label1' }] };
+  assert.equal(ruleFingerprint(a), ruleFingerprint(b));
+  assert.notEqual(
+    ruleFingerprint(a),
+    ruleFingerprint({ ...a, actions: [{ type: 'tag', tagKey: '$label2' }, { type: 'trash' }] }),
+  );
+});
+
+test('a single-action rule and its list form fingerprint identically', () => {
+  assert.equal(
+    ruleFingerprint(validRule),
+    ruleFingerprint({ ...validRule, action: undefined, actions: [{ type: 'trash' }] }),
+  );
 });
 
 test('an unknown operator or header field drops the condition', () => {

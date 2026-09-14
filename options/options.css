@@ -2,12 +2,31 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+/*
+ * Light and dark both come from Thunderbird: `color-scheme` opts the page into
+ * the host theme, and every surface is painted with a system colour (Canvas) or
+ * a mix of `currentColor`, so backgrounds, borders and text follow it with no
+ * second palette to keep in step.
+ *
+ * The fixed accents are the exception, and they need one variant each. A filled
+ * button carries white text, so its background must stay dark enough in both
+ * themes; the same colour used as *text* needs the opposite treatment, hence the
+ * separate --accent-text.
+ */
 :root {
   color-scheme: light dark;
   --accent: #0a84ff;
+  --accent-text: #0060df;
   --danger: #d70022;
   --border: color-mix(in srgb, currentColor 22%, transparent);
   --card: color-mix(in srgb, currentColor 4%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-text: #80c8ff;
+    --danger: #ff6a75;
+  }
 }
 
 body {
@@ -45,7 +64,7 @@ button.primary { background: var(--accent); color: #fff; border-color: transpare
 button.danger { color: var(--danger); }
 button.add { margin-top: 14px; }
 
-.status { min-height: 18px; margin: 10px 0; color: var(--accent); }
+.status { min-height: 18px; margin: 10px 0; color: var(--accent-text); }
 
 .rule {
   border: 1px solid var(--border);
@@ -68,7 +87,7 @@ input, select {
   background: Canvas;
   color: inherit;
 }
-.rule-folders, .rule-action-folder { flex: 1; min-width: 0; }
+.rule-folders, .action-folder { flex: 1; min-width: 0; }
 .rule-name, .cond-value { min-width: 0; }
 
 .conditions { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
@@ -76,9 +95,17 @@ input, select {
 .condition .cond-value { flex: 1; }
 
 .toggle { display: inline-flex; align-items: center; gap: 4px; opacity: 0.85; white-space: nowrap; }
+
+/* Advanced: one setting per line, its explanation directly underneath. */
+.adv-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 14px 0 2px; }
+.adv-row input[type='number'] { width: 5.5em; }
+.adv-hint { margin: 0; font-size: 12px; opacity: 0.7; max-width: 70ch; }
 .hidden { display: none; }
-.action-row { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
-.action-hint { margin: 4px 0 0 74px; font-size: 12px; opacity: 0.7; }
+.actions { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
+/* Each action is one row plus its hint on a line of its own underneath. */
+.action { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.action .lbl { width: 64px; padding-top: 0; }
+.action-hint { flex-basis: 100%; margin: 0 0 0 70px; font-size: 12px; opacity: 0.7; }
 .action-hint.danger { color: var(--danger); opacity: 1; }
 
 /* Domain-list condition: the textarea takes its own line under the operator row. */

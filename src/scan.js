@@ -26,10 +26,16 @@
  */
 
 import { AGE_OPERATORS, ageDays, isAgeCondition } from './matcher.js';
+import { ADVANCED_DEFAULTS } from './settings.js';
 
-export const SCAN_OVERLAP_MINUTES = 90;
-export const CATCH_UP_EVERY_MINUTES = 30;
-export const CATCH_UP_LOOKBACK_DAYS = 30;
+/**
+ * The timings are user-adjustable under Advanced on the options page; these
+ * are the defaults, and what `planScan` falls back to when no settings are
+ * passed. settings.js owns the clamping.
+ */
+export const SCAN_OVERLAP_MINUTES = ADVANCED_DEFAULTS.scanOverlapMinutes;
+export const CATCH_UP_EVERY_MINUTES = ADVANCED_DEFAULTS.catchUpEveryMinutes;
+export const CATCH_UP_LOOKBACK_DAYS = ADVANCED_DEFAULTS.catchUpLookbackDays;
 
 export const SCAN_KINDS = Object.freeze({
   full: 'full',
@@ -49,36 +55,34 @@ function parseDate(value) {
  * Plan a scan for one rule.
  *
  * @param {{lastRunAt?: string, lastCatchUpAt?: string}|undefined} state
- * @param {{manual?: boolean, now?: Date}} [options]
+ * @param {{manual?: boolean, now?: Date, settings?: object}} [options]
  * @returns {{kind: string, fromDate: Date|undefined}}
  */
-export function planScan(state, { manual = false, now = new Date() } = {}) {
+export function planScan(state, { manual = false, now = new Date(), settings } = {}) {
   if (manual) return { kind: SCAN_KINDS.full, fromDate: undefined };
 
+  const overlapMinutes = settings?.scanOverlapMinutes ?? SCAN_OVERLAP_MINUTES;
+  const everyMinutes = settings?.catchUpEveryMinutes ?? CATCH_UP_EVERY_MINUTES;
+  const lookbackDays = settings?.catchUpLookbackDays ?? CATCH_UP_LOOKBACK_DAYS;
+  const catchUp = () => ({
+    kind: SCAN_KINDS.catchUp,
+    fromDate: new Date(now.getTime() - lookbackDays * 24 * 60 * MINUTE),
+  });
+
   const lastCatchUp = parseDate(state?.lastCatchUpAt);
-  const catchUpDue =
-    !lastCatchUp || now.getTime() - lastCatchUp.getTime() >= CATCH_UP_EVERY_MINUTES * MINUTE;
-  if (catchUpDue) {
-    return {
-      kind: SCAN_KINDS.catchUp,
-      fromDate: new Date(now.getTime() - CATCH_UP_LOOKBACK_DAYS * 24 * 60 * MINUTE),
-    };
+  if (!lastCatchUp || now.getTime() - lastCatchUp.getTime() >= everyMinutes * MINUTE) {
+    return catchUp();
   }
 
   // A missing lastRunAt with a valid lastCatchUpAt cannot happen through
   // stampScan, but state is user-visible storage, so fall back to a catch-up
   // rather than trusting it.
   const lastRun = parseDate(state?.lastRunAt);
-  if (!lastRun) {
-    return {
-      kind: SCAN_KINDS.catchUp,
-      fromDate: new Date(now.getTime() - CATCH_UP_LOOKBACK_DAYS * 24 * 60 * MINUTE),
-    };
-  }
+  if (!lastRun) return catchUp();
 
   return {
     kind: SCAN_KINDS.incremental,
-    fromDate: new Date(lastRun.getTime() - SCAN_OVERLAP_MINUTES * MINUTE),
+    fromDate: new Date(lastRun.getTime() - overlapMinutes * MINUTE),
   };
 }
 

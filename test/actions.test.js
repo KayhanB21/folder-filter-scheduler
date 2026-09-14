@@ -4,10 +4,15 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ACTIONS, ACTIONS_BY_ID, runAction } from '../src/actions.js';
+import { ACTIONS, ACTIONS_BY_ID, actionsOf, orderActions, runAction, runActions } from '../src/actions.js';
 
-/** A messenger double that records the calls each action makes. */
-function fakeMessenger() {
+/**
+ * A messenger double that records the calls each action makes.
+ *
+ * `tagsById` seeds what `messages.get` reports, so the tag action can be tested
+ * for the thing that matters: it must not wipe tags that are already there.
+ */
+function fakeMessenger(tagsById = {}) {
   const calls = [];
   const rec = (name) => (...args) => {
     calls.push({ name, args });
@@ -20,6 +25,7 @@ function fakeMessenger() {
       move: rec('move'),
       copy: rec('copy'),
       update: rec('update'),
+      get: (id) => Promise.resolve({ id, tags: tagsById[id] ?? [] }),
     },
   };
 }
@@ -77,4 +83,80 @@ test('empty id list is a no-op', async () => {
 test('unknown action type throws', async () => {
   const m = fakeMessenger();
   await assert.rejects(() => runAction(m, [1], { type: 'nope' }), /Unknown action/);
+});
+
+test('tagging keeps the tags a message already carries', async () => {
+  const m = fakeMessenger({ 1: ['$label3'], 2: [] });
+  await runAction(m, [1, 2], { type: 'tag', tagKey: '$label1' });
+  const updates = m.calls.filter((c) => c.name === 'update');
+  assert.deepEqual(
+    updates.map((c) => c.args).sort((a, b) => a[0] - b[0]),
+    [
+      [1, { tags: ['$label3', '$label1'] }],
+      [2, { tags: ['$label1'] }],
+    ],
+  );
+});
+
+test('tagging a message that already has the tag writes nothing', async () => {
+  const m = fakeMessenger({ 7: ['$label1'] });
+  await runAction(m, [7], { type: 'tag', tagKey: '$label1' });
+  assert.equal(m.calls.filter((c) => c.name === 'update').length, 0);
+});
+
+test('a tag action without a tag throws (and runs nothing)', async () => {
+  const m = fakeMessenger();
+  await assert.rejects(() => runAction(m, [1], { type: 'tag' }), /requires a tag/);
+  assert.equal(m.calls.filter((c) => c.name === 'update').length, 0);
+});
+
+test('the action that consumes the message always runs last', async () => {
+  // Written move-then-tag, which would tag nothing: the move invalidates the ids.
+  const m = fakeMessenger({ 1: [] });
+  await runActions(m, [1], [
+    { type: 'move', folderId: 'friends' },
+    { type: 'tag', tagKey: '$label1' },
+  ]);
+  // messages.get is not recorded; the update (the tag) lands before the move.
+  assert.deepEqual(
+    m.calls.map((c) => c.name),
+    ['update', 'move'],
+  );
+});
+
+test('orderActions leaves an unknown type in place for runAction to reject', async () => {
+  assert.deepEqual(orderActions([{ type: 'nope' }, { type: 'trash' }]), [
+    { type: 'nope' },
+    { type: 'trash' },
+  ]);
+  const m = fakeMessenger();
+  await assert.rejects(() => runActions(m, [1], [{ type: 'nope' }]), /Unknown action/);
+});
+
+test('copy is not terminal, so it can precede a move', () => {
+  assert.equal(ACTIONS_BY_ID.copy.terminal, undefined);
+  assert.equal(ACTIONS_BY_ID.move.terminal, true);
+  assert.equal(ACTIONS_BY_ID.trash.terminal, true);
+  assert.equal(ACTIONS_BY_ID.deletePermanently.terminal, true);
+});
+
+test('actionsOf reads both the old single action and the list', () => {
+  assert.deepEqual(actionsOf({ action: { type: 'trash' } }), [{ type: 'trash' }]);
+  assert.deepEqual(actionsOf({ actions: [{ type: 'markRead' }] }), [{ type: 'markRead' }]);
+  // The list wins when a migrated rule somehow still carries both.
+  assert.deepEqual(actionsOf({ action: { type: 'trash' }, actions: [{ type: 'markRead' }] }), [
+    { type: 'markRead' },
+  ]);
+  assert.deepEqual(actionsOf({}), []);
+});
+
+test('a rule with no action throws rather than scanning for nothing', async () => {
+  const m = fakeMessenger();
+  await assert.rejects(() => runActions(m, [1], []), /no action/);
+});
+
+test('runActions on an empty id list does nothing', async () => {
+  const m = fakeMessenger();
+  await runActions(m, [], [{ type: 'trash' }]);
+  assert.equal(m.calls.length, 0);
 });

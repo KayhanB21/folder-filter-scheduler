@@ -14,10 +14,11 @@
  * dropped and reported instead of being stored and quietly misbehaving later.
  */
 
-import { ACTIONS_BY_ID } from './actions.js';
+import { ACTIONS_BY_ID, actionsOf, orderActions } from './actions.js';
 import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, ageDays } from './matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
+import { sanitizeAdvanced } from './settings.js';
 
 export const EXPORT_FORMAT = 'folder-filter-scheduler/rules';
 export const EXPORT_VERSION = 1;
@@ -63,11 +64,19 @@ export function ruleFingerprint(rule) {
     })
     .sort();
 
-  const action = { type: String(rule?.action?.type ?? '') };
-  if (rule?.action?.folderId) action.folderId = String(rule.action.folderId);
+  // Sorted: within a rule the non-terminal actions commute, and the terminal
+  // one is forced last at run time, so stored order carries no meaning.
+  const actions = actionsOf(rule)
+    .map((a) => {
+      const shape = { type: String(a?.type ?? '') };
+      if (a?.folderId) shape.folderId = String(a.folderId);
+      if (a?.tagKey) shape.tagKey = String(a.tagKey);
+      return JSON.stringify(shape, Object.keys(shape).sort());
+    })
+    .sort();
 
   return JSON.stringify({
-    action,
+    actions,
     conditions,
     folderIds: [...(rule?.folderIds ?? [])].map(String).sort(),
     match: rule?.match === 'all' ? 'all' : 'any',
@@ -110,6 +119,7 @@ export function buildExport(config, { exportedAt = new Date() } = {}) {
     version: EXPORT_VERSION,
     exportedAt: exportedAt.toISOString(),
     intervalMinutes: config?.intervalMinutes ?? 10,
+    advanced: sanitizeAdvanced(config?.advanced).settings,
     allowlist: config?.allowlist ?? [...DEFAULT_ALLOWLIST],
     rules: (config?.rules ?? []).map((rule) => ({
       // Informational only: import recomputes it rather than trusting the file.
@@ -119,7 +129,7 @@ export function buildExport(config, { exportedAt = new Date() } = {}) {
       match: rule.match === 'all' ? 'all' : 'any',
       folderIds: [...(rule.folderIds ?? [])],
       conditions: (rule.conditions ?? []).map((c) => ({ ...c })),
-      action: { ...(rule.action ?? {}) },
+      actions: actionsOf(rule).map((a) => ({ ...a })),
     })),
   };
 }
@@ -208,18 +218,66 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
   return condition;
 }
 
+/**
+ * Rebuild a rule's action list field by field, in execution order.
+ *
+ * At most one terminal action survives. A rule that both moved and trashed the
+ * same message would fail on the second step, because the first invalidates the
+ * message ids, so the extras are dropped here and reported rather than left to
+ * throw during a scheduled run.
+ */
+function sanitizeActions(raw, problems, where) {
+  const listed = actionsOf(raw);
+  if (listed.length === 0) {
+    problems.push(`${where}: no action, rule skipped`);
+    return null;
+  }
+
+  const actions = [];
+  let terminal = null;
+  for (const candidate of orderActions(listed)) {
+    const def = ACTIONS_BY_ID[candidate?.type];
+    if (!def) {
+      problems.push(`${where}: unknown action "${candidate?.type ?? ''}", dropped`);
+      continue;
+    }
+    if (def.needsFolder && !candidate.folderId) {
+      problems.push(`${where}: "${def.id}" needs a destination folder, dropped`);
+      continue;
+    }
+    if (def.needsTag && !candidate.tagKey) {
+      problems.push(`${where}: "${def.id}" needs a tag, dropped`);
+      continue;
+    }
+    if (def.terminal) {
+      if (terminal) {
+        problems.push(`${where}: "${def.id}" dropped, a rule can only end in one action that moves or deletes (kept "${terminal}")`);
+        continue;
+      }
+      terminal = def.id;
+    }
+    const action = { type: def.id };
+    if (def.needsFolder) action.folderId = String(candidate.folderId);
+    if (def.needsTag) action.tagKey = String(candidate.tagKey);
+    // Exact repeats are noise, not a mistake worth reporting.
+    if (actions.some((a) => a.type === action.type && a.folderId === action.folderId && a.tagKey === action.tagKey)) {
+      continue;
+    }
+    actions.push(action);
+  }
+
+  if (actions.length === 0) {
+    problems.push(`${where}: no usable action, rule skipped`);
+    return null;
+  }
+  return actions;
+}
+
 function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds) {
   const where = `Rule ${index + 1}${raw?.name ? ` ("${raw.name}")` : ''}`;
 
-  const action = ACTIONS_BY_ID[raw?.action?.type];
-  if (!action) {
-    problems.push(`${where}: unknown action "${raw?.action?.type ?? ''}", rule skipped`);
-    return null;
-  }
-  if (action.needsFolder && !raw?.action?.folderId) {
-    problems.push(`${where}: action needs a destination folder, rule skipped`);
-    return null;
-  }
+  const actions = sanitizeActions(raw, problems, where);
+  if (!actions) return null;
 
   const conditions = (Array.isArray(raw?.conditions) ? raw.conditions : [])
     .map((c, i) => sanitizeCondition(c, problems, `${where} condition ${i + 1}`, knownAddressBookIds))
@@ -240,9 +298,6 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
     }
   }
 
-  const rebuiltAction = { type: action.id };
-  if (action.needsFolder) rebuiltAction.folderId = String(raw.action.folderId);
-
   return {
     name: String(raw?.name ?? '').trim() || 'Imported rule',
     // Imported rules always get fresh ids so they cannot collide with existing
@@ -251,7 +306,7 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
     match: raw?.match === 'all' ? 'all' : 'any',
     folderIds,
     conditions,
-    action: rebuiltAction,
+    actions,
   };
 }
 
@@ -262,7 +317,7 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
 export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, existingRules } = {}) {
   const problems = [];
   const duplicates = [];
-  const empty = { rules: [], duplicates, allowlist: null, intervalMinutes: null };
+  const empty = { rules: [], duplicates, allowlist: null, intervalMinutes: null, advanced: null };
 
   if (!data || typeof data !== 'object') {
     return { ...empty, problems: ['Not a valid JSON object'] };
@@ -310,5 +365,14 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
   const interval = Number(data.intervalMinutes);
   const intervalMinutes = Number.isFinite(interval) && interval >= 1 ? Math.floor(interval) : null;
 
-  return { rules, duplicates, allowlist, intervalMinutes, problems };
+  // Absent in files written before 0.3.2, and left alone rather than reset to
+  // defaults: an import should not quietly retune someone's scan engine.
+  let advanced = null;
+  if (data.advanced && typeof data.advanced === 'object') {
+    const sanitized = sanitizeAdvanced(data.advanced);
+    advanced = sanitized.settings;
+    problems.push(...sanitized.problems.map((p) => `Advanced: ${p}`));
+  }
+
+  return { rules, duplicates, allowlist, intervalMinutes, advanced, problems };
 }

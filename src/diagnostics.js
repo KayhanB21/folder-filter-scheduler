@@ -17,6 +17,8 @@
  */
 
 import { AGE_OPERATORS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, fieldsOf, isAgeCondition } from './matcher.js';
+import { actionsOf, orderActions } from './actions.js';
+import { ADVANCED_DEFAULTS } from './settings.js';
 
 /** Most recent log entries kept. At a 2-minute interval that is several hours. */
 export const LOG_CAP = 1000;
@@ -74,6 +76,14 @@ export function describeCondition(c, { includeValues = false } = {}) {
   return `${fields} ${not}${c?.operator} ${shown}`;
 }
 
+/** One action as text. Folder ids and tag keys are values, so they are hidden too. */
+export function describeAction(a, { includeValues = false } = {}) {
+  const type = a?.type ?? '?';
+  if (a?.folderId) return `${type} -> ${includeValues ? a.folderId : '(folder)'}`;
+  if (a?.tagKey) return `${type} -> ${includeValues ? a.tagKey : '(tag)'}`;
+  return type;
+}
+
 function describeRule(rule, runState, { includeValues }) {
   const lines = [];
   const status = rule.enabled === false ? 'disabled' : 'enabled';
@@ -82,8 +92,11 @@ function describeRule(rule, runState, { includeValues }) {
   lines.push(`    folders: ${folders.length}${includeValues && folders.length ? ` (${folders.join(', ')})` : ''}`);
   lines.push(`    match: ${rule.match === 'all' ? 'all (AND)' : 'any (OR)'}`);
   for (const c of rule.conditions ?? []) lines.push(`    if ${describeCondition(c, { includeValues })}`);
-  const action = rule.action ?? {};
-  lines.push(`    then: ${action.type ?? '?'}${action.folderId ? (includeValues ? ` -> ${action.folderId}` : ' -> (folder)') : ''}`);
+  // In execution order, which is what the engine will actually do, not the
+  // order they happen to be stored in.
+  for (const a of orderActions(actionsOf(rule))) {
+    lines.push(`    then: ${describeAction(a, { includeValues })}`);
+  }
   const state = runState?.[rule.id];
   lines.push(`    last run: ${state?.lastRunAt ?? 'never'}; last catch-up: ${state?.lastCatchUpAt ?? 'never'}`);
   return lines;
@@ -99,7 +112,7 @@ function describeRule(rule, runState, { includeValues }) {
  * @param {object} input.config          stored config
  * @param {object} input.runState        per-rule run state
  * @param {object} [input.alarm]         the scheduled alarm, if any
- * @param {object} [input.permissions]   { addressBooks: boolean }
+ * @param {object} [input.permissions]   { addressBooks: boolean, messagesTagsList: boolean }
  * @param {Array}  input.entries         log entries, oldest first
  * @param {boolean} [input.includeValues]
  * @param {Date}   [input.generatedAt]
@@ -119,6 +132,8 @@ export function buildReport(input) {
   } = input ?? {};
 
   const rules = Array.isArray(config?.rules) ? config.rules : [];
+  // Advanced settings are timings, never user content, so they are always shown.
+  const adv = { ...ADVANCED_DEFAULTS, ...(config?.advanced ?? {}) };
   const lines = [
     'Folder Filter Scheduler diagnostics',
     `generated: ${generatedAt.toISOString()}`,
@@ -129,7 +144,11 @@ export function buildReport(input) {
     '',
     `interval: every ${config?.intervalMinutes ?? '?'} min`,
     `next scheduled run: ${alarm?.scheduledTime ? new Date(alarm.scheduledTime).toISOString() : 'none scheduled'}`,
+    `run on new mail: ${adv.runOnNewMail ? `yes, ${adv.newMailDelaySeconds}s after the last arrival` : 'no'}`,
+    `scan overlap: ${adv.scanOverlapMinutes} min`,
+    `catch-up: every ${adv.catchUpEveryMinutes} min over the last ${adv.catchUpLookbackDays} day(s)`,
     `address book access: ${permissions?.addressBooks ? 'granted' : 'not granted'}`,
+    `tag list access: ${permissions?.messagesTagsList ? 'granted' : 'not granted'}`,
     `protected domains: ${Array.isArray(config?.allowlist) ? config.allowlist.length : '?'}`,
     '',
     `rules (${rules.length}):`,

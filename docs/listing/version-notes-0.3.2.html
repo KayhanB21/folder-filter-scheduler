@@ -1,0 +1,10 @@
+Adds a tag action, lets a rule carry more than one action, and runs rules as soon as new mail arrives.
+
+<ul>
+<li>New action "Tag as": apply one of your own Thunderbird tags to matched mail. Tags already on a message are kept, so several rules can tag the same message</li>
+<li>A rule can now do more than one thing. "If From is in address book Friends, tag as Friends and move to the Friends folder" is one rule instead of two</li>
+<li>Whatever order you put the actions in, the one that moves or deletes runs last, so the others still see the message. A rule may carry only one such action</li>
+<li>Rules now also run within seconds of new mail arriving, not only on the timer. Arrivals are grouped so one mail sync causes one run, and only the rules watching the folder that got mail are checked</li>
+<li>New Advanced section at the bottom of the options page: turn the new-mail trigger off, and adjust the catch-up scan interval, its lookback, and the scan overlap</li>
+<li>Listing your tags for the picker asks for permission the first time you add a tag action. Applying a tag does not need it, so an existing rule keeps working either way</li>
+</ul>
