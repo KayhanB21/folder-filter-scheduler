@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3]
+
+### Changed
+- **No action is pre-selected any more.** New rules and "+ Add action" used to
+  start on "Move to Trash", so adding a tag action and missing the row above it
+  sent the mail you meant to tag to Trash. A new action row now starts on
+  "Choose an action…", and Save is refused, with the rule named, until every
+  row has a real action.
+
+### Added
+- **To and Cc in address-book conditions.** The condition matches when any
+  recipient is in the chosen book.
+
 ## [0.3.2]
 
 ### Added
