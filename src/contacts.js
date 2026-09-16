@@ -14,8 +14,13 @@
 /** The sentinel address-book id meaning "every local address book". */
 export const ALL_ADDRESS_BOOKS = 'all';
 
-/** Fields an address-book condition may read: the ones that name a sender. */
-export const ADDRESS_BOOK_FIELDS = Object.freeze(['from', 'reply-to', 'sender']);
+/**
+ * Fields an address-book condition may read: the ones that hold addresses.
+ * To and Cc can name several people; the condition matches when any of them is
+ * in the book. Your own address is usually among them, so a book that contains
+ * you matches all of your mail on these two fields.
+ */
+export const ADDRESS_BOOK_FIELDS = Object.freeze(['from', 'reply-to', 'sender', 'to', 'cc']);
 
 /**
  * Normalise one address for comparison: the part inside <...> if present,

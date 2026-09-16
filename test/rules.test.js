@@ -360,7 +360,16 @@ test('import keeps an unknown book id but reports it', () => {
   assert.ok(problems.some((p) => /address book not in this profile/.test(p)), problems.join('; '));
 });
 
-test('import rejects an address-book condition on a non-sender field or with no book', () => {
+test('import accepts an address-book condition on to and cc', () => {
+  for (const field of ['to', 'cc']) {
+    const raw = { ...bookRule, conditions: [{ ...bookRule.conditions[0], field }] };
+    const { rules, problems } = sanitizeImport(file({ rules: [raw] }));
+    assert.deepEqual(problems, [], field);
+    assert.equal(rules[0].conditions[0].field, field);
+  }
+});
+
+test('import rejects an address-book condition on a non-address field or with no book', () => {
   for (const c of [
     { field: 'subject', operator: 'inAddressBook', addressBookId: 'all' },
     { field: 'from', operator: 'inAddressBook' },
