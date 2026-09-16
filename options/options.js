@@ -339,6 +339,14 @@ function renderAction(container, action = {}) {
   const tagGrant = $('.action-tag-grant', node);
   const hint = $('.action-hint', node);
 
+  // Nothing is pre-selected. A default of "Move to Trash" meant a user who added
+  // a tag action and missed the row above it would trash the mail they meant to
+  // tag, so a new row starts on this placeholder and save refuses it.
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Choose an action…';
+  type.append(placeholder);
+
   // Populate from the registry — the UI stays in lockstep with the engine.
   for (const def of ACTIONS) {
     const opt = document.createElement('option');
@@ -346,7 +354,7 @@ function renderAction(container, action = {}) {
     opt.textContent = def.label;
     type.append(opt);
   }
-  type.value = ACTIONS_BY_ID[action.type] ? action.type : 'trash';
+  type.value = ACTIONS_BY_ID[action.type] ? action.type : '';
   fillFolderSelect(folder, action.folderId ? [action.folderId] : []);
 
   // The chosen tag lives on the row so it survives while access is missing.
@@ -368,7 +376,8 @@ function renderAction(container, action = {}) {
   const sync = () => {
     const def = ACTIONS_BY_ID[type.value];
     folder.classList.toggle('hidden', !def?.needsFolder);
-    hint.textContent = def?.hint ?? '';
+    hint.textContent = def?.hint ?? 'Pick what should happen to matching messages.';
+    node.classList.toggle('unchosen', !def);
     hint.classList.toggle('danger', !!def?.danger);
     node.syncTags();
   };
@@ -402,17 +411,10 @@ function renderRule(rule = {}) {
 
   const actionContainer = $('.actions', node);
   const actions = actionsOf(rule);
-  for (const a of orderActions(actions.length ? actions : [{ type: 'trash' }])) {
+  for (const a of orderActions(actions.length ? actions : [{}])) {
     renderAction(actionContainer, a);
   }
-  $('.add-action', node).addEventListener('click', () => {
-    // Default a second action to one that leaves the message in place: only one
-    // action per rule may move or delete it.
-    const hasTerminal = [...actionContainer.querySelectorAll('.action')].some((row) =>
-      isTerminalAction({ type: $('.action-type', row).value }),
-    );
-    renderAction(actionContainer, { type: hasTerminal ? 'markRead' : 'trash' });
-  });
+  $('.add-action', node).addEventListener('click', () => renderAction(actionContainer, {}));
 
   $('.del-rule', node).addEventListener('click', () => {
     collapsed.delete($('.rule-id', node).value);
@@ -498,13 +500,15 @@ function setAllCollapsed(isCollapsed) {
  * are dropped here, while the user is still looking at the page.
  */
 function collectActions(node, ruleName, rejected) {
-  const fromRows = [...node.querySelectorAll('.action')].map((row) => {
+  const fromRows = [...node.querySelectorAll('.action')].flatMap((row) => {
     const type = $('.action-type', row).value;
+    // An unchosen row blocks save (see `unchosenActions`); export skips it.
+    if (!ACTIONS_BY_ID[type]) return [];
     const def = ACTIONS_BY_ID[type];
     const action = { type };
     if (def?.needsFolder) action.folderId = $('.action-folder', row).value;
     if (def?.needsTag) action.tagKey = row.dataset.tagKey || '';
-    return action;
+    return [action];
   });
 
   const actions = [];
@@ -615,7 +619,29 @@ function flash(message, isError = false) {
   statusEl.style.color = isError ? 'var(--danger)' : 'var(--accent-text)';
 }
 
+/** Action rows still on "Choose an action…", with the name of their rule. */
+function unchosenActions() {
+  return [...rulesEl.querySelectorAll('.rule')].flatMap((node) =>
+    [...node.querySelectorAll('.action')]
+      .filter((row) => !ACTIONS_BY_ID[$('.action-type', row).value])
+      .map(() => $('.rule-name', node).value.trim() || 'Untitled rule'),
+  );
+}
+
 async function save() {
+  // Refuse rather than correct: dropping the row could leave a rule with no
+  // action, and guessing one is exactly the mistake this check exists to stop.
+  const unchosen = unchosenActions();
+  if (unchosen.length > 0) {
+    const names = [...new Set(unchosen)].map((n) => `“${n}”`).join(', ');
+    for (const node of rulesEl.querySelectorAll('.rule')) {
+      if (node.querySelector('.action.unchosen')) setCollapsed(node, false);
+    }
+    rulesEl.querySelector('.action.unchosen .action-type')?.focus();
+    flash(`Not saved: choose an action for ${names}.`, true);
+    return;
+  }
+
   const rejected = [];
   const collected = collectConfig(rejected);
   // Merge, so keys the options page does not own (harvestRuleId,

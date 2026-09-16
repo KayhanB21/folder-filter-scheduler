@@ -107,6 +107,8 @@ input, select {
 .action .lbl { width: 64px; padding-top: 0; }
 .action-hint { flex-basis: 100%; margin: 0 0 0 70px; font-size: 12px; opacity: 0.7; }
 .action-hint.danger { color: var(--danger); opacity: 1; }
+.action.unchosen .action-type { border-color: var(--danger); }
+.action.unchosen .action-hint { opacity: 1; }
 
 /* Domain-list condition: the textarea takes its own line under the operator row. */
 textarea {
