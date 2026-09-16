@@ -42,7 +42,7 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Age conditions**: `age` · `older than` / `newer than` · N days, for rules like
   "move security alerts to Archive after 30 days". Something the built-in
   retention policy cannot express, since it can only delete.
-- **Address-book conditions**: `from` / `reply-to` / `sender` · `is in address
+- **Address-book conditions**: `from` / `reply-to` / `sender` / `to` / `cc` · `is in address
   book` · one book or all of them, negatable. "Move mail from people I don't know
   out of this folder" becomes one condition. Access to address books is an
   optional permission, asked for only when you use it.
@@ -131,7 +131,10 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
 - **Then** — one or more actions, e.g. *Tag as… Friends* followed by *Move to
   folder…*. The hint line under each explains exactly what it does. **+ Add
   action** adds another; the action that moves or deletes always runs last, so
-  the others still see the message.
+  the others still see the message. A new action starts on *Choose an action…*
+  and the rule cannot be saved until you pick one, so nothing is trashed by
+  default. On `to` and `cc`, an address-book condition matches when any
+  recipient is in the book; your own address is usually one of them.
 
 ### Advanced settings
 

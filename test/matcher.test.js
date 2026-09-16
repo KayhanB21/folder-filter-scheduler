@@ -379,6 +379,21 @@ test('any known address in a multi-address header counts as known', () => {
   assert.equal(evaluateCondition(m, { ...cond, negate: true }, { addressBooks: books }), false);
 });
 
+test('an address-book condition on to or cc matches when any recipient is known', () => {
+  const m = { fields: { to: ['me@home.example', '"Bob" <bob@example.org>'], cc: ['x@spam.example'] } };
+  for (const field of ['to', 'cc']) {
+    const cond = { field, operator: IN_ADDRESS_BOOK, addressBookId: 'all' };
+    const known = field === 'to';
+    assert.equal(evaluateCondition(m, cond, { addressBooks: books }), known, field);
+    assert.equal(evaluateCondition(m, { ...cond, negate: true }, { addressBooks: books }), !known, `not ${field}`);
+  }
+});
+
+test('an address-book rule on to or cc stays on the cheap path', () => {
+  assert.equal(requiresFullMessage({ conditions: [{ ...inBook('all'), field: 'to' }] }), false);
+  assert.equal(requiresFullMessage({ conditions: [{ ...inBook('all'), field: 'cc' }] }), false);
+});
+
 test('addressBookIdsOf lists each needed book once', () => {
   const rule = { conditions: [inBook('a'), inBook('a'), inBook('b'), { field: 'from', operator: 'contains', value: 'x' }] };
   assert.deepEqual(addressBookIdsOf(rule).sort(), ['a', 'b']);
