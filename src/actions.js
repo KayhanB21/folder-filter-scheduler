@@ -52,6 +52,14 @@ export const ACTIONS = [
     apply: (messenger, ids, action) => messenger.messages.move(ids, action.folderId),
   },
   {
+    id: 'archive',
+    label: 'Archive',
+    needsFolder: false,
+    terminal: true,
+    hint: "Archives each message the way Thunderbird's Archive button does, using its own account's archive settings. An account with archiving turned off keeps its mail in place.",
+    apply: (messenger, ids) => messenger.messages.archive(ids),
+  },
+  {
     id: 'copy',
     label: 'Copy to folder…',
     needsFolder: true,

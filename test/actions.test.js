@@ -24,6 +24,7 @@ function fakeMessenger(tagsById = {}) {
       delete: rec('delete'),
       move: rec('move'),
       copy: rec('copy'),
+      archive: rec('archive'),
       update: rec('update'),
       get: (id) => Promise.resolve({ id, tags: tagsById[id] ?? [] }),
     },
@@ -52,6 +53,22 @@ test('deletePermanently uses skipTrash=true and is flagged danger', async () => 
   await runAction(m, [9], { type: 'deletePermanently' });
   assert.deepEqual(m.calls, [{ name: 'delete', args: [[9], true] }]);
   assert.equal(ACTIONS_BY_ID.deletePermanently.danger, true);
+});
+
+test('archive hands the ids to messages.archive and ends the rule', async () => {
+  const m = fakeMessenger();
+  await runAction(m, [3, 4], { type: 'archive' });
+  assert.deepEqual(m.calls, [{ name: 'archive', args: [[3, 4]] }]);
+  assert.equal(ACTIONS_BY_ID.archive.terminal, true);
+});
+
+test('a tag action runs before archive, whatever the row order', async () => {
+  const m = fakeMessenger({ 1: [] });
+  await runActions(m, [1], [{ type: 'archive' }, { type: 'tag', tagKey: '$label1' }]);
+  assert.deepEqual(
+    m.calls.map((c) => c.name),
+    ['update', 'archive'],
+  );
 });
 
 test('cross-account move passes the chosen destination folder to messages.move', async () => {

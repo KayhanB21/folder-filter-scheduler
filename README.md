@@ -49,14 +49,15 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Diagnostics**: a report you can copy or save from the options page, with
   your Thunderbird version, the shape of each rule, and what recent runs did.
   Addresses, domains, patterns and folder names are left out unless you opt in.
-- **Actions**: move to Trash, move/copy to a chosen folder (**including a folder
+- **Actions**: move to Trash, archive with each account's own archive
+  settings, move/copy to a chosen folder (**including a folder
   in a different account** — e.g. Yahoo Bulk → Outlook Trash), apply one of your
   Thunderbird tags, mark read / flagged / junk, or delete permanently. Actions
   live in a single [registry](src/actions.js) that drives both the engine and
   the UI, so adding one is a one-entry change.
 - **Several actions per rule**: "tag as Friends *and* move to the Friends
-  folder" is one rule. The action that consumes the message (move, Trash, delete)
-  always runs last, whatever order you put the rows in, because a move
+  folder" is one rule. The action that consumes the message (move, archive,
+  Trash, delete) always runs last, whatever order you put the rows in, because a move
   invalidates the message ids that the other actions need. For the same reason a
   rule may carry only one of those.
 - **Multiple source folders per rule**, spanning multiple accounts — one rule can
