@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4]
+
+### Added
+- **Archive action.** Archives matched mail the way Thunderbird's Archive
+  button does, so each message follows its own account's archive settings,
+  including yearly or monthly subfolders. An account with archiving turned off
+  keeps its mail in place. Like Move and Trash, Archive ends the rule, so a tag
+  action in the same rule runs first.
+
 ## [0.3.3]
 
 ### Changed
