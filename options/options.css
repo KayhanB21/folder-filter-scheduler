@@ -108,6 +108,12 @@ input, select {
 .folder-count { font-size: 12px; opacity: 0.7; }
 .folder-picker .rule-folders { width: 100%; }
 .rule-folders option { padding-block: 1px; background-repeat: no-repeat; }
+/* A rule between accounts. Hidden groups (filtered out) do not count. */
+.rule-folders optgroup:not([hidden]) ~ optgroup:not([hidden]) {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 4px;
+}
 .rule-folders option.top-level { font-weight: 600; }
 .rule-folders option.covered { color: var(--accent-text); font-style: italic; }
 .folder-picker .toggle { align-self: flex-start; }

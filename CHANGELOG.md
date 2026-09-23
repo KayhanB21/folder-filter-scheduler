@@ -18,8 +18,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Theme menu.** Match Thunderbird, Light, or Dark, remembered per profile.
 
 ### Changed
-- **The folder list is a tree.** Folders are grouped by account, indented under
-  their parent, and joined by dashed guide lines. While a filter is active, each
+- **The folder list is a tree.** Folders are grouped by account with a line
+  between accounts, indented under their parent, and joined by dashed guide
+  lines. While a filter is active, each
   match shows its full path. With *Include subfolders* on, the list marks every
   folder the rule scans without you picking it.
 
