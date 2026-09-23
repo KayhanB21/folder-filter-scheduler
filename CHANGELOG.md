@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5]
+
+### Added
+- **Include subfolders.** A rule can scan every folder under the ones you
+  picked, worked out on each run so new subfolders are covered. A Trash folder
+  and any folder the rule moves or copies into are skipped, so a rule never
+  deletes mail from Trash for good or scans its own output again. New mail in a
+  subfolder triggers the rule too.
+- **Folder filter.** A search box above each rule's folder list narrows it to
+  matching paths, and *Select all matching* picks every match. Selections made
+  earlier are kept while you filter, and a count shows how many the filter hides.
+- **Theme menu.** Match Thunderbird, Light, or Dark, remembered per profile.
+
+### Changed
+- **The folder list is a tree.** Folders are grouped by account, indented under
+  their parent, and joined by dashed guide lines. While a filter is active, each
+  match shows its full path. With *Include subfolders* on, the list marks every
+  folder the rule scans without you picking it.
+
 ## [0.3.4]
 
 ### Added
