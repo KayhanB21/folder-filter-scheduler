@@ -22,7 +22,7 @@
   --card: color-mix(in srgb, currentColor 4%, transparent);
 }
 
-/* The Theme menu overrides the host theme by setting data-theme on <html>. */
+/* The theme switch overrides the host theme by setting data-theme on <html>. */
 :root[data-theme='light'] { color-scheme: light; }
 :root[data-theme='dark'] { color-scheme: dark; }
 
@@ -48,7 +48,26 @@ body {
 
 h1 { margin: 0 0 2px; font-size: 22px; }
 .title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
-.theme-pick { margin-inline-start: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; opacity: 0.85; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+
+/* Theme switch: three segments in one pill, the chosen one filled. */
+.theme-switch {
+  margin: 0 0 0 auto;
+  padding: 2px;
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 13px;
+}
+.theme-switch label { position: relative; cursor: pointer; }
+.theme-switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.theme-switch label > span { display: flex; align-items: center; padding: 5px 9px; border-radius: 999px; opacity: 0.75; }
+.theme-switch input:checked + span { background: var(--accent); color: #fff; opacity: 1; }
+.theme-switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sub { margin: 0 0 18px; opacity: 0.7; }
 
 .bar {

@@ -38,7 +38,11 @@ function loadTheme() {
 }
 
 // Applied before anything renders, so the page does not flash the other theme.
-$('#theme').value = applyTheme(loadTheme());
+{
+  const current = applyTheme(loadTheme());
+  const radio = $(`#theme input[value="${current}"]`);
+  if (radio) radio.checked = true;
+}
 $('#theme').addEventListener('change', (e) => {
   const value = applyTheme(e.target.value);
   try {

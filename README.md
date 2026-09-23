@@ -73,7 +73,7 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   mail already in Trash deletes it for good, and a folder the rule moves or
   copies into, because the rule would scan its own output again.
 - **Light or dark.** The options page follows Thunderbird's theme, or you can
-  pick Light or Dark from the Theme menu.
+  pick Light or Dark with the sun and moon switch in the header.
 - **Any folder, on a timer** — not just the Inbox.
 - **Runs on new mail too.** Thunderbird reports each arrival through
   `messages.onNewMailReceived`, so a rule fires seconds after mail lands instead

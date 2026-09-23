@@ -15,7 +15,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Folder filter.** A search box above each rule's folder list narrows it to
   matching paths, and *Select all matching* picks every match. Selections made
   earlier are kept while you filter, and a count shows how many the filter hides.
-- **Theme menu.** Match Thunderbird, Light, or Dark, remembered per profile.
+- **Theme switch.** A sun, moon, and monitor switch in the header picks Light,
+  Dark, or System. System, the default, follows Thunderbird's theme.
 
 ### Changed
 - **The folder list is a tree.** Folders are grouped by account with a line
