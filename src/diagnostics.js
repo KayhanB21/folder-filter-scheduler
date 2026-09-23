@@ -89,7 +89,8 @@ function describeRule(rule, runState, { includeValues }) {
   const status = rule.enabled === false ? 'disabled' : 'enabled';
   lines.push(`- "${rule.name}" [${status}] id ${String(rule.id ?? '?').slice(0, 8)}`);
   const folders = Array.isArray(rule.folderIds) ? rule.folderIds : [];
-  lines.push(`    folders: ${folders.length}${includeValues && folders.length ? ` (${folders.join(', ')})` : ''}`);
+  const subs = rule.includeSubfolders === true ? ' and their subfolders' : '';
+  lines.push(`    folders: ${folders.length}${subs}${includeValues && folders.length ? ` (${folders.join(', ')})` : ''}`);
   lines.push(`    match: ${rule.match === 'all' ? 'all (AND)' : 'any (OR)'}`);
   for (const c of rule.conditions ?? []) lines.push(`    if ${describeCondition(c, { includeValues })}`);
   // In execution order, which is what the engine will actually do, not the

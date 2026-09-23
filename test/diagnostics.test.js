@@ -139,3 +139,9 @@ test('a pre-0.3.2 single-action rule still shows its action', () => {
 test('diagnosticsFilename is timestamped like rule exports', () => {
   assert.equal(diagnosticsFilename(new Date(2026, 8, 11, 9, 5)), 'ffs-diagnostics-2026-09-11-0905.txt');
 });
+
+test('the report says when a rule includes subfolders', () => {
+  const withSubs = { ...config, rules: [{ ...config.rules[0], includeSubfolders: true }] };
+  assert.match(buildReport({ ...base, config: withSubs }), /folders: 1 and their subfolders/);
+  assert.match(buildReport(base), /folders: 1\n/);
+});

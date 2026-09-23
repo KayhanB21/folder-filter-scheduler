@@ -63,6 +63,17 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Multiple source folders per rule**, spanning multiple accounts — one rule can
   watch Yahoo Bulk *and* Outlook Junk at once, and "Move to Trash" routes each
   match to its own account's Trash.
+- **Folder picker built for deep trees.** Folders are grouped by account and
+  drawn as a tree with dashed guide lines. Type in the filter box to narrow the
+  list to matching paths, then press *Select all matching* to pick every one.
+  Folders you picked earlier stay picked while you filter.
+- **Include subfolders.** Tick it and a rule also scans every folder under the
+  ones you picked, including folders you create later. The picker marks those
+  folders as included. Two kinds are skipped: a Trash folder, because trashing
+  mail already in Trash deletes it for good, and a folder the rule moves or
+  copies into, because the rule would scan its own output again.
+- **Light or dark.** The options page follows Thunderbird's theme, or you can
+  pick Light or Dark with the sun and moon switch in the header.
 - **Any folder, on a timer** — not just the Inbox.
 - **Runs on new mail too.** Thunderbird reports each arrival through
   `messages.onNewMailReceived`, so a rule fires seconds after mail lands instead

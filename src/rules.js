@@ -79,6 +79,8 @@ export function ruleFingerprint(rule) {
     actions,
     conditions,
     folderIds: [...(rule?.folderIds ?? [])].map(String).sort(),
+    // Only when set, so fingerprints of rules from before 0.3.5 do not change.
+    ...(rule?.includeSubfolders === true ? { includeSubfolders: true } : {}),
     match: rule?.match === 'all' ? 'all' : 'any',
   });
 }
@@ -128,6 +130,7 @@ export function buildExport(config, { exportedAt = new Date() } = {}) {
       enabled: rule.enabled !== false,
       match: rule.match === 'all' ? 'all' : 'any',
       folderIds: [...(rule.folderIds ?? [])],
+      includeSubfolders: rule.includeSubfolders === true,
       conditions: (rule.conditions ?? []).map((c) => ({ ...c })),
       actions: actionsOf(rule).map((a) => ({ ...a })),
     })),
@@ -305,6 +308,7 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
     enabled: raw?.enabled !== false,
     match: raw?.match === 'all' ? 'all' : 'any',
     folderIds,
+    includeSubfolders: raw?.includeSubfolders === true,
     conditions,
     actions,
   };
