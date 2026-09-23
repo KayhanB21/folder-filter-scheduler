@@ -9,6 +9,7 @@ import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
 import { ADVANCED_DEFAULTS, sanitizeAdvanced } from './settings.js';
 import { createRunner } from './runner.js';
+import { resolveRuleFolders } from './folders.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -240,8 +241,24 @@ async function* messagesInFolder(folderId, { fromDate, toDate } = {}) {
   yield* eachMessage(await messenger.messages.query(query));
 }
 
+/**
+ * Every folder, for rules that include subfolders. Read once per run, so a
+ * subfolder created since the last run is picked up without editing the rule.
+ * Empty when no selected rule needs it, or if the query fails: each rule then
+ * falls back to the folders it names.
+ */
+async function loadAllFolders(rules) {
+  if (!rules.some((r) => r.includeSubfolders === true) || !messenger.folders?.query) return [];
+  try {
+    return await messenger.folders.query({});
+  } catch (e) {
+    warn('folder list failed, subfolders skipped this run', e);
+    return [];
+  }
+}
+
 /** Run one rule across all its source folders. Returns count of affected messages. */
-async function runRule(rule, runState, manual, addressBooks, settings) {
+async function runRule(rule, folderIds, runState, manual, addressBooks, settings) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
@@ -254,7 +271,7 @@ async function runRule(rule, runState, manual, addressBooks, settings) {
   let matched = 0;
   let scanFailed = false;
 
-  for (const folderId of rule.folderIds ?? []) {
+  for (const folderId of folderIds) {
     const matchedIds = [];
     try {
       for await (const header of messagesInFolder(folderId, bounds)) {
@@ -305,8 +322,11 @@ async function runAllRules(reason = 'manual', { folderIds = null } = {}) {
   const { rules, advanced } = await loadConfig();
   const runState = await loadRunState();
   const manual = reason === 'manual';
+  const allFolders = await loadAllFolders(rules);
+  const scanned = new Map(rules.map((rule) => [rule, resolveRuleFolders(rule, allFolders)]));
+  // New mail in a subfolder counts for a rule that includes subfolders.
   const selected = folderIds
-    ? rules.filter((rule) => (rule.folderIds ?? []).some((id) => folderIds.has(id)))
+    ? rules.filter((rule) => scanned.get(rule).some((id) => folderIds.has(id)))
     : rules;
 
   // Mail landed somewhere no rule watches. Return before touching the run
@@ -322,7 +342,7 @@ async function runAllRules(reason = 'manual', { folderIds = null } = {}) {
   let total = 0;
 
   for (const rule of selected) {
-    total += await runRule(rule, runState, manual, addressBooks, advanced);
+    total += await runRule(rule, scanned.get(rule), runState, manual, addressBooks, advanced);
   }
 
   await saveRunState(runState);

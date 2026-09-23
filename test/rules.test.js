@@ -384,3 +384,18 @@ test('the address-book id is part of the fingerprint', () => {
   const other = { ...bookRule, conditions: [{ ...bookRule.conditions[0], addressBookId: 'book-2' }] };
   assert.notEqual(ruleFingerprint(bookRule), ruleFingerprint(other));
 });
+
+test('includeSubfolders survives a round trip and is false unless set', () => {
+  const exported = buildExport({ rules: [{ ...validRule, includeSubfolders: true }, validRule] });
+  const { rules } = sanitizeImport(exported);
+  assert.deepEqual(rules.map((r) => r.includeSubfolders), [true, false]);
+  // Anything but a literal true is off: an import must not widen a rule by accident.
+  const loose = sanitizeImport(file({ rules: [{ ...validRule, includeSubfolders: 'yes' }] }));
+  assert.equal(loose.rules[0].includeSubfolders, false);
+});
+
+test('includeSubfolders changes the fingerprint, and an unset flag leaves it as before', () => {
+  assert.notEqual(ruleFingerprint(validRule), ruleFingerprint({ ...validRule, includeSubfolders: true }));
+  assert.equal(ruleFingerprint(validRule), ruleFingerprint({ ...validRule, includeSubfolders: false }));
+  assert.ok(!ruleFingerprint(validRule).includes('includeSubfolders'));
+});
