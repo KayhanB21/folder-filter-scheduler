@@ -9,12 +9,50 @@ import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } fro
 import { ADVANCED_DEFAULTS, sanitizeAdvanced } from '../src/settings.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
+import { folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
+
+// --- Theme -------------------------------------------------------------------
+
+/**
+ * Light, dark, or whatever Thunderbird uses. A per-viewer preference like the
+ * collapsed rules, so it lives in localStorage and never in the rules config.
+ */
+const THEME_KEY = 'ffs.theme';
+const THEMES = new Set(['system', 'light', 'dark']);
+
+function applyTheme(theme) {
+  const value = THEMES.has(theme) ? theme : 'system';
+  if (value === 'system') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = value;
+  return value;
+}
+
+function loadTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) ?? 'system';
+  } catch {
+    return 'system';
+  }
+}
+
+// Applied before anything renders, so the page does not flash the other theme.
+$('#theme').value = applyTheme(loadTheme());
+$('#theme').addEventListener('change', (e) => {
+  const value = applyTheme(e.target.value);
+  try {
+    localStorage.setItem(THEME_KEY, value);
+  } catch {
+    // Without localStorage the choice lasts until the page closes.
+  }
+});
+
 const rulesEl = $('#rules');
 const statusEl = $('#status');
 
-let folders = []; // [{ id, label }]
+let folders = []; // [{ id, label, accountId, accountName, path, name, depth }]
+let guides = new Map(); // folder id -> treeGuides() entry, rebuilt with `folders`
 
 /**
  * Address-book access is an optional permission, asked for only when someone
@@ -179,6 +217,21 @@ function saveCollapsed(ids) {
 
 let collapsed = loadCollapsed();
 
+/** One picker entry. `label` is the full "Account: /path" form, for tooltips. */
+function folderEntry(folder, accountName) {
+  const path = folder.path;
+  return {
+    id: folder.id,
+    label: `${accountName}: ${path}`,
+    accountId: folder.accountId,
+    accountName,
+    path,
+    name: folder.name || path.split('/').filter(Boolean).pop() || path,
+    depth: folderDepth(path),
+    specialUse: folder.specialUse ?? [],
+  };
+}
+
 /** Build a flat, labelled folder list for the <select>s, across all accounts. */
 async function loadFolders() {
   const accounts = await messenger.accounts.list();
@@ -191,10 +244,14 @@ async function loadFolders() {
       const all = await messenger.folders.query({});
       for (const f of all) {
         if (!f.id || !f.path || f.path === '/') continue;
-        flat.push({ id: f.id, label: `${nameByAccount.get(f.accountId) ?? ''}: ${f.path}` });
+        flat.push(folderEntry(f, nameByAccount.get(f.accountId) ?? ''));
       }
       if (flat.length) {
-        folders = flat;
+        // Grouped by account in the account list's order; the query keeps each
+        // account's folders in tree order, and a stable sort preserves that.
+        const rank = new Map(accounts.map((a, i) => [a.id, i]));
+        folders = flat.sort((a, b) => (rank.get(a.accountId) ?? 0) - (rank.get(b.accountId) ?? 0));
+        guides = treeGuides(folders);
         return;
       }
     } catch (e) {
@@ -206,7 +263,7 @@ async function loadFolders() {
   const withSubs = await messenger.accounts.list(true);
   const walk = (folder, accountName) => {
     if (folder.id && folder.path && folder.path !== '/') {
-      flat.push({ id: folder.id, label: `${accountName}: ${folder.path}` });
+      flat.push(folderEntry(folder, accountName));
     }
     for (const child of folder.subFolders ?? []) walk(child, accountName);
   };
@@ -214,17 +271,167 @@ async function loadFolders() {
     walk(account.rootFolder ?? account, account.name);
   }
   folders = flat;
+  guides = treeGuides(folders);
 }
 
+const INDENT_EM = 1.25;
+const GUIDE = 'color-mix(in srgb, currentColor 65%, transparent)';
+const DASH_DOWN = `repeating-linear-gradient(to bottom, ${GUIDE} 0 2px, transparent 2px 4px)`;
+const DASH_RIGHT = `repeating-linear-gradient(to right, ${GUIDE} 0 2px, transparent 2px 4px)`;
+
+/**
+ * Dashed tree lines for one option, as background layers.
+ *
+ * A native <option> holds text only, so the lines are gradients: one vertical
+ * dash per level the tree passes through, and an elbow into this folder. The
+ * option stays a real option, so keyboard and screen reader behaviour is the
+ * same as any other <select>.
+ */
+function guideBackground(guide) {
+  const layers = [];
+  const x = (level) => `${level * INDENT_EM + 0.75}em`;
+  guide.through.forEach((through, level) => {
+    const own = level === guide.through.length - 1;
+    if (own) {
+      // The elbow: down from the top (to the middle when this is the last
+      // child), then right towards the name.
+      layers.push({ image: DASH_DOWN, size: `1px ${guide.last ? '50%' : '100%'}`, position: `${x(level)} 0` });
+      layers.push({ image: DASH_RIGHT, size: '0.6em 1px', position: `${x(level)} 50%` });
+    } else if (through) {
+      layers.push({ image: DASH_DOWN, size: '1px 100%', position: `${x(level)} 0` });
+    }
+  });
+  return {
+    backgroundImage: layers.map((l) => l.image).join(', '),
+    backgroundSize: layers.map((l) => l.size).join(', '),
+    backgroundPosition: layers.map((l) => l.position).join(', '),
+  };
+}
+
+/**
+ * Write one folder option. Indentation is CSS padding, so levels line up and a
+ * screen reader hears the name rather than blank space. While filtering, the
+ * tree is gone, so the option shows the whole path and no lines.
+ */
+function paintFolderOption(opt, folder, { filtering = false, covered = false } = {}) {
+  const depth = Math.max(1, folder.depth);
+  const name = filtering ? folder.path.replace(/^\//, '') : folder.name;
+  const note = covered ? ' · included as a subfolder' : '';
+  opt.textContent = `${name}${note}`;
+  opt.setAttribute('aria-label', `${name}${note}`);
+  opt.style.paddingInlineStart = filtering ? '' : `${(depth - 1) * INDENT_EM + 0.4}em`;
+  const guide = guides.get(folder.id);
+  const lines = !filtering && guide && guide.through.length > 0 ? guideBackground(guide) : null;
+  opt.style.backgroundImage = lines?.backgroundImage ?? '';
+  opt.style.backgroundSize = lines?.backgroundSize ?? '';
+  opt.style.backgroundPosition = lines?.backgroundPosition ?? '';
+  opt.classList.toggle('covered', covered);
+  opt.classList.toggle('top-level', !filtering && depth === 1);
+}
+
+/**
+ * One <optgroup> per account, each folder indented under its parent.
+ *
+ * Still a native <select>, so arrow keys, Shift+arrow, type-ahead and screen
+ * readers work as they do everywhere else in Thunderbird.
+ */
 function fillFolderSelect(select, selectedIds = []) {
   select.innerHTML = '';
+  let group = null;
   for (const f of folders) {
+    if (!group || group.dataset.accountId !== f.accountId) {
+      group = document.createElement('optgroup');
+      group.label = f.accountName || 'Account';
+      group.dataset.accountId = f.accountId ?? '';
+      select.append(group);
+    }
     const opt = document.createElement('option');
     opt.value = f.id;
-    opt.textContent = f.label;
+    paintFolderOption(opt, f);
+    opt.title = f.label;
     opt.selected = selectedIds.includes(f.id);
-    select.append(opt);
+    group.append(opt);
   }
+}
+
+/**
+ * Filter box, "Select all matching", and the selection count for one rule.
+ *
+ * Filtering only hides options. A hidden option keeps its selected state, so a
+ * folder picked earlier stays in the rule while you search for another, and the
+ * count says how many of the selected folders the filter hides.
+ */
+function wireFolderPicker(node) {
+  const filter = $('.folder-filter', node);
+  const select = $('.rule-folders', node);
+  const selectMatching = $('.folder-select-matching', node);
+  const count = $('.folder-count', node);
+  const byId = new Map(folders.map((f) => [f.id, f]));
+
+  const subfolders = $('.rule-subfolders', node);
+
+  /**
+   * Folders the rule scans without being picked. Worked out by the engine's own
+   * `resolveRuleFolders`, so a Trash folder or a move destination the engine
+   * skips is not marked here either.
+   */
+  const coveredIds = () => {
+    if (!subfolders.checked) return new Set();
+    const chosen = [...select.selectedOptions].map((o) => o.value);
+    const actions = [...node.querySelectorAll('.action')].map((row) => ({
+      type: $('.action-type', row).value,
+      folderId: $('.action-folder', row).value,
+    }));
+    const scanned = resolveRuleFolders({ folderIds: chosen, includeSubfolders: true, actions }, folders);
+    return new Set(scanned.filter((id) => !chosen.includes(id)));
+  };
+
+  const updateCount = () => {
+    const selected = [...select.selectedOptions];
+    const hidden = selected.filter((o) => o.hidden).length;
+    const covered = coveredIds();
+    count.textContent =
+      `${selected.length} selected` +
+      (covered.size ? `, ${covered.size} more as subfolders` : '') +
+      (hidden ? `, ${hidden} hidden by the filter` : '');
+    return covered;
+  };
+  const applyFilter = () => {
+    const text = filter.value;
+    const filtering = text.trim() !== '';
+    const covered = updateCount();
+    for (const group of select.querySelectorAll('optgroup')) {
+      let visible = 0;
+      for (const opt of group.children) {
+        const folder = byId.get(opt.value);
+        opt.hidden = !folderMatchesFilter(folder, text);
+        if (!opt.hidden) visible += 1;
+        if (folder) paintFolderOption(opt, folder, { filtering, covered: covered.has(folder.id) });
+      }
+      group.hidden = visible === 0;
+    }
+    // With no filter, "all matching" would be every folder in every account.
+    selectMatching.disabled = !filtering;
+  };
+
+  filter.addEventListener('input', applyFilter);
+  filter.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    select.focus();
+  });
+  selectMatching.addEventListener('click', () => {
+    for (const opt of select.options) if (!opt.hidden) opt.selected = true;
+    applyFilter();
+  });
+  // Repainted on each change, because the covered marks follow the selection,
+  // the checkbox, and any move or copy destination among the actions.
+  select.addEventListener('change', applyFilter);
+  subfolders.addEventListener('change', applyFilter);
+  node.addEventListener('change', (e) => {
+    if (e.target.closest?.('.actions')) applyFilter();
+  });
+  applyFilter();
 }
 
 /** A domain-list condition can watch several headers at once. */
@@ -403,6 +610,7 @@ function renderRule(rule = {}) {
   $('.rule-enabled', node).checked = rule.enabled !== false;
   $('.rule-match', node).value = rule.match ?? 'any';
   fillFolderSelect($('.rule-folders', node), rule.folderIds ?? []);
+  $('.rule-subfolders', node).checked = rule.includeSubfolders === true;
 
   const condContainer = $('.conditions', node);
   const conds = rule.conditions?.length ? rule.conditions : [{}];
@@ -415,6 +623,7 @@ function renderRule(rule = {}) {
     renderAction(actionContainer, a);
   }
   $('.add-action', node).addEventListener('click', () => renderAction(actionContainer, {}));
+  wireFolderPicker(node);
 
   $('.del-rule', node).addEventListener('click', () => {
     collapsed.delete($('.rule-id', node).value);
@@ -467,7 +676,8 @@ function ruleSummary(node) {
     return def.needsTag ? `${def.label.replace(/…$/, '')} ${tagLabel(a.tagKey)}` : def.label;
   });
   const folderCount = $('.rule-folders', node).selectedOptions.length;
-  const where = `${folderCount} folder${folderCount === 1 ? '' : 's'}`;
+  const subs = $('.rule-subfolders', node).checked ? ' and subfolders' : '';
+  const where = `${folderCount} folder${folderCount === 1 ? '' : 's'}${subs}`;
   const what = conditions.join(joiner) || 'no conditions';
 
   return `${what} → ${actions.join(' + ') || 'no action'} · ${where}`;
@@ -541,6 +751,7 @@ function collectConfig(rejected = []) {
       enabled: $('.rule-enabled', node).checked,
       match: $('.rule-match', node).value,
       folderIds: [...$('.rule-folders', node).selectedOptions].map((o) => o.value),
+      includeSubfolders: $('.rule-subfolders', node).checked,
       conditions: [...node.querySelectorAll('.condition')].map((c) => {
         const operator = $('.cond-op', c).value;
         const condition = {

@@ -13,7 +13,17 @@
   </head>
   <body>
     <header>
-      <h1>Folder Filter Scheduler</h1>
+      <div class="title-row">
+        <h1>Folder Filter Scheduler</h1>
+        <label class="theme-pick">
+          Theme
+          <select id="theme">
+            <option value="system">Match Thunderbird</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </div>
       <p class="sub">
         Run rules on any folder on a timer — the piece stock Thunderbird only does for the Inbox.
       </p>
@@ -137,7 +147,17 @@
         <div class="rule-body">
         <div class="row">
           <span class="lbl">Folders</span>
-          <select class="rule-folders" multiple size="4"></select>
+          <div class="folder-picker">
+            <div class="folder-tools">
+              <input class="folder-filter" type="search" placeholder="Filter folders" aria-label="Filter folders" />
+              <button class="folder-select-matching" type="button" disabled>Select all matching</button>
+              <span class="folder-count" aria-live="polite"></span>
+            </div>
+            <select class="rule-folders" multiple size="8" aria-label="Folders"></select>
+            <label class="toggle">
+              <input class="rule-subfolders" type="checkbox" /> Include subfolders, and any created later
+            </label>
+          </div>
         </div>
 
         <div class="row">
