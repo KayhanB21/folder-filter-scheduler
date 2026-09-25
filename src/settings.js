@@ -77,3 +77,12 @@ export function sanitizeAdvanced(raw) {
 export function isDefaultAdvanced(settings) {
   return Object.keys(ADVANCED_DEFAULTS).every((k) => settings?.[k] === ADVANCED_DEFAULTS[k]);
 }
+
+/**
+ * Whether the schedule alarm must be (re)created. Thunderbird wakes the event
+ * page for every new message, and re-creating the alarm on each wake restarts
+ * its countdown, so steady mail kept pushing the scheduled run back (#12).
+ */
+export function alarmNeedsReset(alarm, minutes) {
+  return !alarm || alarm.periodInMinutes !== minutes;
+}

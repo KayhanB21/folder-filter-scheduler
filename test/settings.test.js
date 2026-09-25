@@ -71,3 +71,17 @@ test('isDefaultAdvanced recognises an untouched configuration', () => {
   assert.equal(isDefaultAdvanced(sanitizeAdvanced({ catchUpEveryMinutes: 45 }).settings), false);
   assert.equal(isDefaultAdvanced(undefined), false);
 });
+
+// --- Schedule alarm (#12) -----------------------------------------------------
+
+import { alarmNeedsReset } from '../src/settings.js';
+
+test('a running alarm with the same period is kept, so a wake does not restart it', () => {
+  assert.equal(alarmNeedsReset({ name: 'tick', periodInMinutes: 10 }, 10), false);
+});
+
+test('a missing alarm or a changed period is re-created', () => {
+  assert.equal(alarmNeedsReset(null, 10), true);
+  assert.equal(alarmNeedsReset(undefined, 10), true);
+  assert.equal(alarmNeedsReset({ name: 'tick', periodInMinutes: 5 }, 10), true);
+});

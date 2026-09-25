@@ -99,8 +99,8 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   catches `bounce.evil.com`) and hold hundreds of entries in a single editable box.
 - **Incremental scheduled scans**: a scheduled run only examines messages that
   arrived since the last one, so a per-message header read stays affordable. A
-  wider catch-up scan every 30 minutes picks up mail whose `Date` header lags
-  its real arrival. **Run all rules now** always scans the whole folder.
+  catch-up scan of the whole folder every 30 minutes picks up mail whose `Date`
+  header lags its real arrival, or that Thunderbird stored with no usable date. **Run all rules now** always scans the whole folder.
 - **Run now** button for immediate, on-demand runs.
 
 ## Install (temporary / development)
@@ -159,8 +159,9 @@ At the bottom of the options page. The defaults suit most people:
 - **Wait N seconds** — one mail sync reports many messages; waiting collapses the
   batch into a single run. Capped at 15 seconds, because Thunderbird suspends an
   idle add-on after about 30.
-- **Catch-up scan** — how often, and how far back, the wider pass runs that
-  catches mail whose `Date` header lags its real arrival.
+- **Catch-up scan** — how often the whole-folder pass runs that catches mail
+  whose `Date` header lags its real arrival, and how far back a rule that reads
+  message headers (such as `Reply-To`) reads them during that pass.
 - **Overlap** — how far before the previous run each normal scan starts.
 
 ### 3. Or build a block list by right-clicking
@@ -206,7 +207,8 @@ reports how many messages were affected (e.g. *"Done — 1 message(s) affected."
 > **Speed of `Reply-To` rules.** A rule matching a non-indexed header reads the
 > headers of each candidate message. Scheduled runs are incremental, so in steady
 > state that is only the newly arrived mail; the periodic catch-up scan (every 30
-> minutes, last 30 days) and every manual run cover more. Enabling offline
+> minutes, reading the last 30 days plus any message without a usable date) and
+> every manual run cover more. Enabling offline
 > storage for the folder makes this local and much faster.
 
 > **Age conditions and scanning.** Age is measured from the message's `Date`
