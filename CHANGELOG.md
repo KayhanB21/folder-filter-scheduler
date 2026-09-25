@@ -6,6 +6,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.3.6]
 
+### Added
+- **Common problems** section on the options page and in the README. It
+  explains why a rule can miss mail in an IMAP folder other than the Inbox, and
+  which Thunderbird folder setting fixes it (#12).
+
 ### Fixed
 - **Scheduled runs missed a message that "Run all rules now" found** (#12).
   Thunderbird can store a message with a wrong or empty date, and every
