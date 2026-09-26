@@ -6,7 +6,7 @@ import { evaluateRule, requiresFullMessage, addressBookIdsOf, FIELDS, DOMAIN_IN_
 import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
-import { SCAN_KINDS, inCatchUpWindow, planScan, queryBoundsFor, stampScan } from './scan.js';
+import { planScan, queryBoundsFor, stampScan } from './scan.js';
 import { ADVANCED_DEFAULTS, alarmNeedsReset, sanitizeAdvanced } from './settings.js';
 import { createRunner } from './runner.js';
 import { resolveRuleFolders } from './folders.js';
@@ -270,8 +270,6 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   const plan = planScan(runState[rule.id], { manual, now: startedAt, settings });
   const { kind } = plan;
   const bounds = queryBoundsFor(rule, plan, startedAt);
-  // Header reads are the costly part, so a catch-up keeps them to its lookback.
-  const readWindow = kind === SCAN_KINDS.catchUp && fetchFull ? plan.fromDate : undefined;
   let affected = 0;
   let scanned = 0;
   let matched = 0;
@@ -281,7 +279,6 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
     const matchedIds = [];
     try {
       for await (const header of messagesInFolder(folderId, bounds)) {
-        if (!inCatchUpWindow(header.date, readWindow)) continue;
         scanned += 1;
         const message = await normalize(header, fetchFull);
         if (evaluateRule(message, rule, { now: startedAt, addressBooks })) matchedIds.push(header.id);
@@ -309,7 +306,6 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   const range = [
     bounds.fromDate ? `from ${bounds.fromDate.toISOString()}` : 'from start',
     bounds.toDate ? `to ${bounds.toDate.toISOString()}` : null,
-    readWindow ? `headers read from ${readWindow.toISOString()}` : null,
   ].filter(Boolean).join(' ');
   log(
     `rule "${rule.name}": ${kind} scan (${range}), ${scanned} scanned, ${matched} matched, ` +

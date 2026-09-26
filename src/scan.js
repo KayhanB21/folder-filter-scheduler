@@ -13,15 +13,13 @@
  * - `incremental`: only mail dated since the previous run, plus an overlap.
  *   Cheap enough to do every few minutes even when a rule needs a per-message
  *   header read.
- * - `catchUp`: the whole folder, run on the first scheduled pass and then
- *   every CATCH_UP_EVERY_MINUTES. This exists because
- *   `messages.query({fromDate})` filters on the date Thunderbird stored for
- *   each message, which comes from the sender's Date header. Spam with a Date
- *   hours behind its real arrival time never falls inside an incremental
- *   window, and a message Thunderbird stored with a wrong or empty date (#12)
- *   never falls inside any window at all. So the catch-up query has no lower
- *   bound. A rule that reads each message's headers still limits those reads
- *   to the last CATCH_UP_LOOKBACK_DAYS, see `inCatchUpWindow`.
+ * - `catchUp`: the last CATCH_UP_LOOKBACK_DAYS of the folder, run on the first
+ *   scheduled pass and then every CATCH_UP_EVERY_MINUTES. This exists because
+ *   `messages.query({fromDate})` filters on the Date header, which the sender
+ *   controls. Spam with a Date hours behind its real arrival time never falls
+ *   inside an incremental window, so without a periodic wider pass it would
+ *   never be seen by a scheduled run at all. The catch-up bounds that miss to
+ *   CATCH_UP_EVERY_MINUTES at worst.
  * - `full`: the whole folder, no lower bound. Only for "Run all rules now",
  *   the user's escape hatch for backlog and for mail backdated beyond the
  *   catch-up lookback.
@@ -110,17 +108,14 @@ const DAY = 24 * 60 * MINUTE;
  * starts at the previous run. Any rule with an age condition therefore drops
  * `fromDate` altogether. When the rule is `all` (AND) and demands "older than
  * N", the query can be bounded from above instead, so Thunderbird returns only
- * the old tail of the folder rather than the whole thing. A catch-up scan
- * drops `fromDate` too, see the note at the top of this file. A negated "newer
+ * the old tail of the folder rather than the whole thing. A negated "newer
  * than N" is the same demand and gets the same bound. The matcher re-checks
  * every message, so these bounds only ever narrow the work, never decide it.
  */
 export function queryBoundsFor(rule, plan, now = new Date()) {
   const conditions = Array.isArray(rule?.conditions) ? rule.conditions : [];
   const ages = conditions.filter(isAgeCondition);
-  if (ages.length === 0) {
-    return { fromDate: plan?.kind === SCAN_KINDS.catchUp ? undefined : plan?.fromDate };
-  }
+  if (ages.length === 0) return { fromDate: plan?.fromDate };
 
   const bounds = { fromDate: undefined, toDate: undefined };
   if (rule.match !== 'all') return bounds;
@@ -135,22 +130,4 @@ export function queryBoundsFor(rule, plan, now = new Date()) {
     .filter((n) => n !== null);
   if (olderThan.length > 0) bounds.toDate = new Date(now.getTime() - Math.max(...olderThan) * DAY);
   return bounds;
-}
-
-/** Before this, a stored date is a placeholder, not a real one: 0 means "no date". */
-const EARLIEST_REAL_DATE = Date.UTC(1980, 0, 1);
-
-/**
- * During a catch-up scan, whether a rule that reads each message's headers
- * reads this one. Reading every header of a large folder every 30 minutes is
- * too slow, so those reads stay inside the lookback window. A missing, invalid,
- * or placeholder date is read anyway, because that is the mail a date bound
- * misses. Rules that match on indexed fields check the whole folder, which
- * costs no reads.
- */
-export function inCatchUpWindow(date, fromDate) {
-  if (!(fromDate instanceof Date)) return true;
-  const time = date instanceof Date ? date.getTime() : new Date(date ?? NaN).getTime();
-  if (Number.isNaN(time) || time < EARLIEST_REAL_DATE) return true;
-  return time >= fromDate.getTime();
 }

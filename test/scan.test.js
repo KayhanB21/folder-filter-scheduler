@@ -176,33 +176,3 @@ test('newerThan, negated olderThan, or an unusable day count give no upper bound
     assert.equal(b.toDate, undefined, JSON.stringify(conds));
   }
 });
-
-// --- Catch-up scans (#12) -----------------------------------------------------
-
-import { inCatchUpWindow } from '../src/scan.js';
-
-test('a catch-up scan queries the whole folder, not just the lookback', () => {
-  const plan = planScan(undefined, { now });
-  assert.equal(plan.kind, SCAN_KINDS.catchUp);
-  const b = queryBoundsFor({ match: 'any', conditions: [subj] }, plan, now);
-  assert.equal(b.fromDate, undefined);
-  assert.equal(b.toDate, undefined);
-});
-
-test('a catch-up keeps header reads inside the lookback', () => {
-  const from = minutesBefore(30 * 24 * 60);
-  assert.equal(inCatchUpWindow(minutesBefore(60), from), true);
-  assert.equal(inCatchUpWindow(from, from), true);
-  assert.equal(inCatchUpWindow(minutesBefore(31 * 24 * 60), from), false);
-});
-
-test('a message with no usable date is always read', () => {
-  const from = minutesBefore(30 * 24 * 60);
-  for (const date of [undefined, null, new Date(0), new Date('nope'), 'nope', new Date('1975-06-01')]) {
-    assert.equal(inCatchUpWindow(date, from), true, String(date));
-  }
-});
-
-test('without a read window every message is read', () => {
-  assert.equal(inCatchUpWindow(new Date('2001-01-01'), undefined), true);
-});

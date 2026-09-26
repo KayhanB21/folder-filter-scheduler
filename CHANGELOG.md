@@ -12,12 +12,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   which Thunderbird folder setting fixes it (#12).
 
 ### Fixed
-- **Scheduled runs missed a message that "Run all rules now" found** (#12).
-  Thunderbird can store a message with a wrong or empty date, and every
-  scheduled scan asked only for mail after a certain date. The catch-up scan now
-  checks the whole folder. A rule that reads message headers, such as
-  `Reply-To`, still limits those reads to the lookback, plus any message without
-  a usable date.
 - **New mail delayed scheduled runs** (#12). Each new message woke the add-on,
   which restarted the 10-minute timer, so steady mail pushed the scheduled run
   back again and again. The add-on now keeps a running timer and re-creates it
