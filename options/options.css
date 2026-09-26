@@ -233,3 +233,8 @@ button { white-space: nowrap; flex: none; }
 #diag-report { margin: 4px 0; font-size: 12px; }
 .diag-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .diag-actions button { margin-top: 0; }
+
+/* Common problems panel. */
+.help h3 { font-size: 13px; margin: 14px 0 4px; }
+.help p { font-size: 12px; opacity: 0.85; margin: 4px 0; line-height: 1.45; }
+.help a { color: inherit; }

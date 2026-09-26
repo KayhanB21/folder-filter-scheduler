@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6]
+
+### Added
+- **Common problems** section on the options page and in the README. It
+  explains why a rule can miss mail in an IMAP folder other than the Inbox, and
+  which Thunderbird folder setting fixes it (#12).
+
+### Fixed
+- **New mail delayed scheduled runs** (#12). Each new message woke the add-on,
+  which restarted the 10-minute timer, so steady mail pushed the scheduled run
+  back again and again. The add-on now keeps a running timer and re-creates it
+  only when the interval changes.
+
 ## [0.3.5]
 
 ### Added

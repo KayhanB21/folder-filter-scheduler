@@ -232,6 +232,23 @@ reports how many messages were affected (e.g. *"Done — 1 message(s) affected."
 > offline storage for the folder (Account Settings → Synchronization & Storage) and
 > run **Repair Folder** once.
 
+## Common problems
+
+**A rule misses mail in Sent or another folder that isn't the Inbox.** For IMAP
+accounts, Thunderbird checks only the Inbox for new mail by default. The add-on
+can process only messages that Thunderbird has downloaded, so mail that another
+program sends through your account, or that a server rule files, waits until you
+open the folder. **Run all rules now** seems to work because you opened the folder
+first. To fix this, right-click the folder and open **Properties**. On the
+**General** tab, turn on **When getting new messages for this account, always
+check this folder** (#12).
+
+**Mail arrived while Thunderbird was closed.** Rules run only while Thunderbird
+is running. After Thunderbird starts, the first scheduled run checks the
+catch-up window (30 days by default) and processes anything it missed.
+
+The options page has the same list under **Common problems**.
+
 ## Reporting a problem
 
 Open the options page, expand **Diagnostics** at the bottom, and press **Copy

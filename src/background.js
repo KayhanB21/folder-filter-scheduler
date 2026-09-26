@@ -7,7 +7,7 @@ import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
-import { ADVANCED_DEFAULTS, sanitizeAdvanced } from './settings.js';
+import { ADVANCED_DEFAULTS, alarmNeedsReset, sanitizeAdvanced } from './settings.js';
 import { createRunner } from './runner.js';
 import { resolveRuleFolders } from './folders.js';
 import {
@@ -168,6 +168,10 @@ async function applySettings() {
   const { intervalMinutes, advanced } = await loadConfig();
   advancedCache = advanced;
   const minutes = Math.max(1, Number(intervalMinutes) || DEFAULT_INTERVAL_MINUTES);
+  // Keep a running alarm: this also runs on every wake, and re-creating the
+  // alarm would restart its countdown each time new mail arrives.
+  const alarm = await messenger.alarms.get(ALARM_NAME).catch(() => null);
+  if (!alarmNeedsReset(alarm, minutes)) return;
   await messenger.alarms.clear(ALARM_NAME);
   messenger.alarms.create(ALARM_NAME, { periodInMinutes: minutes });
   log(

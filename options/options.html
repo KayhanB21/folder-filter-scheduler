@@ -138,6 +138,38 @@
       <button id="reset-advanced" type="button">Restore defaults</button>
     </details>
 
+    <details id="help-box" class="allowlist help">
+      <summary>Common problems</summary>
+
+      <h3>A rule misses mail in Sent or another folder that isn't the Inbox</h3>
+      <p>
+        For IMAP accounts, Thunderbird checks only the Inbox for new mail by default. The
+        add-on can process only messages that Thunderbird has downloaded, so mail that
+        another program sends through your account, or that a server rule files, waits
+        until you open the folder. <b>Run all rules now</b> seems to work because you
+        opened the folder first.
+      </p>
+      <p>
+        To fix this, right-click the folder and open <b>Properties</b>. On the
+        <b>General</b> tab, turn on <b>When getting new messages for this account, always
+        check this folder</b>.
+      </p>
+
+      <h3>Mail arrived while Thunderbird was closed</h3>
+      <p>
+        Rules run only while Thunderbird is running. After Thunderbird starts, the first
+        scheduled run checks the last 30 days, or the number of days set under
+        <b>Advanced</b>, and processes anything it missed.
+      </p>
+
+      <h3>Something else doesn't work</h3>
+      <p>
+        Open <b>Diagnostics</b> and attach the report to a
+        <a href="https://github.com/KayhanB21/folder-filter-scheduler/issues" target="_blank" rel="noopener">GitHub issue</a>.
+        The report shows what each recent run scanned and matched.
+      </p>
+    </details>
+
     <!-- Template for a single rule card. -->
     <template id="rule-template">
       <article class="rule">
