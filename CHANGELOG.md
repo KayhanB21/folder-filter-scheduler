@@ -16,6 +16,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   which restarted the 10-minute timer, so steady mail pushed the scheduled run
   back again and again. The add-on now keeps a running timer and re-creates it
   only when the interval changes.
+- **A header download that never answers no longer blocks a run** (#15). A
+  rule that reads Reply-To, List-Id, or Sender downloads the headers of each
+  message. Each download now has a 10-second limit. After 3 downloads time out,
+  the run stops downloading and leaves the remaining messages for the next
+  run.
+- **Diagnostics log shows when a run starts** (#15), so a run that Thunderbird
+  suspends partway leaves a trace.
 
 ## [0.3.5]
 

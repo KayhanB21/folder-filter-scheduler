@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRunner } from '../src/runner.js';
+import { createRunner, withTimeout } from '../src/runner.js';
 
 /** A run that finishes only when the test says so, recording how it was called. */
 function controllable() {
@@ -116,4 +116,16 @@ test('a run throwing synchronously is still handled as a rejection', async () =>
   });
   await assert.rejects(() => runner.request('scheduled'), /sync boom/);
   assert.equal(runner.isRunning(), false);
+});
+
+test('withTimeout passes a value through when the promise settles in time', async () => {
+  assert.equal(await withTimeout(Promise.resolve('headers'), 50), 'headers');
+});
+
+test('withTimeout passes a rejection through unchanged', async () => {
+  await assert.rejects(withTimeout(Promise.reject(new Error('offline')), 50), /offline/);
+});
+
+test('withTimeout rejects with a TimeoutError when the promise never settles', async () => {
+  await assert.rejects(withTimeout(new Promise(() => {}), 5), { name: 'TimeoutError' });
 });

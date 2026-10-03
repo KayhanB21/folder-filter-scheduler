@@ -94,3 +94,27 @@ export function createRunner(run) {
 
   return { request, isRunning: () => inFlight !== null };
 }
+
+/**
+ * Reject when `promise` has not settled within `ms`.
+ *
+ * A Thunderbird API call that never answers would otherwise hold a run open
+ * until the event page is suspended, with nothing in the log to show where it
+ * stopped. The original call is not cancelled, only abandoned.
+ *
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {number} ms
+ * @returns {Promise<T>}
+ */
+export function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error(`no answer after ${ms} ms`);
+      error.name = 'TimeoutError';
+      reject(error);
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}

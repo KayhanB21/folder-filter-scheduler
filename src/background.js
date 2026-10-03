@@ -8,7 +8,7 @@ import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js
 import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
 import { ADVANCED_DEFAULTS, alarmNeedsReset, sanitizeAdvanced } from './settings.js';
-import { createRunner } from './runner.js';
+import { createRunner, withTimeout } from './runner.js';
 import { resolveRuleFolders } from './folders.js';
 import {
   DEFAULT_ALLOWLIST,
@@ -38,6 +38,16 @@ import {
 const ALARM_NAME = 'folder-filter-scheduler.tick';
 const MENU_ID = 'folder-filter-scheduler.harvest-domains';
 const DEFAULT_INTERVAL_MINUTES = 10;
+
+/**
+ * How long one header download may take, and how many may time out before the
+ * run stops downloading. Ten seconds stays well inside the 30 seconds an event
+ * page may sit idle, so the timeout fires before Thunderbird suspends the run.
+ * The limit keeps a folder of unreachable messages from costing ten seconds
+ * each.
+ */
+const HEADER_TIMEOUT_MS = 10_000;
+const HEADER_TIMEOUT_LIMIT = 3;
 
 /**
  * Headers the right-click harvest reads, most trustworthy first.
@@ -197,7 +207,7 @@ async function readHeaders(messageId) {
  * a non-indexed header (reply-to, list-id, …) do we read the headers, which
  * fetches from the server on demand on a non-offline IMAP folder.
  */
-async function normalize(messageHeader, fetchFull) {
+async function normalize(messageHeader, fetchFull, headerReads) {
   const fields = {};
   const push = (name, value) => {
     if (value == null || value === '') return;
@@ -205,13 +215,30 @@ async function normalize(messageHeader, fetchFull) {
     (fields[key] ??= []).push(String(value));
   };
 
+  // A message whose headers cannot be read is left out of the run. Matching it
+  // on the indexed fields alone is unsafe: "Reply-To does not contain X" is
+  // true for a missing header, and a rule that deletes would then act on mail
+  // it never read.
+  if (fetchFull && headerReads.timeouts >= HEADER_TIMEOUT_LIMIT) {
+    headerReads.skipped += 1;
+    return null;
+  }
   if (fetchFull) {
     try {
-      const headers = await readHeaders(messageHeader.id);
+      const headers = await withTimeout(readHeaders(messageHeader.id), HEADER_TIMEOUT_MS);
       for (const [name, values] of Object.entries(headers)) {
         for (const v of values ?? []) push(name, v);
       }
     } catch (e) {
+      if (e?.name === 'TimeoutError') {
+        headerReads.timeouts += 1;
+        headerReads.skipped += 1;
+        if (headerReads.timeouts === HEADER_TIMEOUT_LIMIT) {
+          warn(`${HEADER_TIMEOUT_LIMIT} header reads timed out, no more header reads this run`);
+        }
+        warn('header read timed out', messageHeader.id);
+        return null;
+      }
       warn('header read failed', messageHeader.id, e);
     }
   }
@@ -262,7 +289,7 @@ async function loadAllFolders(rules) {
 }
 
 /** Run one rule across all its source folders. Returns count of affected messages. */
-async function runRule(rule, folderIds, runState, manual, addressBooks, settings) {
+async function runRule(rule, folderIds, runState, manual, addressBooks, settings, headerReads) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
@@ -274,13 +301,15 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   let scanned = 0;
   let matched = 0;
   let scanFailed = false;
+  const skippedBefore = headerReads.skipped;
 
   for (const folderId of folderIds) {
     const matchedIds = [];
     try {
       for await (const header of messagesInFolder(folderId, bounds)) {
         scanned += 1;
-        const message = await normalize(header, fetchFull);
+        const message = await normalize(header, fetchFull, headerReads);
+        if (!message) continue;
         if (evaluateRule(message, rule, { now: startedAt, addressBooks })) matchedIds.push(header.id);
       }
     } catch (e) {
@@ -297,6 +326,10 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
       scanFailed = true;
     }
   }
+
+  // A message whose headers did not arrive was left out, so the pass is not
+  // clean and the next run reads it again.
+  if (headerReads.skipped > skippedBefore) scanFailed = true;
 
   // Only advance the watermark on a clean pass, so a transient failure does not
   // permanently skip the messages it could not read.
@@ -342,11 +375,17 @@ async function runAllRules(reason = 'manual', { folderIds = null } = {}) {
     return 0;
   }
 
+  // Logged before the scan so a run that never finishes still leaves a trace.
+  log(`run (${reason}) started: ${selected.length} of ${rules.length} rule(s)`);
   const addressBooks = await loadAddressBooks(selected);
+  // Shared by every rule of the run: see HEADER_TIMEOUT_LIMIT.
+  const headerReads = { timeouts: 0, skipped: 0 };
   let total = 0;
 
   for (const rule of selected) {
-    total += await runRule(rule, scanned.get(rule), runState, manual, addressBooks, advanced);
+    total += await runRule(
+      rule, scanned.get(rule), runState, manual, addressBooks, advanced, headerReads,
+    );
   }
 
   await saveRunState(runState);
