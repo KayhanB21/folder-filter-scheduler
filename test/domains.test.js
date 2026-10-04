@@ -10,6 +10,8 @@ import {
   domainFromAddress,
   domainsFromHeaderValue,
   harvestDomains,
+  nameShowsOtherAddress,
+  splitMailbox,
   isAllowlisted,
   isValidDomain,
   matchesDomainList,
@@ -126,4 +128,48 @@ test('mergeDomainLists unions, sorts, and reports only genuinely new entries', (
   const { domains, added } = mergeDomainLists(['b.com'], ['a.com', 'B.com', 'bad', '']);
   assert.deepEqual(domains, ['a.com', 'b.com']);
   assert.deepEqual(added, ['a.com']);
+});
+
+// --- Display names that hold an address -------------------------------------
+
+const DECOY = '"LENA <Lena2005@yahoo.com>" <tianwan1234@sina.com>';
+
+test('splitMailbox takes the real address, not one inside the display name', () => {
+  assert.deepEqual(splitMailbox(DECOY), { name: '"LENA <Lena2005@yahoo.com>"', address: 'tianwan1234@sina.com' });
+  // The same mailbox as Thunderbird can hand it over, without the quotes.
+  assert.equal(splitMailbox('LENA <Lena2005@yahoo.com> <tianwan1234@sina.com>').address, 'tianwan1234@sina.com');
+  assert.equal(splitMailbox('"A \\"quoted\\" <x@decoy.com>" <real@ok.com>').address, 'real@ok.com');
+  assert.deepEqual(splitMailbox('"Bella" <bella@example.org>'), { name: '"Bella"', address: 'bella@example.org' });
+  assert.deepEqual(splitMailbox(' bella@example.org '), { name: '', address: 'bella@example.org' });
+  assert.deepEqual(splitMailbox(undefined), { name: '', address: '' });
+});
+
+test('splitMailbox falls back to the last pair when quoting is broken', () => {
+  assert.equal(splitMailbox('"LENA <a@yahoo.com> <b@sina.com>').address, 'b@sina.com');
+  assert.equal(splitMailbox('"only <x@quoted.com>"').address, 'x@quoted.com');
+});
+
+test('the domain of a mailbox is the real sender domain, not the decoy', () => {
+  assert.equal(domainFromAddress(DECOY), 'sina.com');
+  assert.deepEqual(domainsFromHeaderValue(`${DECOY}, "Ann" <ann@ok.com>`), ['sina.com', 'ok.com']);
+});
+
+test('a decoy from a protected provider no longer hides the real domain', () => {
+  const { accepted, skippedAllowlisted } = harvestDomains([DECOY]);
+  assert.deepEqual(accepted, ['sina.com']);
+  assert.deepEqual(skippedAllowlisted, []);
+});
+
+test('nameShowsOtherAddress is true only for an address from another domain', () => {
+  assert.equal(nameShowsOtherAddress(DECOY), true);
+  assert.equal(nameShowsOtherAddress('LENA <Lena2005@yahoo.com> <tianwan1234@sina.com>'), true);
+  assert.equal(nameShowsOtherAddress('"ann@ok.com via List" <list@lists.example>'), true);
+  assert.equal(nameShowsOtherAddress('"ann@ok.com" <ann@ok.com>'), false);
+  assert.equal(nameShowsOtherAddress('"Ann <ann.smith@OK.com>" <asmith@ok.com>'), false);
+  assert.equal(nameShowsOtherAddress('"Ann <ann@ok.com>" <ann@mail.ok.com>'), false);
+  assert.equal(nameShowsOtherAddress('"Ann @ work" <ann@ok.com>'), false);
+  assert.equal(nameShowsOtherAddress('"Ann" <ann@ok.com>'), false);
+  assert.equal(nameShowsOtherAddress('ann@ok.com'), false);
+  assert.equal(nameShowsOtherAddress('"ann@ok.com" <not an address>'), false);
+  assert.equal(nameShowsOtherAddress(undefined), false);
 });
