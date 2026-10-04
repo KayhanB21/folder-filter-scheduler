@@ -41,12 +41,11 @@ const DEFAULT_INTERVAL_MINUTES = 10;
 
 /**
  * How long one header download may take, and how many may time out before the
- * run stops downloading. Ten seconds stays well inside the 30 seconds an event
- * page may sit idle, so the timeout fires before Thunderbird suspends the run.
- * The limit keeps a folder of unreachable messages from costing ten seconds
- * each.
+ * run stops downloading. An event page is suspended after about 30 seconds
+ * idle and a pending timer does not count as activity, so the worst case of
+ * three waits, 15 seconds, has to fit inside that with room to save the run.
  */
-const HEADER_TIMEOUT_MS = 10_000;
+const HEADER_TIMEOUT_MS = 5_000;
 const HEADER_TIMEOUT_LIMIT = 3;
 
 /**
