@@ -296,16 +296,17 @@
           <option value="domainInList">domain is in list</option>
           <option value="inAddressBook">is in address book</option>
           <option value="nameShowsOtherAddress">name shows a different address</option>
-          <!-- Shown only for the age field. -->
+          <!-- For the age field only. -->
           <option value="olderThan" class="op-age">older than</option>
           <option value="newerThan" class="op-age">newer than</option>
-          <!-- Shown only for the read, star, and junk fields. The text is set
-               for the field: "is read" and "is unread", and so on. -->
+          <!-- For the read, star, and junk fields only. The text is set for
+               the field: "is read" and "is unread", and so on. -->
           <option value="isOn">is</option>
           <option value="isOff">is not</option>
-          <!-- Shown only for the tag field. -->
+          <!-- For the tag field only. -->
           <option value="hasTag">has tag</option>
-          <!-- Shown only for the priority field. -->
+          <!-- For the priority field only. options.js greys out each
+               operator that the chosen field rules out. -->
           <option value="priorityIs">is</option>
         </select>
         <label class="toggle"><input class="cond-negate" type="checkbox" /> not</label>

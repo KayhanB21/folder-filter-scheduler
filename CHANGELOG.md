@@ -48,6 +48,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Toolbar button.** It opens a small panel with **Run all rules now**, one
   button for each rule, and **Open settings**. To remove the button, use
   Thunderbird's toolbar customization.
+- **Greyed-out choices on a condition row.** The field and operator lists show
+  every choice. A choice that doesn't work with the rest of the row is greyed
+  out, and hovering over it says why. For example, **reply-to or from** works
+  only with **domain is in list**, and **older than** works only with the
+  `age` field. Before, the lists hid those choices.
 - **Run button on each rule.** It runs only that rule, on every message in its
   folders, and leaves the other rules alone. The button runs the saved rule, so
   it asks you to save first when the card has changes.
