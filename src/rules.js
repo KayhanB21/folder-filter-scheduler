@@ -19,7 +19,7 @@ import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 import { sanitizeAdvanced } from './settings.js';
-import { sanitizeSchedule } from './cron.js';
+import { sanitizeSchedule, scheduleOf } from './cron.js';
 
 export const EXPORT_FORMAT = 'folder-filter-scheduler/rules';
 export const EXPORT_VERSION = 1;
@@ -83,6 +83,10 @@ export function ruleFingerprint(rule) {
     // Only when set, so fingerprints of rules from before 0.3.5 do not change.
     ...(rule?.includeSubfolders === true ? { includeSubfolders: true } : {}),
     match: rule?.match === 'all' ? 'all' : 'any',
+    // Only when the schedule is on, so a rule without one, or with one turned
+    // off, fingerprints as it did before 0.3.6. Two rules that differ only in
+    // when they run are different rules.
+    ...(scheduleOf(rule) ? { schedule: scheduleOf(rule).expression } : {}),
   });
 }
 

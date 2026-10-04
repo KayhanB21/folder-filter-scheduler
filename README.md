@@ -262,6 +262,10 @@ don't start it. The **Run** button on the card and **Run all rules now** still
 do. If Thunderbird is closed at a scheduled time, the rule runs one time when
 Thunderbird next starts.
 
+The diagnostics log records a run on a rule's own schedule only when it changes
+mail or fails. To record every such run, turn on **Log every run on a rule's own
+schedule** under **Advanced**.
+
 ## Common problems
 
 **A rule misses mail in Sent or another folder that isn't the Inbox.** For IMAP

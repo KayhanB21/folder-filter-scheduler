@@ -150,7 +150,12 @@ test('the report shows a rule\'s own schedule', () => {
   const withRule = (schedule) => ({ ...config, rules: [{ ...config.rules[0], schedule }] });
   assert.match(
     buildReport({ ...base, config: withRule({ enabled: true, cron: '0 21 * * *' }) }),
-    /schedule: cron 0 21 \* \* \*/,
+    /schedule: cron 0 21 \* \* \*; next run: \d{4}-/,
+  );
+  assert.match(buildReport(base), /rule schedule runs in the log: only those that change mail or fail/);
+  assert.match(
+    buildReport({ ...base, config: { ...config, advanced: { logScheduleRuns: true } } }),
+    /rule schedule runs in the log: all/,
   );
   assert.match(
     buildReport({ ...base, config: withRule({ enabled: true, cron: 'nonsense' }) }),

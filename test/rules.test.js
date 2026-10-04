@@ -402,8 +402,7 @@ test('includeSubfolders changes the fingerprint, and an unset flag leaves it as 
 
 test('a schedule survives a round trip, and a rule without one gains none', () => {
   const scheduled = { ...validRule, schedule: { enabled: true, cron: '0 21 * * *' } };
-  // A different folder, or the import drops the second rule as a duplicate.
-  const exported = buildExport({ rules: [scheduled, { ...validRule, folderIds: ['other'] }] });
+  const exported = buildExport({ rules: [scheduled, validRule] });
   assert.deepEqual(exported.rules[0].schedule, { enabled: true, cron: '0 21 * * *' });
   assert.ok(!('schedule' in exported.rules[1]));
 
@@ -423,4 +422,23 @@ test('an imported schedule that does not parse is turned off and reported', () =
   const loose = sanitizeImport(file({ rules: [{ ...validRule, schedule: { enabled: 'yes', cron: '0 21 * * *' } }] }));
   assert.equal(loose.rules[0].schedule.enabled, false);
   assert.ok(!('schedule' in sanitizeImport(file({ rules: [{ ...validRule, schedule: '0 21 * * *' }] })).rules[0]));
+});
+
+test('a schedule that is on changes the fingerprint; one that is off or absent does not', () => {
+  const on = (cron) => ({ ...validRule, schedule: { enabled: true, cron } });
+  assert.notEqual(ruleFingerprint(validRule), ruleFingerprint(on('0 21 * * *')));
+  assert.notEqual(ruleFingerprint(on('0 21 * * *')), ruleFingerprint(on('0 8 * * *')));
+  // Spacing is not a difference.
+  assert.equal(ruleFingerprint(on('0 21 * * *')), ruleFingerprint(on(' 0  21 * * * ')));
+  const off = { ...validRule, schedule: { enabled: false, cron: '0 21 * * *' } };
+  assert.equal(ruleFingerprint(validRule), ruleFingerprint(off));
+  assert.ok(!ruleFingerprint(validRule).includes('schedule'));
+});
+
+test('a rule that differs from an existing one only by its schedule is imported', () => {
+  const scheduled = { ...validRule, schedule: { enabled: true, cron: '0 21 * * *' } };
+  const { rules } = sanitizeImport(file({ rules: [scheduled] }), { existingRules: [validRule] });
+  assert.equal(rules.length, 1);
+  const again = sanitizeImport(file({ rules: [scheduled] }), { existingRules: [scheduled] });
+  assert.equal(again.rules.length, 0);
 });

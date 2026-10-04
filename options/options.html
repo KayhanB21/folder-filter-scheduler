@@ -135,6 +135,15 @@
         dated slightly early is not missed.
       </p>
 
+      <label class="toggle adv-row">
+        <input id="adv-log-schedule" type="checkbox" /> Log every run on a rule's own schedule
+      </label>
+      <p class="adv-hint">
+        Without this, the diagnostics log records such a run only when it changes
+        mail or fails. A rule that runs every minute would otherwise push the older
+        entries out of the log within hours.
+      </p>
+
       <button id="reset-advanced" type="button">Restore defaults</button>
     </details>
 

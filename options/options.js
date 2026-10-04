@@ -866,6 +866,7 @@ function collectConfig(rejected = []) {
 /** Each advanced setting and the input that holds it. */
 const ADVANCED_INPUTS = {
   runOnNewMail: '#adv-new-mail',
+  logScheduleRuns: '#adv-log-schedule',
   newMailDelaySeconds: '#adv-new-mail-delay',
   catchUpEveryMinutes: '#adv-catchup-every',
   catchUpLookbackDays: '#adv-catchup-days',
@@ -875,7 +876,7 @@ const ADVANCED_INPUTS = {
 function fillAdvanced(settings) {
   for (const [key, selector] of Object.entries(ADVANCED_INPUTS)) {
     const el = $(selector);
-    if (key === 'runOnNewMail') el.checked = settings[key] !== false;
+    if (el.type === 'checkbox') el.checked = settings[key] === true;
     else el.value = settings[key];
   }
 }
@@ -885,7 +886,7 @@ function collectAdvanced() {
   const raw = {};
   for (const [key, selector] of Object.entries(ADVANCED_INPUTS)) {
     const el = $(selector);
-    raw[key] = key === 'runOnNewMail' ? el.checked : el.value.trim();
+    raw[key] = el.type === 'checkbox' ? el.checked : el.value.trim();
   }
   return raw;
 }
