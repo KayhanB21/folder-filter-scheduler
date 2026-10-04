@@ -520,3 +520,73 @@ test('the new fields are listed, cheap, and labelled', () => {
     assert.deepEqual(Object.keys(STATE_LABELS[field]), ['isOn', 'isOff']);
   }
 });
+
+// --- Priority condition ------------------------------------------------------
+
+import { PRIORITY_FIELD, PRIORITY_IS, PRIORITY_LEVELS, priorityLevel, priorityOf } from '../src/matcher.js';
+
+const withHeaders = (fields) => ({ fields, headersRead: true });
+const priorityIs = (value, extra = {}) => ({ field: 'priority', operator: PRIORITY_IS, value, ...extra });
+
+test('priorityLevel reads digits, words, and the Priority header words', () => {
+  const cases = {
+    '1': 'highest',
+    '1 (Highest)': 'highest',
+    '2 (High)': 'high',
+    ' 3 ': 'normal',
+    '4': 'low',
+    '5 (Lowest)': 'lowest',
+    Highest: 'highest',
+    HIGH: 'high',
+    Normal: 'normal',
+    low: 'low',
+    Lowest: 'lowest',
+    urgent: 'highest',
+    'non-urgent': 'low',
+  };
+  for (const [value, level] of Object.entries(cases)) assert.equal(priorityLevel(value), level, value);
+  for (const value of ['', '0', '9', 'whatever', undefined]) assert.equal(priorityLevel(value), null, String(value));
+});
+
+test('priorityOf prefers X-Priority, falls back to Priority, then to normal', () => {
+  assert.equal(priorityOf(withHeaders({ 'x-priority': ['1 (Highest)'], priority: ['non-urgent'] })), 'highest');
+  assert.equal(priorityOf(withHeaders({ priority: ['urgent'] })), 'highest');
+  assert.equal(priorityOf(withHeaders({ 'x-priority': ['nonsense'], priority: ['non-urgent'] })), 'low');
+  assert.equal(priorityOf(withHeaders({})), 'normal');
+});
+
+test('a priority condition matches the level, and honours negation', () => {
+  const high = withHeaders({ 'x-priority': ['2'] });
+  assert.equal(evaluateCondition(high, priorityIs('high')), true);
+  assert.equal(evaluateCondition(high, priorityIs('HIGH ')), true);
+  assert.equal(evaluateCondition(high, priorityIs('highest')), false);
+  assert.equal(evaluateCondition(high, priorityIs('high', { negate: true })), false);
+  assert.equal(evaluateCondition(high, priorityIs('normal', { negate: true })), true);
+  assert.equal(evaluateCondition(withHeaders({}), priorityIs('normal')), true);
+});
+
+test('a priority condition never matches without the headers, negated or not', () => {
+  for (const message of [msg({ 'x-priority': ['1'] }), { fields: {}, headersRead: false }]) {
+    for (const negate of [false, true]) {
+      for (const level of PRIORITY_LEVELS) {
+        assert.equal(evaluateCondition(message, priorityIs(level, { negate })), false);
+      }
+    }
+  }
+});
+
+test('a priority condition with an unknown level never matches', () => {
+  const high = withHeaders({ 'x-priority': ['2'] });
+  for (const negate of [false, true]) {
+    for (const value of ['', 'urgent', '2', undefined]) {
+      assert.equal(evaluateCondition(high, priorityIs(value, { negate })), false);
+    }
+  }
+  assert.throws(() => evaluateCondition(high, { field: 'priority', operator: 'contains', value: 'high' }));
+});
+
+test('a priority rule needs the header download', () => {
+  assert.ok(FIELDS.includes(PRIORITY_FIELD));
+  assert.equal(CHEAP_FIELDS.includes(PRIORITY_FIELD), false);
+  assert.equal(requiresFullMessage({ conditions: [priorityIs('high')] }), true);
+});

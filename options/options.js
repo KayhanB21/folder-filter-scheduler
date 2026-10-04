@@ -14,6 +14,9 @@ import {
   STATE_LABELS,
   TAG_FIELD,
   HAS_TAG,
+  PRIORITY_FIELD,
+  PRIORITY_IS,
+  PRIORITY_LEVELS,
   ageDays,
 } from '../src/matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
@@ -495,6 +498,8 @@ function renderCondition(container, cond = {}) {
   $('.cond-value', node).value = cond.value ?? '';
   $('.cond-domains', node).value = (cond.domains ?? []).join('\n');
   $('.cond-days', node).value = ageDays(cond) ?? '';
+  // A new priority row starts on High: the level people most often filter on.
+  $('.cond-priority', node).value = PRIORITY_LEVELS.includes(cond.value) ? cond.value : 'high';
 
   // The row changes shape with its field and operator. A domain list needs a
   // textarea, not a one-line input: a harvested list runs to hundreds of
@@ -550,25 +555,33 @@ function renderCondition(container, cond = {}) {
       mode = nextMode;
     }
 
-    // Age, the three states, and tag each take their own operators and nothing
-    // else. Every other field takes the rest.
+    // Age, the three states, tag, and priority each take their own operators
+    // and nothing else. Every other field takes the rest.
     const field = fieldSelect.value;
     const isAge = field === AGE_FIELD;
     const isState = STATE_FIELDS.includes(field);
     const isTag = field === TAG_FIELD;
+    const isPriority = field === PRIORITY_FIELD;
     const kindOf = (value) => {
       if (value in AGE_OPERATORS) return 'age';
       if (value in STATE_OPERATORS) return 'state';
+      if (value === PRIORITY_IS) return 'priority';
       return value === HAS_TAG ? 'tag' : 'plain';
     };
-    const kind = isAge ? 'age' : isState ? 'state' : isTag ? 'tag' : 'plain';
+    const kind = isAge ? 'age' : isState ? 'state' : isTag ? 'tag' : isPriority ? 'priority' : 'plain';
     for (const option of op.options) {
       option.hidden = kindOf(option.value) !== kind;
       option.disabled = option.hidden;
       if (isState && option.value in STATE_OPERATORS) option.textContent = STATE_LABELS[field][option.value];
     }
     if (kindOf(op.value) !== kind) {
-      op.value = { age: AGE_OPERATORS.olderThan, state: STATE_OPERATORS.isOn, tag: HAS_TAG, plain: 'contains' }[kind];
+      op.value = {
+        age: AGE_OPERATORS.olderThan,
+        state: STATE_OPERATORS.isOn,
+        tag: HAS_TAG,
+        priority: PRIORITY_IS,
+        plain: 'contains',
+      }[kind];
     }
 
     // "is unread" already says "not read", so a state row has no "not" box.
@@ -577,7 +590,9 @@ function renderCondition(container, cond = {}) {
     if (isState) negate.checked = false;
 
     $('.cond-domains', node).classList.toggle('hidden', !isList);
-    $('.cond-value', node).classList.toggle('hidden', isList || isAge || isAddress || isState || isTag);
+    $('.cond-value', node).classList.toggle('hidden', isList || isAge || isAddress || isState || isTag || isPriority);
+    $('.cond-priority', node).classList.toggle('hidden', !isPriority);
+    $('.cond-priority-hint', node).classList.toggle('hidden', !isPriority);
     $('.cond-hint', node).classList.toggle('hidden', !isName);
     $('.cond-state-hint', node).classList.toggle('hidden', !isState && !isTag);
     $('.cond-days', node).classList.toggle('hidden', !isAge);
@@ -771,6 +786,7 @@ function ruleSummary(node) {
     if (field === TAG_FIELD) {
       return `${negate ? 'does not have' : 'has'} tag ${tagLabel(c.dataset.tagKey)}`;
     }
+    if (field === PRIORITY_FIELD) return `priority ${negate ? 'is not' : 'is'} ${$('.cond-priority', c).value}`;
     if ($('.cond-op', c).value === IN_ADDRESS_BOOK) {
       return `${field} ${negate}in ${bookLabel(c.dataset.bookId)}`;
     }
@@ -898,6 +914,8 @@ function collectConfig(rejected = []) {
           // A missing tag is stored as-is and never matches (the matcher guards it).
           condition.tagKey = c.dataset.tagKey || '';
           if (!condition.tagKey) rejected.push('a tag condition has no tag chosen, so it will not match');
+        } else if (condition.field === PRIORITY_FIELD) {
+          condition.value = $('.cond-priority', c).value;
         } else if (operator === IN_ADDRESS_BOOK) {
           condition.addressBookId = c.dataset.bookId || ALL_ADDRESS_BOOKS;
         } else if (operator === DOMAIN_IN_LIST) {

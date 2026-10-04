@@ -154,6 +154,9 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
   of the four downloads anything. A scheduled run checks older mail only in the
   catch-up scan, so after you star, tag, or read an older message, a rule can
   take up to 30 minutes to act on it. **Run** checks every message at once.
+  The `priority` field checks for Highest, High, Normal, Low, or Lowest. To
+  read it, the add-on downloads the headers of each message, so it is slower
+  than the other fields. A message with no priority counts as Normal.
   Choosing `name shows a different address` needs no value. It matches when the
   sender name contains an email address from a different domain than the real
   address, as in `"Lena <lena@yahoo.com>" <someone@sina.com>`. Spam does this
