@@ -95,7 +95,10 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Run from the menu or the toolbar**: the same right-click menu has *Run all
   rules now* and *Run a rule*, which lists your rules. The toolbar button opens
   a panel with the same choices. To remove the button, right-click the toolbar,
-  select **Customize**, and drag the button off.
+  select **Customize**, and drag the button off. To hide the right-click menu,
+  clear *Show Folder Filter Scheduler in the right-click menu* under
+  **Advanced**. *Use the short name FFS*, also under **Advanced**, shows FFS
+  in both places.
 - **Import / export rules** as JSON, so a rule set can be backed up or moved
   between profiles. Imported rules are validated field by field and staged on the
   page for review before anything is stored.

@@ -155,6 +155,18 @@ test('the report says when a rule includes subfolders', () => {
   assert.match(buildReport(base), /folders: 1\n/);
 });
 
+test('the report says whether the right-click menu is shown', () => {
+  assert.match(buildReport(base), /right-click menu: shown; name: full/);
+  assert.match(
+    buildReport({ ...base, config: { ...config, advanced: { shortName: true } } }),
+    /right-click menu: shown; name: FFS/,
+  );
+  assert.match(
+    buildReport({ ...base, config: { ...config, advanced: { showMenu: false } } }),
+    /right-click menu: hidden/,
+  );
+});
+
 test('the report shows a rule\'s own schedule', () => {
   const withRule = (schedule) => ({ ...config, rules: [{ ...config.rules[0], schedule }] });
   assert.match(

@@ -24,6 +24,8 @@ export const ADVANCED_DEFAULTS = Object.freeze({
   catchUpEveryMinutes: 30,
   catchUpLookbackDays: 30,
   logScheduleRuns: false,
+  showMenu: true,
+  shortName: false,
 });
 
 /**
@@ -70,6 +72,10 @@ export function sanitizeAdvanced(raw) {
     // log lines a minute, which pushes everything else out of the diagnostics
     // log within hours. See `quiet` in background.js.
     logScheduleRuns: raw?.logScheduleRuns === true,
+    // On unless literally false, so a config saved before the setting existed
+    // keeps its right-click menu.
+    showMenu: raw?.showMenu !== false,
+    shortName: raw?.shortName === true,
   };
 
   for (const [key, limit] of Object.entries(ADVANCED_LIMITS)) {
