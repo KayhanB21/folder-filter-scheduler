@@ -442,3 +442,31 @@ test('a rule that differs from an existing one only by its schedule is imported'
   const again = sanitizeImport(file({ rules: [scheduled] }), { existingRules: [scheduled] });
   assert.equal(again.rules.length, 0);
 });
+
+// --- Name-shows-a-different-address conditions -------------------------------
+
+const nameRule = {
+  ...validRule,
+  name: 'Decoy senders',
+  conditions: [{ field: 'from', operator: 'nameShowsOtherAddress', negate: false }],
+};
+
+test('import accepts a name check and stores no value for it', () => {
+  const { rules, problems } = sanitizeImport(file({ rules: [{ ...nameRule, conditions: [{ ...nameRule.conditions[0], value: 'x' }] }] }));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ field: 'from', operator: 'nameShowsOtherAddress', negate: false }]);
+});
+
+test('import rejects a name check on a field that holds no address', () => {
+  const raw = { ...nameRule, conditions: [{ field: 'subject', operator: 'nameShowsOtherAddress' }] };
+  const { rules, problems } = sanitizeImport(file({ rules: [raw] }));
+  assert.equal(rules.length, 0);
+  assert.ok(problems.some((p) => /name check only applies/.test(p)), problems.join('; '));
+});
+
+test('a name check survives an export and import round trip', () => {
+  const exported = buildExport({ rules: [{ ...nameRule, id: 'n1' }] });
+  const { rules, problems } = sanitizeImport(JSON.parse(JSON.stringify(exported)));
+  assert.deepEqual(problems, []);
+  assert.equal(rules[0].conditions[0].operator, 'nameShowsOtherAddress');
+});

@@ -90,6 +90,15 @@
         <span class="spacer"></span>
         <button id="diag-clear" type="button" class="danger">Clear log</button>
       </div>
+
+      <label class="toggle adv-row">
+        <input id="adv-log-schedule" type="checkbox" /> Log every run on a rule's own schedule
+      </label>
+      <p class="adv-hint">
+        Without this, the diagnostics log records such a run only when it changes
+        mail or fails. A rule that runs every minute would otherwise push the older
+        entries out of the log within hours. Select <b>Save</b> to apply a change.
+      </p>
     </details>
 
     <details id="advanced-box" class="allowlist">
@@ -133,15 +142,6 @@
       <p class="adv-hint">
         How far before the previous run each scan starts, so mail arriving mid-scan or
         dated slightly early is not missed.
-      </p>
-
-      <label class="toggle adv-row">
-        <input id="adv-log-schedule" type="checkbox" /> Log every run on a rule's own schedule
-      </label>
-      <p class="adv-hint">
-        Without this, the diagnostics log records such a run only when it changes
-        mail or fails. A rule that runs every minute would otherwise push the older
-        entries out of the log within hours.
       </p>
 
       <button id="reset-advanced" type="button">Restore defaults</button>
@@ -276,6 +276,7 @@
           <option value="matchesRegex">matches regex</option>
           <option value="domainInList">domain is in list</option>
           <option value="inAddressBook">is in address book</option>
+          <option value="nameShowsOtherAddress">name shows a different address</option>
           <!-- Shown only for the age field. -->
           <option value="olderThan" class="op-age">older than</option>
           <option value="newerThan" class="op-age">newer than</option>
@@ -297,6 +298,15 @@
           spellcheck="false"
           placeholder="One domain per line, e.g. evil.com&#10;Subdomains are matched automatically."
         ></textarea>
+        <!-- Shown only for the nameShowsOtherAddress operator. -->
+        <p class="cond-hint hidden">
+          Matches when the sender name contains an email address from a different
+          domain than the real address. Example: the name is
+          <code>Lena &lt;lena@yahoo.com&gt;</code> and the real address is
+          <code>someone@sina.com</code>. Spam does this to look like another
+          sender. Some mailing lists do it too, so try the rule with a move to a
+          folder before you use Trash.
+        </p>
       </div>
     </template>
 

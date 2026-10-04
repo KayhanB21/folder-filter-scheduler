@@ -108,21 +108,80 @@ export function addressesFromHeaderValue(value) {
 }
 
 /**
+ * Split one mailbox into its display name and its real address.
+ *
+ * The real address is the last `<...>` outside quotes. A display name can hold
+ * an address of its own, `"Lena <lena@yahoo.com>" <someone@sina.com>`, and
+ * spam uses that to show a sender it is not. Taking the first `<...>` would
+ * read the decoy. Thunderbird sometimes hands the name over without its
+ * quotes, so the last pair wins in that form too. A bare address has no name.
+ */
+export function splitMailbox(mailbox) {
+  const text = String(mailbox ?? '').trim();
+  let found = null;
+  let start = -1;
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === '\\' && inQuotes) i += 1;
+    else if (ch === '"') inQuotes = !inQuotes;
+    else if (inQuotes) continue;
+    else if (ch === '<') start = i;
+    else if (ch === '>' && start !== -1) {
+      found = { start, end: i };
+      start = -1;
+    }
+  }
+
+  // Every pair sits inside quotes, or a quote never closes: use the last pair.
+  if (!found) {
+    const end = text.lastIndexOf('>');
+    const open = end === -1 ? -1 : text.lastIndexOf('<', end);
+    if (open !== -1) found = { start: open, end };
+  }
+  if (!found) return { name: '', address: text };
+
+  return {
+    name: `${text.slice(0, found.start)} ${text.slice(found.end + 1)}`.trim(),
+    address: text.slice(found.start + 1, found.end).trim(),
+  };
+}
+
+/**
  * Pull the domain out of one address, which may be bare (`a@b.com`) or a full
  * mailbox string (`"Name" <a@b.com>`). Returns null when there is no usable,
  * valid domain — callers treat null as "nothing to harvest here".
  */
 export function domainFromAddress(address) {
-  let candidate = String(address ?? '').trim();
-
-  const angled = candidate.match(/<([^>]*)>/);
-  if (angled) candidate = angled[1].trim();
+  const candidate = splitMailbox(address).address;
 
   const at = candidate.lastIndexOf('@');
   if (at === -1) return null;
 
   const domain = normalizeDomain(candidate.slice(at + 1));
   return isValidDomain(domain) ? domain : null;
+}
+
+const ADDRESS_IN_TEXT = /[a-z0-9._%+-]+@([a-z0-9-]+(?:\.[a-z0-9-]+)+)/gi;
+
+/**
+ * True when a mailbox's display name contains an email address from a
+ * different domain than its real address. A domain and its own subdomain count
+ * as the same, so `"Ann <ann@example.com>" <ann@mail.example.com>` is fine.
+ * A mailbox with no name, or with no usable real address, never matches.
+ */
+export function nameShowsOtherAddress(mailbox) {
+  const { name, address } = splitMailbox(mailbox);
+  const real = domainFromAddress(address);
+  if (!name || !real) return false;
+
+  for (const [, shownDomain] of name.matchAll(ADDRESS_IN_TEXT)) {
+    const shown = normalizeDomain(shownDomain);
+    if (!isValidDomain(shown)) continue;
+    if (shown !== real && !shown.endsWith(`.${real}`) && !real.endsWith(`.${shown}`)) return true;
+  }
+  return false;
 }
 
 /** Every distinct valid domain named by one raw header value. */

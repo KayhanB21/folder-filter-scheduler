@@ -51,6 +51,7 @@ const config = {
         { fields: ['reply-to', 'from'], operator: 'domainInList', domains: ['evil.example', 'bad.example'] },
         { field: 'from', operator: 'inAddressBook', addressBookId: 'all', negate: true },
         { field: 'age', operator: 'olderThan', days: 30 },
+        { field: 'from', operator: 'nameShowsOtherAddress' },
       ],
       actions: [{ type: 'tag', tagKey: 'Family secrets' }, { type: 'move', folderId: 'account1://Archive' }],
     },
@@ -89,6 +90,7 @@ test('the default report carries no addresses, domains, patterns, or folders', (
   assert.match(report, /from matchesRegex <\d+ chars>/);
   assert.match(report, /domain in list of 2/);
   assert.match(report, /from not in address book \(all\)/);
+  assert.match(report, /from name shows a different address/);
   assert.match(report, /age older than 30 day/);
   assert.match(report, /last run: 2026-09-11T08:28:00\.000Z; last catch-up: 2026-09-11T08:10:00\.000Z/);
   assert.match(report, /incremental scan, 3 scanned/);

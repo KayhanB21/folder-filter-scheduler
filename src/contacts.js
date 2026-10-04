@@ -11,6 +11,8 @@
  * the matcher; nothing here touches `messenger.*`.
  */
 
+import { splitMailbox } from './domains.js';
+
 /** The sentinel address-book id meaning "every local address book". */
 export const ALL_ADDRESS_BOOKS = 'all';
 
@@ -23,15 +25,13 @@ export const ALL_ADDRESS_BOOKS = 'all';
 export const ADDRESS_BOOK_FIELDS = Object.freeze(['from', 'reply-to', 'sender', 'to', 'cc']);
 
 /**
- * Normalise one address for comparison: the part inside <...> if present,
- * trimmed and lowercased. Returns null when there is no `local@domain` shape.
+ * Normalise one address for comparison: the real address of a mailbox (see
+ * splitMailbox), trimmed and lowercased. Returns null when there is no `local@domain` shape.
  * Lowercasing the local part is technically lossy, but every real provider
  * treats it case-insensitively and so do Thunderbird's own address-book lookups.
  */
 export function normalizeAddress(address) {
-  let candidate = String(address ?? '').trim();
-  const angled = candidate.match(/<([^>]*)>/);
-  if (angled) candidate = angled[1].trim();
+  let candidate = splitMailbox(address).address;
   if (candidate.toLowerCase().startsWith('mailto:')) candidate = candidate.slice(7);
   candidate = candidate.toLowerCase();
 

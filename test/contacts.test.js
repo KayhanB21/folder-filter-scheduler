@@ -57,3 +57,8 @@ test('addressSetFromVCards dedupes across contacts', () => {
   assert.equal(set.size, 4);
   assert.ok(set.has('alice@example.com'));
 });
+
+test('normalizeAddress reads the real address, not one inside the display name', () => {
+  assert.equal(normalizeAddress('"Friend <friend@known.com>" <spam@evil.com>'), 'spam@evil.com');
+  assert.equal(normalizeAddress('Friend <friend@known.com> <spam@evil.com>'), 'spam@evil.com');
+});

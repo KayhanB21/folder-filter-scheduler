@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!--
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Folder Filter Scheduler</title>
+    <link rel="stylesheet" href="../options/options.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="popup-body">
+    <button id="run-all" type="button" class="primary">Run all rules now</button>
+
+    <h2>Run one rule</h2>
+    <div id="rule-list" class="rule-list"></div>
+    <p id="no-rules" class="popup-note" hidden>No saved rule is turned on.</p>
+
+    <p id="status" class="popup-note" role="status"></p>
+
+    <button id="open-options" type="button">Open settings</button>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

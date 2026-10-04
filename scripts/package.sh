@@ -18,7 +18,7 @@ OUT_DIR="dist"
 OUT="${OUT_DIR}/folder-filter-scheduler-${VERSION}.zip"
 
 # Only the files the add-on needs at runtime — no tests, CI, docs, or secrets.
-INCLUDE=(manifest.json src options confirm _locales icons LICENSE)
+INCLUDE=(manifest.json src options confirm popup _locales icons LICENSE)
 
 mkdir -p "$OUT_DIR"
 rm -f "$OUT"
@@ -26,11 +26,11 @@ rm -f "$OUT"
 zip -r -X "$OUT" "${INCLUDE[@]}" -x '*.DS_Store' >/dev/null
 
 # Fail loudly if manifest.json is not at the archive root (the #1 upload error).
-# Capture the listing first: piping straight into `grep -q` makes grep close the
-# pipe on first match, which SIGPIPEs `unzip` and — under `set -o pipefail` —
-# reports a false failure.
+# Capture the listing and feed it to grep without a pipe: `grep -q` exits on the
+# first match, which SIGPIPEs whatever is still writing to it and, under
+# `set -o pipefail`, reports a false failure.
 listing="$(unzip -l "$OUT")"
-if ! printf '%s\n' "$listing" | grep -qE ' manifest\.json$'; then
+if ! grep -qE ' manifest\.json$' <<<"$listing"; then
   echo "ERROR: manifest.json is not at the ZIP root." >&2
   exit 1
 fi

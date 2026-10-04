@@ -30,6 +30,11 @@
     "scripts": ["src/background.js"],
     "type": "module"
   },
+  "action": {
+    "default_title": "Folder Filter Scheduler",
+    "default_icon": "icons/icon.svg",
+    "default_popup": "popup/popup.html"
+  },
   "options_ui": {
     "page": "options/options.html",
     "open_in_tab": true

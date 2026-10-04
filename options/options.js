@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { FIELDS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, AGE_FIELD, AGE_OPERATORS, ageDays } from '../src/matcher.js';
+import { FIELDS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, AGE_FIELD, AGE_OPERATORS, ageDays } from '../src/matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
 import { diagnosticsFilename } from '../src/diagnostics.js';
 import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } from '../src/actions.js';
@@ -503,15 +503,18 @@ function renderCondition(container, cond = {}) {
     if (isBook && bookAccess) fillBookSelect(bookSelect, node.dataset.bookId);
   };
 
-  let mode = null; // 'list' | 'book' | 'plain': decides which fields are offered
+  let mode = null; // 'list' | 'address' | 'plain': decides which fields are offered
   const syncRow = () => {
     const isList = op.value === DOMAIN_IN_LIST;
     const isBook = op.value === IN_ADDRESS_BOOK;
-    const nextMode = isList ? 'list' : isBook ? 'book' : 'plain';
+    const isName = op.value === NAME_SHOWS_OTHER_ADDRESS;
+    // Both read addresses, so they offer the same fields.
+    const isAddress = isBook || isName;
+    const nextMode = isList ? 'list' : isAddress ? 'address' : 'plain';
     if (nextMode !== mode) {
       const previous = mode === null ? (cond.field ?? cond.fields?.[0]) : fieldSelect.value;
       if (isList) fillDomainFieldSelect(fieldSelect, cond);
-      else if (isBook) fillBookFieldSelect(fieldSelect, previous);
+      else if (isAddress) fillBookFieldSelect(fieldSelect, previous);
       else fillFieldSelect(fieldSelect, FIELDS.includes(previous) ? previous : 'reply-to');
       mode = nextMode;
     }
@@ -526,7 +529,8 @@ function renderCondition(container, cond = {}) {
     if (!isAge && op.value in AGE_OPERATORS) op.value = 'contains';
 
     $('.cond-domains', node).classList.toggle('hidden', !isList);
-    $('.cond-value', node).classList.toggle('hidden', isList || isAge || isBook);
+    $('.cond-value', node).classList.toggle('hidden', isList || isAge || isAddress);
+    $('.cond-hint', node).classList.toggle('hidden', !isName);
     $('.cond-days', node).classList.toggle('hidden', !isAge);
     $('.cond-days-unit', node).classList.toggle('hidden', !isAge);
     node.syncBooks();
@@ -716,6 +720,9 @@ function ruleSummary(node) {
     if ($('.cond-op', c).value === IN_ADDRESS_BOOK) {
       return `${field} ${negate}in ${bookLabel(c.dataset.bookId)}`;
     }
+    if ($('.cond-op', c).value === NAME_SHOWS_OTHER_ADDRESS) {
+      return `${field} ${negate}name shows a different address`;
+    }
     if ($('.cond-op', c).value === DOMAIN_IN_LIST) {
       const { domains } = parseDomainList($('.cond-domains', c).value);
       return `${field} ${negate}in list of ${domains.length}`;
@@ -841,7 +848,7 @@ function collectConfig(rejected = []) {
           const { domains, invalid } = parseDomainList($('.cond-domains', c).value);
           condition.domains = domains;
           rejected.push(...invalid);
-        } else {
+        } else if (operator !== NAME_SHOWS_OTHER_ADDRESS) {
           condition.value = $('.cond-value', c).value;
         }
         return condition;
