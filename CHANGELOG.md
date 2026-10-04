@@ -67,9 +67,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only when the interval changes.
 - **A header download that never answers no longer blocks a run** (#15). A
   rule that reads Reply-To, List-Id, or Sender downloads the headers of each
-  message. Each download now has a 7-second limit. After 2 downloads time out,
-  the run stops downloading and leaves the remaining messages for the next
-  run.
+  message. Each download now has a 7-second limit. Thunderbird has a second,
+  slower way to read headers, which reads the whole message. When the first
+  way passes the limit, the add-on reads that message the second way and keeps
+  to it on that account for the remainder of the run. So a rule on Reply-To
+  works again on an account where the first way never answers. After 2 reads
+  end with no answer from either way, the run stops downloading and leaves the
+  remaining messages for the next run. The right-click **Add spam domains**
+  entry reads headers the same way.
 - **Diagnostics log shows when a run starts** (#15), so a run that Thunderbird
   suspends partway leaves a trace.
 - **An address inside the sender name hid the real sender.** For a sender such
