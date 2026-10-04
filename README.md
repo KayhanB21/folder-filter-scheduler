@@ -88,10 +88,14 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   free indexed header and downloads nothing; only `reply-to`/`list-id`/`sender`
   rules pay for a full message fetch. Offline storage is therefore a performance
   choice, not a requirement.
-- **Right-click harvesting**: select spam in any folder, choose *Add spam domains to
-  Folder Filter Scheduler*, and the extracted sender domains are merged into a
-  standing block rule after a confirmation step. Well-known providers (gmail,
-  yahoo, outlook, …) are never blocked.
+- **Right-click harvesting**: select spam in any folder, choose *Folder Filter
+  Scheduler*, then *Add spam domains*, and the extracted sender domains are
+  merged into a standing block rule after a confirmation step. Well-known
+  providers (gmail, yahoo, outlook, …) are never blocked.
+- **Run from the menu or the toolbar**: the same right-click menu has *Run all
+  rules now* and *Run a rule*, which lists your rules. The toolbar button opens
+  a panel with the same choices. To remove the button, right-click the toolbar,
+  select **Customize**, and drag the button off.
 - **Import / export rules** as JSON, so a rule set can be backed up or moved
   between profiles. Imported rules are validated field by field and staged on the
   page for review before anything is stored.
@@ -174,8 +178,8 @@ At the bottom of the options page. The defaults suit most people:
 
 ### 3. Or build a block list by right-clicking
 
-Select one or more spam messages, right-click, and choose **Add spam domains to
-Folder Filter Scheduler**. The add-on reads each message's `Reply-To` and `From`
+Select one or more spam messages, right-click, and choose **Folder Filter
+Scheduler**, then **Add spam domains**. The add-on reads each message's `Reply-To` and `From`
 headers, extracts the sender domains, drops anything on the protected-domains
 list, and shows you what it found. Confirm, and the domains are merged into a rule
 named **Spam domains** that moves matches to Trash on the normal schedule.
@@ -269,7 +273,7 @@ Thunderbird next starts.
 
 The diagnostics log records a run on a rule's own schedule only when it changes
 mail or fails. To record every such run, turn on **Log every run on a rule's own
-schedule** under **Advanced**.
+schedule** under **Diagnostics**.
 
 ## Common problems
 

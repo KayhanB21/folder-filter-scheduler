@@ -2,6 +2,8 @@ Fixes for scheduled runs, a schedule for each rule, and a Run button on each rul
 
 <ul>
 <li>New: a rule can have its own schedule, written as a cron expression such as "0 21 * * *" for 21:00 every day. It is off by default. The rule card describes the expression in plain words and shows the next run time</li>
+<li>New right-click menu "Folder Filter Scheduler" with "Add spam domains", "Run all rules now", and "Run a rule"</li>
+<li>New toolbar button that runs all rules or one rule</li>
 <li>New "Run" button on each rule. It runs only that rule, on every message in its folders</li>
 <li>New condition "name shows a different address". It matches a sender name that contains an email address from a different domain than the real address, which is common in spam. No rule uses it until you add it</li>
 <li>A sender name that contains an email address no longer hides the real sender. Domain lists, "Add spam domains", and address-book checks read the real address</li>

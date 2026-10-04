@@ -11,6 +11,7 @@ import { ADVANCED_DEFAULTS, alarmNeedsReset, sanitizeAdvanced } from './settings
 import { createRunner, withTimeout } from './runner.js';
 import { resolveRuleFolders } from './folders.js';
 import { cronAlarmNeedsReset, missedRun, nextRun, scheduleOf } from './cron.js';
+import { MENU_HARVEST, MENU_RUN_ALL, menuItems, ruleIdFromMenuItem } from './menu.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -42,7 +43,6 @@ import {
 const ALARM_NAME = 'folder-filter-scheduler.tick';
 /** One alarm per rule with its own schedule, named by the rule id. */
 const CRON_ALARM_PREFIX = 'folder-filter-scheduler.rule.';
-const MENU_ID = 'folder-filter-scheduler.harvest-domains';
 const DEFAULT_INTERVAL_MINUTES = 10;
 
 /**
@@ -665,6 +665,7 @@ async function mergeHarvestedDomains(domains, sourceFolderId) {
   await saveConfig({ ...config, rules, harvestRuleId: rule.id });
 
   log(`harvest merged ${added.length} new domain(s); rule now holds ${merged.length}`);
+  if (created) registerMenu();
   return { added, total: merged.length, ruleName: rule.name, created };
 }
 
@@ -753,25 +754,35 @@ async function handleHarvest(info) {
 }
 
 /**
- * Menus are not persisted for MV3 event pages, so this runs on every wake.
- * removeAll() first keeps a re-registration from failing on a duplicate id.
+ * Build the right-click menu. Menus are not persisted for MV3 event pages, so
+ * this runs on every wake, and again when the saved rules change, because
+ * "Run a rule" lists them. removeAll() first keeps a re-registration from
+ * failing on a duplicate id. The builds are chained: two at once would
+ * interleave their removeAll() and create() calls.
  */
-async function registerMenu() {
-  try {
-    await messenger.menus.removeAll();
-    messenger.menus.create({
-      id: MENU_ID,
-      title: 'Add spam domains to Folder Filter Scheduler',
-      contexts: ['message_list'],
-    });
-  } catch (e) {
-    warn('menu registration failed', e);
-  }
+let menuBuild = Promise.resolve();
+function registerMenu() {
+  menuBuild = menuBuild.then(async () => {
+    try {
+      const { rules } = await loadConfig();
+      await messenger.menus.removeAll();
+      for (const item of menuItems(rules)) messenger.menus.create(item);
+    } catch (e) {
+      warn('menu registration failed', e);
+    }
+  });
+  return menuBuild;
 }
 
 messenger.menus.onClicked.addListener((info) => {
-  if (info.menuItemId !== MENU_ID) return;
-  handleHarvest(info).catch((e) => warn('harvest failed', e));
+  if (info.menuItemId === MENU_HARVEST) {
+    handleHarvest(info).catch((e) => warn('harvest failed', e));
+    return;
+  }
+  const ruleId = ruleIdFromMenuItem(info.menuItemId);
+  if (info.menuItemId !== MENU_RUN_ALL && ruleId === null) return;
+  const scope = ruleId === null ? {} : { ruleIds: new Set([ruleId]) };
+  runner.request('manual', scope).catch((e) => warn('run from the menu failed', e));
 });
 
 /**
@@ -871,6 +882,8 @@ messenger.runtime.onMessage.addListener((msg) => {
     return runner.request('manual', scope).then((affected) => ({ ok: true, affected }));
   }
   if (msg?.command === 'reschedule') {
+    // The options page sends this after a save, so the rules might be new.
+    registerMenu();
     return applySettings().then(() => ({ ok: true }));
   }
   if (msg?.command === 'diagnostics') {
