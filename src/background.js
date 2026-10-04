@@ -8,7 +8,8 @@ import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js
 import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
 import { ADVANCED_DEFAULTS, alarmNeedsReset, sanitizeAdvanced } from './settings.js';
-import { createRunner, withTimeout } from './runner.js';
+import { createRunner } from './runner.js';
+import { createHeaderReads } from './headers.js';
 import { resolveRuleFolders } from './folders.js';
 import { cronAlarmNeedsReset, missedRun, nextRun, scheduleOf } from './cron.js';
 import { MENU_HARVEST, MENU_RUN_ALL, SHORT_NAME, displayName, menuItems, ruleIdFromMenuItem } from './menu.js';
@@ -46,12 +47,13 @@ const CRON_ALARM_PREFIX = 'folder-filter-scheduler.rule.';
 const DEFAULT_INTERVAL_MINUTES = 10;
 
 /**
- * How long one header download may take, and how many may time out before the
- * run stops downloading. The first download of a run can include the IMAP
- * login, so the limit is generous: a false timeout makes a working rule skip
- * mail, which is worse than a slow run. Thunderbird suspends an idle event
- * page after about 30 seconds, so the worst case of two waits, 14 seconds,
- * leaves room to log the result and save the run.
+ * How long one header download may take, and how many may end with no headers
+ * before the run stops downloading. The first download of a run can include
+ * the IMAP login, so the limit is generous: a false timeout makes a working
+ * rule skip mail, which is worse than a slow run. Thunderbird suspends an idle
+ * event page after about 30 seconds, so the worst case of two waits, 14
+ * seconds, leaves room to log the result and save the run. headers.js holds
+ * the policy, including the second way to read that follows a timeout.
  */
 const HEADER_TIMEOUT_MS = 7_000;
 const HEADER_TIMEOUT_LIMIT = 2;
@@ -249,12 +251,23 @@ async function applySettings() {
   );
 }
 
-/** Read a message's headers without paying for MIME parsing (TB 147+). */
-async function readHeaders(messageId) {
-  const raw = messenger.messages.getHeaders
-    ? await messenger.messages.getHeaders(messageId)
-    : await messenger.messages.getFull(messageId);
-  return raw?.headers ?? raw ?? {};
+/**
+ * The header reads of one run, or of one right-click harvest. `getHeaders`
+ * skips MIME parsing (TB 147+); `getFull` is the fallback for an account where
+ * it never answers.
+ */
+function newHeaderReads() {
+  return createHeaderReads({
+    getHeaders: messenger.messages.getHeaders && ((id) => messenger.messages.getHeaders(id)),
+    getFull: (id) => messenger.messages.getFull(id),
+    timeoutMs: HEADER_TIMEOUT_MS,
+    limit: HEADER_TIMEOUT_LIMIT,
+    // Saved at once: the run might be suspended before the usual delay.
+    onTimeout: (message) => {
+      warn(message);
+      return flushLog();
+    },
+  });
 }
 
 /**
@@ -278,30 +291,16 @@ async function normalize(messageHeader, fetchFull, headerReads) {
   // on the indexed fields alone is unsafe: "Reply-To does not contain X" is
   // true for a missing header, and a rule that deletes would then act on mail
   // it never read.
-  if (fetchFull && headerReads.timeouts >= HEADER_TIMEOUT_LIMIT) {
-    headerReads.skipped += 1;
-    return null;
-  }
   let headersRead = false;
   if (fetchFull) {
     try {
-      const headers = await withTimeout(readHeaders(messageHeader.id), HEADER_TIMEOUT_MS);
+      const headers = await headerReads.read(messageHeader.id, messageHeader.folder?.accountId);
+      if (!headers) return null;
       for (const [name, values] of Object.entries(headers)) {
         for (const v of values ?? []) push(name, v);
       }
       headersRead = true;
     } catch (e) {
-      if (e?.name === 'TimeoutError') {
-        headerReads.timeouts += 1;
-        headerReads.skipped += 1;
-        warn(`header read timed out after ${HEADER_TIMEOUT_MS / 1000} s`, messageHeader.id);
-        if (headerReads.timeouts === HEADER_TIMEOUT_LIMIT) {
-          warn(`${HEADER_TIMEOUT_LIMIT} header reads timed out, no more header reads this run`);
-        }
-        // Saved at once: the run might be suspended before the usual delay.
-        await flushLog();
-        return null;
-      }
       warn('header read failed', messageHeader.id, e);
     }
   }
@@ -482,7 +481,7 @@ async function runAllRules(
   logUnless(quietRun, `run (${reason}) started: ${selected.length} of ${rules.length} rule(s)`);
   const addressBooks = await loadAddressBooks(selected);
   // Shared by every rule of the run: see HEADER_TIMEOUT_LIMIT.
-  const headerReads = { timeouts: 0, skipped: 0 };
+  const headerReads = newHeaderReads();
   let total = 0;
 
   for (const rule of selected) {
@@ -706,11 +705,16 @@ async function addressesFromSelection(selectedMessages) {
   const byField = Object.fromEntries(HARVEST_FIELDS.map((f) => [f, []]));
   let scanned = 0;
   let unreadable = 0;
+  const headerReads = newHeaderReads();
 
   for await (const header of eachMessage(selectedMessages)) {
     scanned += 1;
     try {
-      const headers = await readHeaders(header.id);
+      const headers = await headerReads.read(header.id, header.folder?.accountId);
+      if (!headers) {
+        unreadable += 1;
+        continue;
+      }
       for (const field of HARVEST_FIELDS) {
         const found = (headers[field] ?? []).flatMap((v) => addressesFromHeaderValue(v));
         // Per message, not per batch: the indexed author stands in when this

@@ -10,7 +10,7 @@ Fixes for scheduled runs, a schedule for each rule, and a Run button on each rul
 <li>New condition "name shows a different address". It matches a sender name that contains an email address from a different domain than the real address, which is common in spam. No rule uses it until you add it</li>
 <li>A sender name that contains an email address no longer hides the real sender. Domain lists, "Add spam domains", and address-book checks read the real address</li>
 <li>New mail no longer restarts the schedule timer, so scheduled runs happen on time even when mail arrives often</li>
-<li>A header download that never answers no longer blocks a run. Each download has a 7-second limit</li>
+<li>A header download that never answers no longer blocks a run. Each download has a 7-second limit, and after a timeout the add-on reads the whole message instead, so a rule on Reply-To works on an account where the header download never answers</li>
 <li>The diagnostics log shows when each run starts</li>
 <li>New "Common problems" section on the options page. It explains why a rule can miss mail in Sent or other IMAP folders, and which Thunderbird setting fixes it</li>
 </ul>
