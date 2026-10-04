@@ -311,8 +311,15 @@ async function normalize(messageHeader, fetchFull, headerReads) {
   if (!fields.to) for (const r of messageHeader.recipients ?? []) push('to', r);
   if (!fields.cc) for (const c of messageHeader.ccList ?? []) push('cc', c);
 
-  // The indexed Date, for age conditions. Free, no fetch.
-  return { fields, date: messageHeader.date, _header: messageHeader };
+  // The indexed Date, state, and tags, for the conditions that are not about a
+  // header. Free, no fetch.
+  return {
+    fields,
+    date: messageHeader.date,
+    state: { read: messageHeader.read, star: messageHeader.flagged, junk: messageHeader.junk },
+    tags: messageHeader.tags,
+    _header: messageHeader,
+  };
 }
 
 /** Walk any paginated MessageList (a query result or a menu selection). */

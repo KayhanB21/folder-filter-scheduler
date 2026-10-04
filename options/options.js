@@ -2,7 +2,20 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { FIELDS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, AGE_FIELD, AGE_OPERATORS, ageDays } from '../src/matcher.js';
+import {
+  FIELDS,
+  DOMAIN_IN_LIST,
+  IN_ADDRESS_BOOK,
+  NAME_SHOWS_OTHER_ADDRESS,
+  AGE_FIELD,
+  AGE_OPERATORS,
+  STATE_FIELDS,
+  STATE_OPERATORS,
+  STATE_LABELS,
+  TAG_FIELD,
+  HAS_TAG,
+  ageDays,
+} from '../src/matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
 import { diagnosticsFilename } from '../src/diagnostics.js';
 import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } from '../src/actions.js';
@@ -177,7 +190,7 @@ function fillTagSelect(select, currentKey) {
 }
 
 function refreshTagRows() {
-  for (const row of rulesEl.querySelectorAll('.action')) row.syncTags?.();
+  for (const row of rulesEl.querySelectorAll('.action, .condition')) row.syncTags?.();
 }
 
 function requestTagAccess() {
@@ -503,6 +516,24 @@ function renderCondition(container, cond = {}) {
     if (isBook && bookAccess) fillBookSelect(bookSelect, node.dataset.bookId);
   };
 
+  // The tag key lives on the row for the same reason.
+  node.dataset.tagKey = cond.tagKey ?? '';
+  const tagSelect = $('.cond-tag', node);
+  const tagGrant = $('.cond-tag-grant', node);
+  tagSelect.addEventListener('change', () => {
+    node.dataset.tagKey = tagSelect.value;
+  });
+  tagGrant.addEventListener('click', requestTagAccess);
+  node.syncTags = () => {
+    const isTag = fieldSelect.value === TAG_FIELD;
+    tagSelect.classList.toggle('hidden', !isTag || !tagAccess);
+    tagGrant.classList.toggle('hidden', !isTag || tagAccess);
+    if (isTag && tagAccess) {
+      fillTagSelect(tagSelect, node.dataset.tagKey);
+      node.dataset.tagKey = tagSelect.value;
+    }
+  };
+
   let mode = null; // 'list' | 'address' | 'plain': decides which fields are offered
   const syncRow = () => {
     const isList = op.value === DOMAIN_IN_LIST;
@@ -519,21 +550,40 @@ function renderCondition(container, cond = {}) {
       mode = nextMode;
     }
 
-    const isAge = fieldSelect.value === AGE_FIELD;
+    // Age, the three states, and tag each take their own operators and nothing
+    // else. Every other field takes the rest.
+    const field = fieldSelect.value;
+    const isAge = field === AGE_FIELD;
+    const isState = STATE_FIELDS.includes(field);
+    const isTag = field === TAG_FIELD;
+    const kindOf = (value) => {
+      if (value in AGE_OPERATORS) return 'age';
+      if (value in STATE_OPERATORS) return 'state';
+      return value === HAS_TAG ? 'tag' : 'plain';
+    };
+    const kind = isAge ? 'age' : isState ? 'state' : isTag ? 'tag' : 'plain';
     for (const option of op.options) {
-      const ageOp = option.value in AGE_OPERATORS;
-      option.hidden = isAge ? !ageOp : ageOp;
+      option.hidden = kindOf(option.value) !== kind;
       option.disabled = option.hidden;
+      if (isState && option.value in STATE_OPERATORS) option.textContent = STATE_LABELS[field][option.value];
     }
-    if (isAge && !(op.value in AGE_OPERATORS)) op.value = AGE_OPERATORS.olderThan;
-    if (!isAge && op.value in AGE_OPERATORS) op.value = 'contains';
+    if (kindOf(op.value) !== kind) {
+      op.value = { age: AGE_OPERATORS.olderThan, state: STATE_OPERATORS.isOn, tag: HAS_TAG, plain: 'contains' }[kind];
+    }
+
+    // "is unread" already says "not read", so a state row has no "not" box.
+    const negate = $('.cond-negate', node);
+    negate.closest('label').classList.toggle('hidden', isState);
+    if (isState) negate.checked = false;
 
     $('.cond-domains', node).classList.toggle('hidden', !isList);
-    $('.cond-value', node).classList.toggle('hidden', isList || isAge || isAddress);
+    $('.cond-value', node).classList.toggle('hidden', isList || isAge || isAddress || isState || isTag);
     $('.cond-hint', node).classList.toggle('hidden', !isName);
+    $('.cond-state-hint', node).classList.toggle('hidden', !isState && !isTag);
     $('.cond-days', node).classList.toggle('hidden', !isAge);
     $('.cond-days-unit', node).classList.toggle('hidden', !isAge);
     node.syncBooks();
+    node.syncTags();
   };
   op.addEventListener('change', syncRow);
   fieldSelect.addEventListener('change', syncRow);
@@ -717,6 +767,10 @@ function ruleSummary(node) {
       const days = $('.cond-days', c).value || '?';
       return `age ${negate}${opLabel} ${days} day${days === '1' ? '' : 's'}`;
     }
+    if (STATE_FIELDS.includes(field)) return STATE_LABELS[field][$('.cond-op', c).value] ?? field;
+    if (field === TAG_FIELD) {
+      return `${negate ? 'does not have' : 'has'} tag ${tagLabel(c.dataset.tagKey)}`;
+    }
     if ($('.cond-op', c).value === IN_ADDRESS_BOOK) {
       return `${field} ${negate}in ${bookLabel(c.dataset.bookId)}`;
     }
@@ -838,6 +892,12 @@ function collectConfig(rejected = []) {
           const days = ageDays({ days: raw });
           condition.days = days ?? 0;
           if (days === null) rejected.push(`age condition needs a whole number of days (got "${raw || 'nothing'}")`);
+        } else if (STATE_FIELDS.includes(condition.field)) {
+          condition.negate = false;
+        } else if (condition.field === TAG_FIELD) {
+          // A missing tag is stored as-is and never matches (the matcher guards it).
+          condition.tagKey = c.dataset.tagKey || '';
+          if (!condition.tagKey) rejected.push('a tag condition has no tag chosen, so it will not match');
         } else if (operator === IN_ADDRESS_BOOK) {
           condition.addressBookId = c.dataset.bookId || ALL_ADDRESS_BOOKS;
         } else if (operator === DOMAIN_IN_LIST) {
@@ -963,6 +1023,10 @@ async function save() {
     note = ' Address book conditions will not match until you allow address book access.';
   } else if (bookConds.some((c) => !knownBooks.has(c.addressBookId))) {
     note = ' An address book condition points at a book that no longer exists; it will not match.';
+  }
+  const tagConds = collected.rules.flatMap((r) => r.conditions.filter((c) => c.field === TAG_FIELD && c.tagKey));
+  if (tagConds.length > 0 && tagAccess && tagConds.some((c) => !tags.some((t) => t.key === c.tagKey))) {
+    note += ' A tag condition points at a tag that no longer exists; it will not match.';
   }
   // Tagging itself works without messagesTagsList; only the picker needs it.
   if (tagActions.length > 0 && tagAccess && tagActions.some((a) => !tags.some((t) => t.key === a.tagKey))) {

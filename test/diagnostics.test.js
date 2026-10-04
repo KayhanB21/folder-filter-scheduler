@@ -52,6 +52,8 @@ const config = {
         { field: 'from', operator: 'inAddressBook', addressBookId: 'all', negate: true },
         { field: 'age', operator: 'olderThan', days: 30 },
         { field: 'from', operator: 'nameShowsOtherAddress' },
+        { field: 'read', operator: 'isOff' },
+        { field: 'tag', operator: 'hasTag', tagKey: 'Secret tag', negate: true },
       ],
       actions: [{ type: 'tag', tagKey: 'Family secrets' }, { type: 'move', folderId: 'account1://Archive' }],
     },
@@ -74,7 +76,7 @@ const base = {
 
 test('the default report carries no addresses, domains, patterns, or folders', () => {
   const report = buildReport(base);
-  for (const secret of ['spammer', 'evil.example', 'bad.example', 'Junk"', 'account1://', 'Archive', 'Family secrets']) {
+  for (const secret of ['spammer', 'evil.example', 'bad.example', 'Junk"', 'account1://', 'Archive', 'Family secrets', 'Secret tag']) {
     assert.ok(!report.includes(secret), `leaked ${secret}`);
   }
   assert.match(report, /Thunderbird 152\.0/);
@@ -91,6 +93,8 @@ test('the default report carries no addresses, domains, patterns, or folders', (
   assert.match(report, /domain in list of 2/);
   assert.match(report, /from not in address book \(all\)/);
   assert.match(report, /from name shows a different address/);
+  assert.match(report, /if is unread/);
+  assert.match(report, /not has tag/);
   assert.match(report, /age older than 30 day/);
   assert.match(report, /last run: 2026-09-11T08:28:00\.000Z; last catch-up: 2026-09-11T08:10:00\.000Z/);
   assert.match(report, /incremental scan, 3 scanned/);
@@ -102,6 +106,7 @@ test('opting in includes the values', () => {
   assert.ok(report.includes('evil.example'));
   assert.ok(report.includes('account1://Junk'));
   assert.ok(report.includes('Family secrets'));
+  assert.ok(report.includes('not has tag Secret tag'));
   assert.match(report, /values included: yes/);
 });
 

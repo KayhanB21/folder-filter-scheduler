@@ -52,7 +52,7 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Actions**: move to Trash, archive with each account's own archive
   settings, move/copy to a chosen folder (**including a folder
   in a different account** — e.g. Yahoo Bulk → Outlook Trash), apply one of your
-  Thunderbird tags, mark read / flagged / junk, or delete permanently. Actions
+  Thunderbird tags, mark read or unread, add or remove a star, mark junk or not junk, or delete permanently. Actions
   live in a single [registry](src/actions.js) that drives both the engine and
   the UI, so adding one is a one-entry change.
 - **Several actions per rule**: "tag as Friends *and* move to the Friends
@@ -148,6 +148,12 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
   Choosing the `age` field swaps the row to `older than` / `newer than` and a
   number of days. Choosing `is in address book` swaps the value for a book picker;
   the first time, it shows **Allow address book access…** instead.
+  The `read`, `star`, and `junk` fields check the state of a message, with
+  choices such as `is unread` or `is not starred`. The `tag` field checks for
+  one of your Thunderbird tags; tick **not** for "does not have the tag". None
+  of the four downloads anything. A scheduled run checks older mail only in the
+  catch-up scan, so after you star, tag, or read an older message, a rule can
+  take up to 30 minutes to act on it. **Run** checks every message at once.
   Choosing `name shows a different address` needs no value. It matches when the
   sender name contains an email address from a different domain than the real
   address, as in `"Lena <lena@yahoo.com>" <someone@sina.com>`. Spam does this

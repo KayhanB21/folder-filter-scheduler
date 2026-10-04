@@ -9,7 +9,9 @@
  * APIs so it can be unit-tested under plain Node. The background script feeds it
  * a normalized message and a rule; it returns whether the rule matches.
  *
- * A normalized message is `{ fields: { <lowercased-name>: string[] } }`.
+ * A normalized message is `{ fields: { <lowercased-name>: string[] } }`, plus
+ * `date`, `state` (read, star, junk), and `tags` for the conditions that are
+ * not about a header.
  * Header-like fields ("from", "subject", "reply-to", "x-anything") map to the
  * raw header values exactly as Thunderbird's header APIs return them
  * (lowercased keys, array values because a header may legally repeat).
@@ -76,6 +78,29 @@ export const AGE_OPERATORS = Object.freeze({
   newerThan: 'newerThan',
 });
 
+/**
+ * Message-state pseudo-fields: whether a message is read, starred, or marked
+ * as junk. Not headers. The background script copies them from the indexed
+ * message into `message.state`, so they cost no download. Shape:
+ * `{ field: 'read' | 'star' | 'junk', operator: 'isOn' | 'isOff', negate }`.
+ */
+export const STATE_FIELDS = Object.freeze(['read', 'star', 'junk']);
+export const STATE_OPERATORS = Object.freeze({ isOn: 'isOn', isOff: 'isOff' });
+/** What each state operator means for each field, in the user's words. */
+export const STATE_LABELS = Object.freeze({
+  read: Object.freeze({ isOn: 'is read', isOff: 'is unread' }),
+  star: Object.freeze({ isOn: 'is starred', isOff: 'is not starred' }),
+  junk: Object.freeze({ isOn: 'is junk', isOff: 'is not junk' }),
+});
+
+/**
+ * The tag pseudo-field. `message.tags` holds the keys of the tags on the
+ * message, also free. Shape: `{ field: 'tag', operator: 'hasTag', tagKey,
+ * negate }`.
+ */
+export const TAG_FIELD = 'tag';
+export const HAS_TAG = 'hasTag';
+
 export const FIELDS = Object.freeze([
   'from',
   'to',
@@ -85,6 +110,8 @@ export const FIELDS = Object.freeze([
   'list-id',
   'sender',
   AGE_FIELD,
+  ...STATE_FIELDS,
+  TAG_FIELD,
 ]);
 
 /**
@@ -93,7 +120,7 @@ export const FIELDS = Object.freeze([
  * Everything else (reply-to, list-id, sender, arbitrary headers) needs a
  * `messages.getFull()`, which on a non-offline IMAP folder hits the network.
  */
-export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject', AGE_FIELD]);
+export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject', AGE_FIELD, ...STATE_FIELDS, TAG_FIELD]);
 
 const foldCase = (s) => (s ?? '').toString().toLowerCase();
 
@@ -105,6 +132,14 @@ const foldCase = (s) => (s ?? '').toString().toLowerCase();
  */
 export function isAgeCondition(condition) {
   return foldCase(condition?.field) === AGE_FIELD;
+}
+
+export function isStateCondition(condition) {
+  return STATE_FIELDS.includes(foldCase(condition?.field));
+}
+
+export function isTagCondition(condition) {
+  return foldCase(condition?.field) === TAG_FIELD;
 }
 
 /**
@@ -228,6 +263,36 @@ function evaluateAddressBookCondition(message, condition, addressBooks) {
   return condition.negate ? !anyKnown : anyKnown;
 }
 
+/**
+ * Evaluate a read, star, or junk condition. NEVER matches, negated or not,
+ * when the message does not carry the state as a boolean: an unknown state
+ * must not read as "unread" or "not junk" and hand the message to an action.
+ */
+function evaluateStateCondition(message, condition) {
+  const value = message?.state?.[foldCase(condition.field)];
+  if (typeof value !== 'boolean') return false;
+
+  let satisfied;
+  if (condition.operator === STATE_OPERATORS.isOn) satisfied = value;
+  else if (condition.operator === STATE_OPERATORS.isOff) satisfied = !value;
+  else throw new Error(`Unknown state operator: ${condition.operator}`);
+  return condition.negate ? !satisfied : satisfied;
+}
+
+/**
+ * Evaluate a tag condition. NEVER matches, negated or not, when no tag is
+ * chosen or the message's tags are unknown. "Does not have tag X" with a blank
+ * X would otherwise be true for every message.
+ */
+function evaluateTagCondition(message, condition) {
+  if (condition.operator !== HAS_TAG) throw new Error(`Unknown tag operator: ${condition.operator}`);
+  const key = typeof condition.tagKey === 'string' ? condition.tagKey.trim() : '';
+  if (!key || !Array.isArray(message?.tags)) return false;
+
+  const satisfied = message.tags.includes(key);
+  return condition.negate ? !satisfied : satisfied;
+}
+
 function evaluateNameCondition(message, condition) {
   const anySatisfied = fieldsOf(condition)
     .flatMap((field) => valuesFor(message, field))
@@ -238,6 +303,8 @@ function evaluateNameCondition(message, condition) {
 
 export function evaluateCondition(message, condition, { now = new Date(), addressBooks } = {}) {
   if (isAgeCondition(condition)) return evaluateAgeCondition(message, condition, now);
+  if (isStateCondition(condition)) return evaluateStateCondition(message, condition);
+  if (isTagCondition(condition)) return evaluateTagCondition(message, condition);
   if (condition.operator === IN_ADDRESS_BOOK) {
     return evaluateAddressBookCondition(message, condition, addressBooks);
   }

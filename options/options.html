@@ -280,6 +280,12 @@
           <!-- Shown only for the age field. -->
           <option value="olderThan" class="op-age">older than</option>
           <option value="newerThan" class="op-age">newer than</option>
+          <!-- Shown only for the read, star, and junk fields. The text is set
+               for the field: "is read" and "is unread", and so on. -->
+          <option value="isOn">is</option>
+          <option value="isOff">is not</option>
+          <!-- Shown only for the tag field. -->
+          <option value="hasTag">has tag</option>
         </select>
         <label class="toggle"><input class="cond-negate" type="checkbox" /> not</label>
         <input class="cond-value" type="text" placeholder="value" />
@@ -290,6 +296,10 @@
              button asks for the optional addressBooks permission instead. -->
         <select class="cond-book hidden"></select>
         <button class="cond-book-grant hidden" type="button">Allow address book access…</button>
+        <!-- Shown only for the tag field. Without access, the button asks for
+             the optional messagesTagsList permission instead. -->
+        <select class="cond-tag hidden"></select>
+        <button class="cond-tag-grant hidden" type="button">Allow tag access…</button>
         <button class="del-cond danger" type="button">×</button>
         <!-- Shown only for the domainInList operator: one domain per line. -->
         <textarea
@@ -306,6 +316,13 @@
           <code>someone@sina.com</code>. Spam does this to look like another
           sender. Some mailing lists do it too, so try the rule with a move to a
           folder before you use Trash.
+        </p>
+        <!-- Shown only for the read, star, junk, and tag fields. -->
+        <p class="cond-state-hint cond-hint hidden">
+          A scheduled run checks older mail only in the catch-up scan, by default
+          every 30 minutes (see <b>Advanced</b>). So after you star, tag, or read an
+          older message, the rule can take that long to act on it.
+          <b>Run</b> checks every message at once.
         </p>
       </div>
     </template>

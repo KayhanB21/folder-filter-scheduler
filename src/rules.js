@@ -15,7 +15,7 @@
  */
 
 import { ACTIONS_BY_ID, actionsOf, orderActions } from './actions.js';
-import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, ageDays } from './matcher.js';
+import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, STATE_FIELDS, STATE_OPERATORS, TAG_FIELD, HAS_TAG, ageDays } from './matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 import { sanitizeAdvanced } from './settings.js';
@@ -31,6 +31,8 @@ const KNOWN_OPERATORS = new Set([
   IN_ADDRESS_BOOK,
   NAME_SHOWS_OTHER_ADDRESS,
   ...Object.keys(AGE_OPERATORS),
+  ...Object.keys(STATE_OPERATORS),
+  HAS_TAG,
 ]);
 const AGE_OPERATOR_SET = new Set(Object.keys(AGE_OPERATORS));
 
@@ -59,7 +61,9 @@ export function ruleFingerprint(rule) {
         shape.days = ageDays(c);
       } else if (shape.operator === IN_ADDRESS_BOOK) {
         shape.addressBookId = String(c?.addressBookId ?? '');
-      } else if (shape.operator !== NAME_SHOWS_OTHER_ADDRESS) {
+      } else if (shape.operator === HAS_TAG) {
+        shape.tagKey = String(c?.tagKey ?? '');
+      } else if (shape.operator !== NAME_SHOWS_OTHER_ADDRESS && !(shape.operator in STATE_OPERATORS)) {
         shape.value = String(c?.value ?? '');
       }
       return JSON.stringify(shape, Object.keys(shape).sort());
@@ -186,6 +190,27 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
       return null;
     }
     condition.days = days;
+    return condition;
+  }
+
+  // Read, star, junk, and tag are pseudo-fields too, each with its own
+  // operators. One of them never shares a condition with another field.
+  const [only] = fields;
+  const stateField = fields.length === 1 && STATE_FIELDS.includes(only);
+  const tagField = fields.length === 1 && only === TAG_FIELD;
+  const mixed = fields.length > 1 && fields.some((f) => STATE_FIELDS.includes(f) || f === TAG_FIELD);
+  if (mixed || stateField !== (operator in STATE_OPERATORS) || tagField !== (operator === HAS_TAG)) {
+    problems.push(`${where}: "${operator}" does not apply to "${fields.join(',')}"`);
+    return null;
+  }
+  if (stateField) return condition;
+  if (tagField) {
+    const tagKey = typeof raw?.tagKey === 'string' ? raw.tagKey.trim() : '';
+    if (!tagKey) {
+      problems.push(`${where}: no tag chosen`);
+      return null;
+    }
+    condition.tagKey = tagKey;
     return condition;
   }
 

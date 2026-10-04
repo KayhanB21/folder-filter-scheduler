@@ -81,11 +81,25 @@ export const ACTIONS = [
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { read: true }))),
   },
   {
-    id: 'markFlagged',
-    label: 'Flag',
+    id: 'markUnread',
+    label: 'Mark as unread',
     needsFolder: false,
-    hint: 'Flags matches without moving them.',
+    hint: 'Marks matches as unread without moving them.',
+    apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { read: false }))),
+  },
+  {
+    id: 'markFlagged',
+    label: 'Add star',
+    needsFolder: false,
+    hint: 'Adds a star to matches without moving them.',
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { flagged: true }))),
+  },
+  {
+    id: 'markUnflagged',
+    label: 'Remove star',
+    needsFolder: false,
+    hint: 'Removes the star from matches without moving them.',
+    apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { flagged: false }))),
   },
   {
     id: 'markJunk',
@@ -93,6 +107,13 @@ export const ACTIONS = [
     needsFolder: false,
     hint: 'Marks matches as junk (does not move them — Thunderbird’s junk handling decides the rest).',
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { junk: true }))),
+  },
+  {
+    id: 'markNotJunk',
+    label: 'Mark as not junk',
+    needsFolder: false,
+    hint: 'Removes the junk mark from matches without moving them.',
+    apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { junk: false }))),
   },
   {
     id: 'deletePermanently',
