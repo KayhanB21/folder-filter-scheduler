@@ -7,6 +7,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.3.6]
 
 ### Added
+- **Run button on each rule.** It runs only that rule, on every message in its
+  folders, and leaves the other rules alone. The button runs the saved rule, so
+  it asks you to save first when the card has changes.
 - **Common problems** section on the options page and in the README. It
   explains why a rule can miss mail in an IMAP folder other than the Inbox, and
   which Thunderbird folder setting fixes it (#12).

@@ -607,8 +607,22 @@ function renderAction(container, action = {}) {
   container.append(node);
 }
 
-function renderRule(rule = {}) {
+/**
+ * `saved` is true only for a rule drawn from storage. The Run button runs the
+ * stored rule, so a card that differs from it must be saved first: otherwise a
+ * rule just switched from Delete to Tag would still delete.
+ */
+function renderRule(rule = {}, saved = false) {
   const node = $('#rule-template').content.firstElementChild.cloneNode(true);
+  if (!saved) node.dataset.unsaved = 'true';
+  const markUnsaved = (event) => {
+    // The folder filter and the collapse arrow change the view, not the rule.
+    if (event.target.closest('.folder-filter, .rule-collapse, .run-rule')) return;
+    if (event.type === 'click' && !event.target.closest('button')) return;
+    node.dataset.unsaved = 'true';
+  };
+  for (const type of ['input', 'change', 'click']) node.addEventListener(type, markUnsaved);
+  $('.run-rule', node).addEventListener('click', () => runRuleNow(node));
   $('.rule-id', node).value = rule.id ?? crypto.randomUUID();
   $('.rule-name', node).value = rule.name ?? 'New rule';
   $('.rule-enabled', node).checked = rule.enabled !== false;
@@ -867,7 +881,7 @@ async function save() {
 
   // Re-render so the user sees exactly what was stored, dropped lines included.
   rulesEl.innerHTML = '';
-  for (const rule of collected.rules) renderRule(rule);
+  for (const rule of collected.rules) renderRule(rule, true);
   $('#allowlist').value = collected.allowlist.join('\n');
   fillAdvanced(collected.advanced);
 
@@ -1013,6 +1027,29 @@ async function runNow() {
   }
 }
 
+/** Run one saved rule on every message in its folders. */
+async function runRuleNow(node) {
+  const name = $('.rule-name', node).value.trim() || 'Untitled rule';
+  if (node.dataset.unsaved === 'true') {
+    flash(`Save your changes before you run “${name}”.`, true);
+    return;
+  }
+  if (!$('.rule-enabled', node).checked) {
+    flash(`“${name}” is turned off. Turn it on and save before you run it.`, true);
+    return;
+  }
+  flash(`Running “${name}”…`);
+  try {
+    const res = await messenger.runtime.sendMessage({
+      command: 'runNow',
+      ruleId: $('.rule-id', node).value,
+    });
+    flash(`Done. “${name}” affected ${res?.affected ?? 0} message(s).`);
+  } catch (e) {
+    flash(`Run failed: ${e.message}`, true);
+  }
+}
+
 async function init() {
   await loadFolders();
   await loadAddressBooks();
@@ -1024,7 +1061,8 @@ async function init() {
   // On a first visit with many rules, start collapsed: a folder multi-select
   // makes each card tall enough that a dozen rules cannot be scanned otherwise.
   const firstVisit = localStorage.getItem(COLLAPSED_KEY) === null;
-  for (const r of rules) renderRule(r);
+  // The blank starter card of a fresh install is not in storage yet.
+  for (const r of rules) renderRule(r, Boolean(config?.rules?.length));
   if (firstVisit && rules.length > 3) setAllCollapsed(true);
 
   $('#allowlist').value = (config?.allowlist ?? DEFAULT_ALLOWLIST).join('\n');

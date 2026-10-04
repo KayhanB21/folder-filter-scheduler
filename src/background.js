@@ -353,23 +353,39 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
  * a new-mail trigger avoids re-querying every folder of every rule because one
  * message landed somewhere. A rule left out keeps its watermark, so the next
  * scheduled run still covers it.
+ *
+ * `ruleIds` narrows a manual run to the rules named, which is the Run button on
+ * one rule: only those get the full scan. `background` is true when a scheduled
+ * or new-mail trigger shares the run, and the other rules then get their usual
+ * incremental pass. See runner.js.
  */
-async function runAllRules(reason = 'manual', { folderIds = null } = {}) {
+async function runAllRules(
+  reason = 'manual',
+  { folderIds = null, ruleIds = null, background = false } = {},
+) {
   const { rules, advanced } = await loadConfig();
   const runState = await loadRunState();
   const manual = reason === 'manual';
+  const isManual = (rule) => manual && (!ruleIds || ruleIds.has(rule.id));
   const allFolders = await loadAllFolders(rules);
   const scanned = new Map(rules.map((rule) => [rule, resolveRuleFolders(rule, allFolders)]));
-  // New mail in a subfolder counts for a rule that includes subfolders.
-  const selected = folderIds
-    ? rules.filter((rule) => scanned.get(rule).some((id) => folderIds.has(id)))
-    : rules;
+  const selected = rules.filter((rule) => {
+    if (isManual(rule)) return true;
+    if (manual && !background) return false;
+    // New mail in a subfolder counts for a rule that includes subfolders.
+    return !folderIds || scanned.get(rule).some((id) => folderIds.has(id));
+  });
 
-  // Mail landed somewhere no rule watches. Return before touching the run
-  // state: stamping watermarks for a scan that never happened would be wrong,
-  // and writing storage on every unrelated arrival is pure noise.
-  if (folderIds && selected.length === 0) {
-    log(`run (${reason}) skipped: no rule watches the ${folderIds.size} folder(s) involved`);
+  // Mail landed somewhere no rule watches, or the rule asked for is not saved.
+  // Return before touching the run state: stamping watermarks for a scan that
+  // never happened would be wrong, and writing storage on every unrelated
+  // arrival is pure noise.
+  if (selected.length === 0 && (folderIds || ruleIds)) {
+    log(
+      folderIds
+        ? `run (${reason}) skipped: no rule watches the ${folderIds.size} folder(s) involved`
+        : `run (${reason}) skipped: the rule asked for is not saved`,
+    );
     await flushLog();
     return 0;
   }
@@ -383,7 +399,7 @@ async function runAllRules(reason = 'manual', { folderIds = null } = {}) {
 
   for (const rule of selected) {
     total += await runRule(
-      rule, scanned.get(rule), runState, manual, addressBooks, advanced, headerReads,
+      rule, scanned.get(rule), runState, isManual(rule), addressBooks, advanced, headerReads,
     );
   }
 
@@ -729,7 +745,9 @@ if (messenger.messages?.onNewMailReceived?.addListener) {
 
 messenger.runtime.onMessage.addListener((msg) => {
   if (msg?.command === 'runNow') {
-    return runner.request('manual').then((affected) => ({ ok: true, affected }));
+    // A rule id is the Run button on one rule; without it, every rule runs.
+    const scope = typeof msg.ruleId === 'string' ? { ruleIds: new Set([msg.ruleId]) } : {};
+    return runner.request('manual', scope).then((affected) => ({ ok: true, affected }));
   }
   if (msg?.command === 'reschedule') {
     return applySettings().then(() => ({ ok: true }));

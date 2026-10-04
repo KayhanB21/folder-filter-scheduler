@@ -101,7 +101,8 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   arrived since the last one, so a per-message header read stays affordable. A
   wider catch-up scan every 30 minutes picks up mail whose `Date` header lags
   its real arrival. **Run all rules now** always scans the whole folder.
-- **Run now** button for immediate, on-demand runs.
+- **Run now** button for immediate, on-demand runs, and a **Run** button on each
+  rule that runs only that rule.
 
 ## Install (temporary / development)
 
@@ -200,8 +201,10 @@ Rules can also be **collapsed** to a one-line summary, individually or with
 **Collapse all**. That is a view preference stored in the browser only: it never
 changes what is saved or exported.
 
-Click **Save**, then **Run all rules now** to test immediately — the status line
-reports how many messages were affected (e.g. *"Done — 1 message(s) affected."*).
+Click **Save**, then **Run all rules now** to test immediately. To test one
+rule, click **Run** on its card: it scans every message in that rule's folders
+and leaves the other rules alone. Either way, the status line reports how many
+messages were affected.
 
 > **Speed of `Reply-To` rules.** A rule matching a non-indexed header reads the
 > headers of each candidate message. Scheduled runs are incremental, so in steady

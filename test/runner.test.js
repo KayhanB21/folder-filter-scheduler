@@ -9,14 +9,16 @@ import { createRunner, withTimeout } from '../src/runner.js';
 /** A run that finishes only when the test says so, recording how it was called. */
 function controllable() {
   const calls = [];
+  const contexts = [];
   let release;
   const run = (reason, context) => {
     calls.push({ reason, folderIds: context?.folderIds ? [...context.folderIds].sort() : null });
+    contexts.push(context);
     return new Promise((resolve, reject) => {
       release = { resolve, reject };
     });
   };
-  return { calls, run, finish: (v = 0) => release.resolve(v), fail: (e) => release.reject(e) };
+  return { calls, contexts, run, finish: (v = 0) => release.resolve(v), fail: (e) => release.reject(e) };
 }
 
 test('a run starts immediately when nothing is in flight', async () => {
@@ -128,4 +130,80 @@ test('withTimeout passes a rejection through unchanged', async () => {
 
 test('withTimeout rejects with a TimeoutError when the promise never settles', async () => {
   await assert.rejects(withTimeout(new Promise(() => {}), 5), { name: 'TimeoutError' });
+});
+
+const ids = (set) => (set ? [...set].sort() : null);
+
+test('a manual request for one rule runs only that rule', async () => {
+  const c = controllable();
+  const runner = createRunner(c.run);
+  const promise = runner.request('manual', { ruleIds: new Set(['banks']) });
+
+  assert.equal(c.calls[0].reason, 'manual');
+  assert.deepEqual(ids(c.contexts[0].ruleIds), ['banks']);
+  assert.equal(c.contexts[0].background, false);
+  c.finish(2);
+  assert.equal(await promise, 2);
+});
+
+test('queued manual requests for two rules run both, and no others', async () => {
+  const c = controllable();
+  const runner = createRunner(c.run);
+  const first = runner.request('scheduled');
+  runner.request('manual', { ruleIds: new Set(['banks']) });
+  runner.request('manual', { ruleIds: new Set(['spam']) });
+
+  c.finish(0);
+  await first;
+  assert.deepEqual(ids(c.contexts[1].ruleIds), ['banks', 'spam']);
+  assert.equal(c.contexts[1].background, false);
+  c.finish(0);
+});
+
+test('a new-mail trigger joining a one-rule manual run keeps both scopes', async () => {
+  const c = controllable();
+  const runner = createRunner(c.run);
+  const first = runner.request('scheduled');
+  runner.request('manual', { ruleIds: new Set(['banks']) });
+  runner.request('newMail', { folderIds: new Set(['junk']) });
+
+  c.finish(0);
+  await first;
+  // The full scan stays on the one rule; the rest get the new-mail pass.
+  assert.equal(c.calls[1].reason, 'manual');
+  assert.deepEqual(ids(c.contexts[1].ruleIds), ['banks']);
+  assert.deepEqual(c.calls[1].folderIds, ['junk']);
+  assert.equal(c.contexts[1].background, true);
+  c.finish(0);
+});
+
+test('a one-rule manual request joining a queued new-mail run keeps the folder scope', async () => {
+  const c = controllable();
+  const runner = createRunner(c.run);
+  const first = runner.request('scheduled');
+  runner.request('newMail', { folderIds: new Set(['junk']) });
+  runner.request('manual', { ruleIds: new Set(['banks']) });
+
+  c.finish(0);
+  await first;
+  assert.equal(c.calls[1].reason, 'manual');
+  assert.deepEqual(ids(c.contexts[1].ruleIds), ['banks']);
+  assert.deepEqual(c.calls[1].folderIds, ['junk']);
+  assert.equal(c.contexts[1].background, true);
+  c.finish(0);
+});
+
+test('"run all rules" overrides a queued one-rule request', async () => {
+  const c = controllable();
+  const runner = createRunner(c.run);
+  const first = runner.request('scheduled');
+  runner.request('manual', { ruleIds: new Set(['banks']) });
+  runner.request('newMail', { folderIds: new Set(['junk']) });
+  runner.request('manual');
+
+  c.finish(0);
+  await first;
+  assert.equal(c.contexts[1].ruleIds, null);
+  assert.equal(c.contexts[1].folderIds, null);
+  c.finish(0);
 });
