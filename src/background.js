@@ -774,14 +774,16 @@ async function handleHarvest(info) {
  * this runs on every wake, and again when the saved rules change, because
  * "Run a rule" lists them. removeAll() first keeps a re-registration from
  * failing on a duplicate id. The builds are chained: two at once would
- * interleave their removeAll() and create() calls.
+ * interleave their removeAll() and create() calls. With the menu turned off
+ * under Advanced, removeAll() is the whole job.
  */
 let menuBuild = Promise.resolve();
 function registerMenu() {
   menuBuild = menuBuild.then(async () => {
     try {
-      const { rules } = await loadConfig();
+      const { rules, advanced } = await loadConfig();
       await messenger.menus.removeAll();
+      if (!advanced.showMenu) return;
       for (const item of menuItems(rules)) messenger.menus.create(item);
     } catch (e) {
       warn('menu registration failed', e);
@@ -898,7 +900,8 @@ messenger.runtime.onMessage.addListener((msg) => {
     return runner.request('manual', scope).then((affected) => ({ ok: true, affected }));
   }
   if (msg?.command === 'reschedule') {
-    // The options page sends this after a save, so the rules might be new.
+    // The options page sends this after a save, so the rules might be new,
+    // or the menu turned on or off.
     registerMenu();
     return applySettings().then(() => ({ ok: true }));
   }

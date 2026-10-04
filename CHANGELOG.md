@@ -39,7 +39,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a folder before you use Trash.
 - **One right-click menu.** Right-click a message and select **Folder Filter
   Scheduler** for three entries: **Add spam domains**, **Run all rules now**,
-  and **Run a rule**, which lists your rules so that you can run one.
+  and **Run a rule**, which lists your rules so that you can run one. To hide
+  the menu, clear **Show Folder Filter Scheduler in the right-click menu**
+  under **Advanced**.
 - **Toolbar button.** It opens a small panel with **Run all rules now**, one
   button for each rule, and **Open settings**. To remove the button, use
   Thunderbird's toolbar customization.

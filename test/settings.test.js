@@ -86,6 +86,14 @@ test('a missing alarm or a changed period is re-created', () => {
   assert.equal(alarmNeedsReset({ name: 'tick', periodInMinutes: 5 }, 10), true);
 });
 
+test('showMenu is off only for a literal false', () => {
+  assert.equal(ADVANCED_DEFAULTS.showMenu, true);
+  assert.equal(sanitizeAdvanced({}).settings.showMenu, true);
+  assert.equal(sanitizeAdvanced(undefined).settings.showMenu, true);
+  assert.equal(sanitizeAdvanced({ showMenu: 'no' }).settings.showMenu, true);
+  assert.equal(sanitizeAdvanced({ showMenu: false }).settings.showMenu, false);
+});
+
 test('logScheduleRuns is on only for a literal true', () => {
   assert.equal(ADVANCED_DEFAULTS.logScheduleRuns, false);
   assert.equal(sanitizeAdvanced({}).settings.logScheduleRuns, false);
