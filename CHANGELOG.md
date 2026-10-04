@@ -70,8 +70,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   message. Each download now has a 7-second limit. Thunderbird has a second,
   slower way to read headers, which reads the whole message. When the first
   way passes the limit, the add-on reads that message the second way and keeps
-  to it on that account for the remainder of the run. So a rule on Reply-To
-  works again on an account where the first way never answers. After 2 reads
+  to it on that account until Thunderbird restarts, so later runs skip the
+  wait. So a rule on Reply-To works again on an account where the first way
+  never answers. After 2 reads
   end with no answer from either way, the run stops downloading and leaves the
   remaining messages for the next run. The right-click **Add spam domains**
   entry reads headers the same way.

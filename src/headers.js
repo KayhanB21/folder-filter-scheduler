@@ -17,6 +17,10 @@ import { withTimeout } from './runner.js';
  * read with `getFull`, and the account stays on `getFull` for the rest of the
  * run. Accounts where `getHeaders` answers keep it.
  *
+ * The caller can carry the switched accounts from one run to the next: it
+ * passes the ones it knows in `viaFull` and hears about a new one through
+ * `onSwitch`. Each later run then skips the wait on those accounts.
+ *
  * A wait that ends with no headers counts toward `limit`. When that many have
  * piled up, the reader stops reading, because Thunderbird suspends an idle
  * event page after about 30 seconds and the run still has to log and save. A
@@ -31,9 +35,21 @@ import { withTimeout } from './runner.js';
  * @param {number} options.limit waits without headers before reading stops
  * @param {(message: string) => unknown} [options.onTimeout] told about each
  *   wait, and awaited, so the caller can save its log at once
+ * @param {Iterable<string>} [options.viaFull] accounts already known to need
+ *   `getFull`
+ * @param {(accountId: string) => unknown} [options.onSwitch] told, and
+ *   awaited, when an account with an id moves to `getFull`
  */
-export function createHeaderReads({ getHeaders, getFull, timeoutMs, limit, onTimeout = () => {} }) {
-  const viaFull = new Set();
+export function createHeaderReads({
+  getHeaders,
+  getFull,
+  timeoutMs,
+  limit,
+  onTimeout = () => {},
+  viaFull: known = [],
+  onSwitch = () => {},
+}) {
+  const viaFull = new Set(known);
   const seconds = timeoutMs / 1000;
   const headersOf = (raw) => raw?.headers ?? raw ?? {};
   const isTimeout = (e) => e?.name === 'TimeoutError';
@@ -69,6 +85,9 @@ export function createHeaderReads({ getHeaders, getFull, timeoutMs, limit, onTim
           waited = true;
           reads.timeouts += 1;
           viaFull.add(accountId);
+          // A message with no account id is not remembered: the empty id would
+          // stand for every such message in later runs.
+          if (accountId) await onSwitch(accountId);
           await onTimeout(
             `header read gave no answer after ${seconds} s, reading whole messages on this account instead`,
           );

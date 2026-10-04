@@ -115,3 +115,52 @@ test('a result with no headers part is read as the headers themselves', async ()
   const empty = setup({ getHeaders: async () => undefined, getFull: answers({}) });
   assert.deepEqual(await empty.reads.read(1), {});
 });
+
+test('a known account goes straight to getFull, with no wait and no log line', async () => {
+  const calls = [];
+  const logged = [];
+  const reads = createHeaderReads({
+    getHeaders: (id) => {
+      calls.push(`headers:${id}`);
+      return never();
+    },
+    getFull: (id) => {
+      calls.push(`full:${id}`);
+      return answers(HEADERS)();
+    },
+    timeoutMs: 20,
+    limit: 2,
+    onTimeout: (message) => logged.push(message),
+    viaFull: ['slow'],
+  });
+  assert.deepEqual(await reads.read(1, 'slow'), HEADERS);
+  assert.deepEqual(calls, ['full:1']);
+  assert.deepEqual(logged, []);
+  assert.equal(reads.timeouts, 0);
+});
+
+test('onSwitch hears about each account one time, and never about a missing id', async () => {
+  const switched = [];
+  const reads = createHeaderReads({
+    getHeaders: never,
+    getFull: answers(HEADERS),
+    timeoutMs: 20,
+    limit: 2,
+    onSwitch: (accountId) => switched.push(accountId),
+  });
+  await reads.read(1, 'a');
+  await reads.read(2, 'a');
+  await reads.read(3, 'b');
+  await reads.read(4);
+  await reads.read(5, undefined);
+  assert.deepEqual(switched, ['a', 'b']);
+});
+
+test('the caller\'s set of known accounts is copied, not shared', async () => {
+  const known = new Set();
+  const reads = createHeaderReads({
+    getHeaders: never, getFull: answers(HEADERS), timeoutMs: 20, limit: 2, viaFull: known,
+  });
+  await reads.read(1, 'a');
+  assert.equal(known.size, 0);
+});

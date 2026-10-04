@@ -252,12 +252,31 @@ async function applySettings() {
 }
 
 /**
+ * Accounts where `getHeaders` gave no answer, kept in session storage. So a
+ * later run reads whole messages on them at once and skips the 7-second wait,
+ * also after the event page was suspended. Session storage empties when
+ * Thunderbird closes, so each start tries `getHeaders` again, in case the
+ * hang is gone.
+ */
+const FULL_READ_ACCOUNTS_KEY = 'headerFullReadAccounts';
+
+/**
  * The header reads of one run, or of one right-click harvest. `getHeaders`
  * skips MIME parsing (TB 147+); `getFull` is the fallback for an account where
  * it never answers.
  */
-function newHeaderReads() {
+async function newHeaderReads() {
+  const session = messenger.storage.session;
+  const stored = await session?.get(FULL_READ_ACCOUNTS_KEY).catch(() => null);
+  const known = new Set(stored?.[FULL_READ_ACCOUNTS_KEY] ?? []);
   return createHeaderReads({
+    viaFull: known,
+    onSwitch: (accountId) => {
+      known.add(accountId);
+      return session
+        ?.set({ [FULL_READ_ACCOUNTS_KEY]: [...known] })
+        .catch((e) => warn('could not remember the account for whole-message reads', e));
+    },
     getHeaders: messenger.messages.getHeaders && ((id) => messenger.messages.getHeaders(id)),
     getFull: (id) => messenger.messages.getFull(id),
     timeoutMs: HEADER_TIMEOUT_MS,
@@ -481,7 +500,7 @@ async function runAllRules(
   logUnless(quietRun, `run (${reason}) started: ${selected.length} of ${rules.length} rule(s)`);
   const addressBooks = await loadAddressBooks(selected);
   // Shared by every rule of the run: see HEADER_TIMEOUT_LIMIT.
-  const headerReads = newHeaderReads();
+  const headerReads = await newHeaderReads();
   let total = 0;
 
   for (const rule of selected) {
@@ -705,7 +724,7 @@ async function addressesFromSelection(selectedMessages) {
   const byField = Object.fromEntries(HARVEST_FIELDS.map((f) => [f, []]));
   let scanned = 0;
   let unreadable = 0;
-  const headerReads = newHeaderReads();
+  const headerReads = await newHeaderReads();
 
   for await (const header of eachMessage(selectedMessages)) {
     scanned += 1;
