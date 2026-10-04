@@ -547,3 +547,35 @@ test('import accepts the mark-as-unread, remove-star, and not-junk actions', () 
     assert.deepEqual(rules[0].actions, [{ type }]);
   }
 });
+
+// --- Priority condition ------------------------------------------------------
+
+test('import accepts a priority condition and normalises its level', () => {
+  const { rules, problems } = sanitizeImport(withConditions([{ field: 'priority', operator: 'priorityIs', value: ' High ' }]));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ operator: 'priorityIs', negate: false, field: 'priority', value: 'high' }]);
+});
+
+test('import rejects a priority condition with a bad level, operator, or field', () => {
+  for (const c of [
+    { field: 'priority', operator: 'priorityIs', value: 'urgent' },
+    { field: 'priority', operator: 'priorityIs' },
+    { field: 'priority', operator: 'contains', value: 'high' },
+    { field: 'subject', operator: 'priorityIs', value: 'high' },
+    { field: 'read', operator: 'priorityIs', value: 'high' },
+    { fields: ['priority', 'from'], operator: 'domainInList', domains: ['evil.com'] },
+  ]) {
+    const { rules, problems } = sanitizeImport(withConditions([c]));
+    assert.equal(rules.length, 0, JSON.stringify(c));
+    assert.ok(problems.length > 0, JSON.stringify(c));
+  }
+});
+
+test('a priority condition survives a round trip and fingerprints by level', () => {
+  const rule = { ...validRule, id: 'p1', conditions: [{ field: 'priority', operator: 'priorityIs', value: 'high', negate: true }] };
+  const { rules, problems } = sanitizeImport(JSON.parse(JSON.stringify(buildExport({ rules: [rule] }))));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ operator: 'priorityIs', negate: true, field: 'priority', value: 'high' }]);
+  const low = { ...rule, conditions: [{ ...rule.conditions[0], value: 'low' }] };
+  assert.notEqual(ruleFingerprint(rule), ruleFingerprint(low));
+});

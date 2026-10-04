@@ -53,6 +53,7 @@ const config = {
         { field: 'age', operator: 'olderThan', days: 30 },
         { field: 'from', operator: 'nameShowsOtherAddress' },
         { field: 'read', operator: 'isOff' },
+        { field: 'priority', operator: 'priorityIs', value: 'high', negate: true },
         { field: 'tag', operator: 'hasTag', tagKey: 'Secret tag', negate: true },
       ],
       actions: [{ type: 'tag', tagKey: 'Family secrets' }, { type: 'move', folderId: 'account1://Archive' }],
@@ -94,6 +95,7 @@ test('the default report carries no addresses, domains, patterns, or folders', (
   assert.match(report, /from not in address book \(all\)/);
   assert.match(report, /from name shows a different address/);
   assert.match(report, /if is unread/);
+  assert.match(report, /priority is not high/);
   assert.match(report, /not has tag/);
   assert.match(report, /age older than 30 day/);
   assert.match(report, /last run: 2026-09-11T08:28:00\.000Z; last catch-up: 2026-09-11T08:10:00\.000Z/);

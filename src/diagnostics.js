@@ -24,6 +24,7 @@ import {
   STATE_LABELS,
   fieldsOf,
   isAgeCondition,
+  isPriorityCondition,
   isStateCondition,
   isTagCondition,
 } from './matcher.js';
@@ -78,6 +79,8 @@ export function describeCondition(c, { includeValues = false } = {}) {
   }
   // A tag key is a value, like a tag in an action.
   if (isTagCondition(c)) return `${not}has tag ${includeValues ? c.tagKey : '(tag)'}`;
+  // One of five fixed levels, so there is nothing to hide.
+  if (isPriorityCondition(c)) return `priority ${c?.negate ? 'is not' : 'is'} ${c.value}`;
   const fields = fieldsOf(c).join(' or ') || '(no field)';
   if (c?.operator === DOMAIN_IN_LIST) {
     const domains = Array.isArray(c.domains) ? c.domains : [];

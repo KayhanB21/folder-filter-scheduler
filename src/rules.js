@@ -15,7 +15,7 @@
  */
 
 import { ACTIONS_BY_ID, actionsOf, orderActions } from './actions.js';
-import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, STATE_FIELDS, STATE_OPERATORS, TAG_FIELD, HAS_TAG, ageDays } from './matcher.js';
+import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, STATE_FIELDS, STATE_OPERATORS, TAG_FIELD, HAS_TAG, PRIORITY_FIELD, PRIORITY_IS, PRIORITY_LEVELS, ageDays } from './matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 import { sanitizeAdvanced } from './settings.js';
@@ -33,6 +33,7 @@ const KNOWN_OPERATORS = new Set([
   ...Object.keys(AGE_OPERATORS),
   ...Object.keys(STATE_OPERATORS),
   HAS_TAG,
+  PRIORITY_IS,
 ]);
 const AGE_OPERATOR_SET = new Set(Object.keys(AGE_OPERATORS));
 
@@ -193,13 +194,20 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
     return condition;
   }
 
-  // Read, star, junk, and tag are pseudo-fields too, each with its own
-  // operators. One of them never shares a condition with another field.
+  // Read, star, junk, tag, and priority are pseudo-fields too, each with its
+  // own operators. One of them never shares a condition with another field.
   const [only] = fields;
   const stateField = fields.length === 1 && STATE_FIELDS.includes(only);
   const tagField = fields.length === 1 && only === TAG_FIELD;
-  const mixed = fields.length > 1 && fields.some((f) => STATE_FIELDS.includes(f) || f === TAG_FIELD);
-  if (mixed || stateField !== (operator in STATE_OPERATORS) || tagField !== (operator === HAS_TAG)) {
+  const priorityField = fields.length === 1 && only === PRIORITY_FIELD;
+  const isPseudo = (f) => STATE_FIELDS.includes(f) || f === TAG_FIELD || f === PRIORITY_FIELD;
+  const mixed = fields.length > 1 && fields.some(isPseudo);
+  if (
+    mixed ||
+    stateField !== (operator in STATE_OPERATORS) ||
+    tagField !== (operator === HAS_TAG) ||
+    priorityField !== (operator === PRIORITY_IS)
+  ) {
     problems.push(`${where}: "${operator}" does not apply to "${fields.join(',')}"`);
     return null;
   }
@@ -211,6 +219,15 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
       return null;
     }
     condition.tagKey = tagKey;
+    return condition;
+  }
+  if (priorityField) {
+    const level = String(raw?.value ?? '').trim().toLowerCase();
+    if (!PRIORITY_LEVELS.includes(level)) {
+      problems.push(`${where}: priority must be one of ${PRIORITY_LEVELS.join(', ')}`);
+      return null;
+    }
+    condition.value = level;
     return condition;
   }
 

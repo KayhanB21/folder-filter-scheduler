@@ -11,7 +11,8 @@
  *
  * A normalized message is `{ fields: { <lowercased-name>: string[] } }`, plus
  * `date`, `state` (read, star, junk), and `tags` for the conditions that are
- * not about a header.
+ * not about a header, and `headersRead`, true when the full headers were
+ * downloaded and are in `fields`.
  * Header-like fields ("from", "subject", "reply-to", "x-anything") map to the
  * raw header values exactly as Thunderbird's header APIs return them
  * (lowercased keys, array values because a header may legally repeat).
@@ -101,6 +102,17 @@ export const STATE_LABELS = Object.freeze({
 export const TAG_FIELD = 'tag';
 export const HAS_TAG = 'hasTag';
 
+/**
+ * The priority pseudo-field. Thunderbird does not index the priority for
+ * add-ons, so it is read from the X-Priority header (or Priority, when that
+ * is the only one), which costs a header download per message. A message with
+ * neither header is Normal, as Thunderbird shows it. Shape:
+ * `{ field: 'priority', operator: 'priorityIs', value: <level>, negate }`.
+ */
+export const PRIORITY_FIELD = 'priority';
+export const PRIORITY_IS = 'priorityIs';
+export const PRIORITY_LEVELS = Object.freeze(['highest', 'high', 'normal', 'low', 'lowest']);
+
 export const FIELDS = Object.freeze([
   'from',
   'to',
@@ -112,6 +124,7 @@ export const FIELDS = Object.freeze([
   AGE_FIELD,
   ...STATE_FIELDS,
   TAG_FIELD,
+  PRIORITY_FIELD,
 ]);
 
 /**
@@ -140,6 +153,40 @@ export function isStateCondition(condition) {
 
 export function isTagCondition(condition) {
   return foldCase(condition?.field) === TAG_FIELD;
+}
+
+export function isPriorityCondition(condition) {
+  return foldCase(condition?.field) === PRIORITY_FIELD;
+}
+
+/**
+ * One priority header value as a level, or null when it says nothing usable.
+ * X-Priority is "1" to "5", often with a word after it: "1 (Highest)". Some
+ * senders write only the word, and the Priority header uses "urgent" and
+ * "non-urgent".
+ */
+export function priorityLevel(value) {
+  const text = foldCase(value).trim();
+  const digit = /^[1-5]/.exec(text);
+  if (digit) return PRIORITY_LEVELS[Number(digit[0]) - 1];
+  // The longer word before the shorter, and "non-urgent" before "urgent".
+  if (text.includes('lowest')) return 'lowest';
+  if (text.includes('non-urgent') || text.includes('low')) return 'low';
+  if (text.includes('highest') || text.includes('urgent')) return 'highest';
+  if (text.includes('high')) return 'high';
+  if (text.includes('normal')) return 'normal';
+  return null;
+}
+
+/** The priority of a normalized message: X-Priority, then Priority, then Normal. */
+export function priorityOf(message) {
+  for (const header of ['x-priority', 'priority']) {
+    for (const value of valuesFor(message, header)) {
+      const level = priorityLevel(value);
+      if (level) return level;
+    }
+  }
+  return 'normal';
 }
 
 /**
@@ -293,6 +340,21 @@ function evaluateTagCondition(message, condition) {
   return condition.negate ? !satisfied : satisfied;
 }
 
+/**
+ * Evaluate a priority condition. NEVER matches, negated or not, when the level
+ * is not a known one, or when the message's headers were not read. Without its
+ * headers every message looks like Normal, and "priority is normal" on a rule
+ * that deletes would then act on mail it never read.
+ */
+function evaluatePriorityCondition(message, condition) {
+  if (condition.operator !== PRIORITY_IS) throw new Error(`Unknown priority operator: ${condition.operator}`);
+  const level = foldCase(condition.value).trim();
+  if (!PRIORITY_LEVELS.includes(level) || message?.headersRead !== true) return false;
+
+  const satisfied = priorityOf(message) === level;
+  return condition.negate ? !satisfied : satisfied;
+}
+
 function evaluateNameCondition(message, condition) {
   const anySatisfied = fieldsOf(condition)
     .flatMap((field) => valuesFor(message, field))
@@ -305,6 +367,7 @@ export function evaluateCondition(message, condition, { now = new Date(), addres
   if (isAgeCondition(condition)) return evaluateAgeCondition(message, condition, now);
   if (isStateCondition(condition)) return evaluateStateCondition(message, condition);
   if (isTagCondition(condition)) return evaluateTagCondition(message, condition);
+  if (isPriorityCondition(condition)) return evaluatePriorityCondition(message, condition);
   if (condition.operator === IN_ADDRESS_BOOK) {
     return evaluateAddressBookCondition(message, condition, addressBooks);
   }

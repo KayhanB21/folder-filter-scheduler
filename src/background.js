@@ -282,12 +282,14 @@ async function normalize(messageHeader, fetchFull, headerReads) {
     headerReads.skipped += 1;
     return null;
   }
+  let headersRead = false;
   if (fetchFull) {
     try {
       const headers = await withTimeout(readHeaders(messageHeader.id), HEADER_TIMEOUT_MS);
       for (const [name, values] of Object.entries(headers)) {
         for (const v of values ?? []) push(name, v);
       }
+      headersRead = true;
     } catch (e) {
       if (e?.name === 'TimeoutError') {
         headerReads.timeouts += 1;
@@ -318,6 +320,8 @@ async function normalize(messageHeader, fetchFull, headerReads) {
     date: messageHeader.date,
     state: { read: messageHeader.read, star: messageHeader.flagged, junk: messageHeader.junk },
     tags: messageHeader.tags,
+    // A priority condition needs to know the headers are really there.
+    headersRead,
     _header: messageHeader,
   };
 }

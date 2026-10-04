@@ -286,6 +286,8 @@
           <option value="isOff">is not</option>
           <!-- Shown only for the tag field. -->
           <option value="hasTag">has tag</option>
+          <!-- Shown only for the priority field. -->
+          <option value="priorityIs">is</option>
         </select>
         <label class="toggle"><input class="cond-negate" type="checkbox" /> not</label>
         <input class="cond-value" type="text" placeholder="value" />
@@ -300,6 +302,14 @@
              the optional messagesTagsList permission instead. -->
         <select class="cond-tag hidden"></select>
         <button class="cond-tag-grant hidden" type="button">Allow tag access…</button>
+        <!-- Shown only for the priority field. -->
+        <select class="cond-priority hidden">
+          <option value="highest">Highest</option>
+          <option value="high">High</option>
+          <option value="normal">Normal</option>
+          <option value="low">Low</option>
+          <option value="lowest">Lowest</option>
+        </select>
         <button class="del-cond danger" type="button">×</button>
         <!-- Shown only for the domainInList operator: one domain per line. -->
         <textarea
@@ -316,6 +326,12 @@
           <code>someone@sina.com</code>. Spam does this to look like another
           sender. Some mailing lists do it too, so try the rule with a move to a
           folder before you use Trash.
+        </p>
+        <!-- Shown only for the priority field. -->
+        <p class="cond-priority-hint cond-hint hidden">
+          To read the priority, the add-on downloads the headers of each message,
+          so this check is slower than the others. A message with no priority
+          counts as Normal.
         </p>
         <!-- Shown only for the read, star, junk, and tag fields. -->
         <p class="cond-state-hint cond-hint hidden">

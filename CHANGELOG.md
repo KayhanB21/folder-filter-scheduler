@@ -23,6 +23,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   one of your Thunderbird tags. None of them downloads anything. A scheduled
   run checks older mail only in the catch-up scan, so a rule can take up to 30
   minutes to act after you star, tag, or read an older message.
+- **Priority condition** (#14). A rule can check whether the priority of a
+  message is Highest, High, Normal, Low, or Lowest. To read it, the add-on
+  downloads the headers of each message, so it is slower than the other
+  conditions. A message with no priority counts as Normal. A message whose
+  headers the add-on can't read never matches.
 - **Three more actions** (#14): **Mark as unread**, **Remove star**, and
   **Mark as not junk**. The **Flag** action is now named **Add star**, as
   Thunderbird names it. Saved rules keep working.
