@@ -19,6 +19,7 @@
 import { AGE_OPERATORS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, fieldsOf, isAgeCondition } from './matcher.js';
 import { actionsOf, orderActions } from './actions.js';
 import { ADVANCED_DEFAULTS } from './settings.js';
+import { scheduleOf } from './cron.js';
 
 /** Most recent log entries kept. At a 2-minute interval that is several hours. */
 export const LOG_CAP = 1000;
@@ -97,6 +98,10 @@ function describeRule(rule, runState, { includeValues }) {
   // order they happen to be stored in.
   for (const a of orderActions(actionsOf(rule))) {
     lines.push(`    then: ${describeAction(a, { includeValues })}`);
+  }
+  if (rule.schedule?.enabled === true) {
+    const cron = scheduleOf(rule);
+    lines.push(`    schedule: ${cron ? `cron ${cron.expression}` : 'invalid cron, the default timer applies'}`);
   }
   const state = runState?.[rule.id];
   lines.push(`    last run: ${state?.lastRunAt ?? 'never'}; last catch-up: ${state?.lastCatchUpAt ?? 'never'}`);

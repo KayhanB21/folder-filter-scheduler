@@ -19,6 +19,7 @@ import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 import { sanitizeAdvanced } from './settings.js';
+import { sanitizeSchedule } from './cron.js';
 
 export const EXPORT_FORMAT = 'folder-filter-scheduler/rules';
 export const EXPORT_VERSION = 1;
@@ -131,6 +132,8 @@ export function buildExport(config, { exportedAt = new Date() } = {}) {
       match: rule.match === 'all' ? 'all' : 'any',
       folderIds: [...(rule.folderIds ?? [])],
       includeSubfolders: rule.includeSubfolders === true,
+      // Only when the rule has one, so files without schedules look as before.
+      ...(rule.schedule ? { schedule: sanitizeSchedule(rule.schedule) } : {}),
       conditions: (rule.conditions ?? []).map((c) => ({ ...c })),
       actions: actionsOf(rule).map((a) => ({ ...a })),
     })),
@@ -301,6 +304,16 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
     }
   }
 
+  // A schedule that does not parse is kept as text but turned off, so the rule
+  // falls back to the default timer and the user can correct it.
+  let schedule = null;
+  if (raw?.schedule && typeof raw.schedule === 'object') {
+    schedule = sanitizeSchedule(raw.schedule);
+    if (raw.schedule.enabled === true && !schedule.enabled) {
+      problems.push(`${where}: the schedule is not a valid cron expression, turned off`);
+    }
+  }
+
   return {
     name: String(raw?.name ?? '').trim() || 'Imported rule',
     // Imported rules always get fresh ids so they cannot collide with existing
@@ -309,6 +322,7 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
     match: raw?.match === 'all' ? 'all' : 'any',
     folderIds,
     includeSubfolders: raw?.includeSubfolders === true,
+    ...(schedule && schedule.cron ? { schedule } : {}),
     conditions,
     actions,
   };

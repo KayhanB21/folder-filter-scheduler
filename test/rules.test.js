@@ -399,3 +399,28 @@ test('includeSubfolders changes the fingerprint, and an unset flag leaves it as 
   assert.equal(ruleFingerprint(validRule), ruleFingerprint({ ...validRule, includeSubfolders: false }));
   assert.ok(!ruleFingerprint(validRule).includes('includeSubfolders'));
 });
+
+test('a schedule survives a round trip, and a rule without one gains none', () => {
+  const scheduled = { ...validRule, schedule: { enabled: true, cron: '0 21 * * *' } };
+  // A different folder, or the import drops the second rule as a duplicate.
+  const exported = buildExport({ rules: [scheduled, { ...validRule, folderIds: ['other'] }] });
+  assert.deepEqual(exported.rules[0].schedule, { enabled: true, cron: '0 21 * * *' });
+  assert.ok(!('schedule' in exported.rules[1]));
+
+  const { rules, problems } = sanitizeImport(exported);
+  assert.deepEqual(rules[0].schedule, { enabled: true, cron: '0 21 * * *' });
+  assert.ok(!('schedule' in rules[1]));
+  assert.deepEqual(problems, []);
+});
+
+test('an imported schedule that does not parse is turned off and reported', () => {
+  const bad = { ...validRule, schedule: { enabled: true, cron: '99 99 * * *' } };
+  const { rules, problems } = sanitizeImport(file({ rules: [bad] }));
+  assert.deepEqual(rules[0].schedule, { enabled: false, cron: '99 99 * * *' });
+  assert.match(problems.join('\n'), /not a valid cron expression/);
+
+  // Anything but a literal true is off, and a non-object is ignored.
+  const loose = sanitizeImport(file({ rules: [{ ...validRule, schedule: { enabled: 'yes', cron: '0 21 * * *' } }] }));
+  assert.equal(loose.rules[0].schedule.enabled, false);
+  assert.ok(!('schedule' in sanitizeImport(file({ rules: [{ ...validRule, schedule: '0 21 * * *' }] })).rules[0]));
+});

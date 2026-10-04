@@ -10,6 +10,7 @@ import { ADVANCED_DEFAULTS, sanitizeAdvanced } from '../src/settings.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
 import { folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
+import { describeCron, nextRun, parseCron } from '../src/cron.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -643,6 +644,15 @@ function renderRule(rule = {}, saved = false) {
   $('.add-action', node).addEventListener('click', () => renderAction(actionContainer, {}));
   wireFolderPicker(node);
 
+  $('.rule-schedule-on', node).checked = rule.schedule?.enabled === true;
+  $('.rule-cron', node).value = rule.schedule?.cron ?? '';
+  $('.rule-schedule-on', node).addEventListener('change', () => {
+    refreshSchedule(node);
+    if ($('.rule-schedule-on', node).checked) $('.rule-cron', node).focus();
+  });
+  $('.rule-cron', node).addEventListener('input', () => refreshSchedule(node));
+  refreshSchedule(node);
+
   $('.del-rule', node).addEventListener('click', () => {
     collapsed.delete($('.rule-id', node).value);
     saveCollapsed(collapsed);
@@ -657,6 +667,39 @@ function renderRule(rule = {}, saved = false) {
   rulesEl.append(node);
   // Restore the remembered view state. A rule the user just added stays open.
   if (rule.id && collapsed.has(rule.id)) setCollapsed(node, true);
+}
+
+/**
+ * Show or hide a rule's schedule fields, and say in plain words what the cron
+ * expression means and when it next matches, so a user can check it without
+ * knowing the syntax.
+ */
+function refreshSchedule(node) {
+  const on = $('.rule-schedule-on', node).checked;
+  $('.schedule-fields', node).classList.toggle('hidden', !on);
+  if (!on) return;
+
+  const text = $('.schedule-text', node);
+  const cron = parseCron($('.rule-cron', node).value);
+  text.classList.toggle('danger', !cron.ok);
+  if (!cron.ok) {
+    text.textContent = `${cron.error}.`;
+    $('.cron-help', node).href = 'https://crontab.guru/';
+    return;
+  }
+  const next = nextRun(cron);
+  text.textContent = `${describeCron(cron)}. ${
+    next ? `Next run: ${next.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}.` : 'This date never comes, so the rule never runs.'
+  }`;
+  // Opens the same expression in the editor the link points to.
+  $('.cron-help', node).href = `https://crontab.guru/#${cron.expression.replaceAll(' ', '_')}`;
+}
+
+/** The schedule a rule card holds, or null when it has none worth storing. */
+function scheduleFrom(node) {
+  const enabled = $('.rule-schedule-on', node).checked;
+  const cron = $('.rule-cron', node).value.trim();
+  return enabled || cron ? { enabled, cron } : null;
 }
 
 /** A one-line digest of a rule, shown while it is collapsed. */
@@ -698,7 +741,10 @@ function ruleSummary(node) {
   const where = `${folderCount} folder${folderCount === 1 ? '' : 's'}${subs}`;
   const what = conditions.join(joiner) || 'no conditions';
 
-  return `${what} → ${actions.join(' + ') || 'no action'} · ${where}`;
+  const cron = $('.rule-schedule-on', node).checked ? parseCron($('.rule-cron', node).value) : null;
+  const when = cron?.ok ? ` · ${describeCron(cron)}` : '';
+
+  return `${what} → ${actions.join(' + ') || 'no action'} · ${where}${when}`;
 }
 
 function setCollapsed(node, isCollapsed) {
@@ -770,6 +816,7 @@ function collectConfig(rejected = []) {
       match: $('.rule-match', node).value,
       folderIds: [...$('.rule-folders', node).selectedOptions].map((o) => o.value),
       includeSubfolders: $('.rule-subfolders', node).checked,
+      ...(scheduleFrom(node) ? { schedule: scheduleFrom(node) } : {}),
       conditions: [...node.querySelectorAll('.condition')].map((c) => {
         const operator = $('.cond-op', c).value;
         const condition = {
@@ -868,6 +915,19 @@ async function save() {
     }
     rulesEl.querySelector('.action.unchosen .action-type')?.focus();
     flash(`Not saved: choose an action for ${names}.`, true);
+    return;
+  }
+
+  // Refused for the same reason: a schedule that does not parse would leave the
+  // rule on the default timer while the card says otherwise.
+  const badSchedule = [...rulesEl.querySelectorAll('.rule')].find(
+    (node) => $('.rule-schedule-on', node).checked && !parseCron($('.rule-cron', node).value).ok,
+  );
+  if (badSchedule) {
+    setCollapsed(badSchedule, false);
+    $('.rule-cron', badSchedule).focus();
+    const name = $('.rule-name', badSchedule).value.trim() || 'Untitled rule';
+    flash(`Not saved: the schedule of “${name}” is not a valid cron expression.`, true);
     return;
   }
 

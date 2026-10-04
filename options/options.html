@@ -214,6 +214,27 @@
 
         <div class="actions"></div>
         <button class="add-action" type="button">+ Add action</button>
+
+        <!-- Off by default: a rule runs on the timer at the top of the page. -->
+        <div class="row schedule">
+          <span class="lbl">Schedule</span>
+          <div class="schedule-box">
+            <label class="toggle">
+              <input class="rule-schedule-on" type="checkbox" /> Run this rule on its own schedule
+            </label>
+            <div class="schedule-fields hidden">
+              <input class="rule-cron" type="text" placeholder="0 21 * * *" spellcheck="false" autocomplete="off" aria-label="Cron expression" />
+              <a class="cron-help" href="https://crontab.guru/" target="_blank" rel="noopener">How to write a cron expression</a>
+              <p class="schedule-text" aria-live="polite"></p>
+              <p class="schedule-hint">
+                A cron expression has five fields: minute, hour, day of month, month, and
+                day of week, in your computer's local time. With its own schedule, the rule
+                runs only at these times. The timer at the top of the page and new mail no
+                longer start it.
+              </p>
+            </div>
+          </div>
+        </div>
         </div>
       </article>
     </template>

@@ -103,6 +103,9 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   its real arrival. **Run all rules now** always scans the whole folder.
 - **Run now** button for immediate, on-demand runs, and a **Run** button on each
   rule that runs only that rule.
+- **A schedule for each rule**, written as a cron expression such as
+  `0 21 * * *`, to the minute. It is off by default. The options page describes
+  the expression in plain words and shows the next run time.
 
 ## Install (temporary / development)
 
@@ -234,6 +237,30 @@ messages were affected.
 > fetched on demand, so it works either way. For speed and offline use, enable
 > offline storage for the folder (Account Settings → Synchronization & Storage) and
 > run **Repair Folder** once.
+
+## Give a rule its own schedule
+
+By default every rule runs on the timer at the top of the options page, and when
+new mail arrives. To run one rule at set times instead, turn on **Run this rule
+on its own schedule** on its card and enter a cron expression.
+
+A cron expression has five fields: minute, hour, day of month, month, and day of
+week. Times are your computer's local time. The table shows some examples.
+
+| Expression | When the rule runs |
+| --- | --- |
+| `0 21 * * *` | At 21:00 every day |
+| `*/5 * * * *` | Every 5 minutes |
+| `0 9 * * mon-fri` | At 09:00 on Monday through Friday |
+| `30 8 1 * *` | At 08:30 on day 1 of the month |
+
+The card shows the expression in plain words and the next run time, and links to
+[crontab.guru](https://crontab.guru/), an editor that explains each field.
+
+A rule with its own schedule runs only at those times. The timer and new mail
+don't start it. The **Run** button on the card and **Run all rules now** still
+do. If Thunderbird is closed at a scheduled time, the rule runs one time when
+Thunderbird next starts.
 
 ## Common problems
 

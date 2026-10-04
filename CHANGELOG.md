@@ -7,6 +7,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.3.6]
 
 ### Added
+- **A schedule for each rule.** Turn on **Run this rule on its own schedule**
+  on a rule card and enter a cron expression, such as `0 21 * * *` for 21:00
+  every day. The smallest step is 1 minute. The card describes the expression
+  in plain words, shows the next run time, and links to a cron editor. It is off
+  by default. A rule with its own schedule runs only at those times: the timer
+  and new mail no longer start it. A run that Thunderbird missed while it was
+  closed happens at the next start.
 - **Run button on each rule.** It runs only that rule, on every message in its
   folders, and leaves the other rules alone. The button runs the saved rule, so
   it asks you to save first when the card has changes.
