@@ -49,11 +49,12 @@ const DEFAULT_INTERVAL_MINUTES = 10;
  * How long one header download may take, and how many may time out before the
  * run stops downloading. The first download of a run can include the IMAP
  * login, so the limit is generous: a false timeout makes a working rule skip
- * mail, which is worse than a slow run. It still fires well inside the 30
- * seconds after which Thunderbird suspends an idle event page.
+ * mail, which is worse than a slow run. Thunderbird suspends an idle event
+ * page after about 30 seconds, so the worst case of two waits, 14 seconds,
+ * leaves room to log the result and save the run.
  */
-const HEADER_TIMEOUT_MS = 10_000;
-const HEADER_TIMEOUT_LIMIT = 3;
+const HEADER_TIMEOUT_MS = 7_000;
+const HEADER_TIMEOUT_LIMIT = 2;
 
 /**
  * Headers the right-click harvest reads, most trustworthy first.
@@ -291,10 +292,12 @@ async function normalize(messageHeader, fetchFull, headerReads) {
       if (e?.name === 'TimeoutError') {
         headerReads.timeouts += 1;
         headerReads.skipped += 1;
+        warn(`header read timed out after ${HEADER_TIMEOUT_MS / 1000} s`, messageHeader.id);
         if (headerReads.timeouts === HEADER_TIMEOUT_LIMIT) {
           warn(`${HEADER_TIMEOUT_LIMIT} header reads timed out, no more header reads this run`);
         }
-        warn('header read timed out', messageHeader.id);
+        // Saved at once: the run might be suspended before the usual delay.
+        await flushLog();
         return null;
       }
       warn('header read failed', messageHeader.id, e);
@@ -387,7 +390,8 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
 
   // A message whose headers did not arrive was left out, so the pass is not
   // clean and the next run reads it again.
-  if (headerReads.skipped > skippedBefore) scanFailed = true;
+  const skipped = headerReads.skipped - skippedBefore;
+  if (skipped > 0) scanFailed = true;
 
   // Only advance the watermark on a clean pass, so a transient failure does not
   // permanently skip the messages it could not read.
@@ -400,7 +404,8 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   ].filter(Boolean).join(' ');
   logUnless(
     quiet && affected === 0 && !scanFailed,
-    `rule "${rule.name}": ${kind} scan (${range}), ${scanned} scanned, ${matched} matched, ` +
+    `rule "${rule.name}": ${kind} scan (${range}), ${scanned} scanned, ` +
+      `${skipped > 0 ? `${skipped} skipped (headers unread), ` : ''}${matched} matched, ` +
       `${affected} actioned, ${Date.now() - startedAt.getTime()} ms${scanFailed ? ', WITH ERRORS' : ''}`,
   );
   return affected;
