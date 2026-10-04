@@ -25,6 +25,7 @@ export const ADVANCED_DEFAULTS = Object.freeze({
   catchUpLookbackDays: 30,
   logScheduleRuns: false,
   showMenu: true,
+  shortName: false,
 });
 
 /**
@@ -74,6 +75,7 @@ export function sanitizeAdvanced(raw) {
     // On unless literally false, so a config saved before the setting existed
     // keeps its right-click menu.
     showMenu: raw?.showMenu !== false,
+    shortName: raw?.shortName === true,
   };
 
   for (const [key, limit] of Object.entries(ADVANCED_LIMITS)) {

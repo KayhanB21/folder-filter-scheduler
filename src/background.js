@@ -11,7 +11,7 @@ import { ADVANCED_DEFAULTS, alarmNeedsReset, sanitizeAdvanced } from './settings
 import { createRunner, withTimeout } from './runner.js';
 import { resolveRuleFolders } from './folders.js';
 import { cronAlarmNeedsReset, missedRun, nextRun, scheduleOf } from './cron.js';
-import { MENU_HARVEST, MENU_RUN_ALL, menuItems, ruleIdFromMenuItem } from './menu.js';
+import { MENU_HARVEST, MENU_RUN_ALL, SHORT_NAME, displayName, menuItems, ruleIdFromMenuItem } from './menu.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -776,15 +776,20 @@ async function handleHarvest(info) {
  * failing on a duplicate id. The builds are chained: two at once would
  * interleave their removeAll() and create() calls. With the menu turned off
  * under Advanced, removeAll() is the whole job.
+ *
+ * The toolbar button takes its label here too, because the same setting names
+ * both. A null label hands the button back to the title in the manifest.
  */
 let menuBuild = Promise.resolve();
 function registerMenu() {
   menuBuild = menuBuild.then(async () => {
     try {
       const { rules, advanced } = await loadConfig();
+      await messenger.action?.setLabel?.({ label: advanced.shortName ? SHORT_NAME : null });
       await messenger.menus.removeAll();
       if (!advanced.showMenu) return;
-      for (const item of menuItems(rules)) messenger.menus.create(item);
+      const title = displayName(advanced.shortName);
+      for (const item of menuItems(rules, undefined, title)) messenger.menus.create(item);
     } catch (e) {
       warn('menu registration failed', e);
     }
@@ -901,7 +906,7 @@ messenger.runtime.onMessage.addListener((msg) => {
   }
   if (msg?.command === 'reschedule') {
     // The options page sends this after a save, so the rules might be new,
-    // or the menu turned on or off.
+    // or the menu turned on or off, or renamed.
     registerMenu();
     return applySettings().then(() => ({ ok: true }));
   }

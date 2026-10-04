@@ -180,7 +180,7 @@ export function buildReport(input) {
     `scan overlap: ${adv.scanOverlapMinutes} min`,
     `catch-up: every ${adv.catchUpEveryMinutes} min over the last ${adv.catchUpLookbackDays} day(s)`,
     `rule schedule runs in the log: ${adv.logScheduleRuns ? 'all' : 'only those that change mail or fail'}`,
-    `right-click menu: ${adv.showMenu ? 'shown' : 'hidden'}`,
+    `right-click menu: ${adv.showMenu ? 'shown' : 'hidden'}; name: ${adv.shortName ? 'FFS' : 'full'}`,
     `address book access: ${permissions?.addressBooks ? 'granted' : 'not granted'}`,
     `tag list access: ${permissions?.messagesTagsList ? 'granted' : 'not granted'}`,
     `protected domains: ${Array.isArray(config?.allowlist) ? config.allowlist.length : '?'}`,

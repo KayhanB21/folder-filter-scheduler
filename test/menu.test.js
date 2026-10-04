@@ -9,6 +9,7 @@ import {
   MENU_ROOT,
   MENU_RUN_ALL,
   MENU_RUN_RULE,
+  displayName,
   menuItems,
   menuTitle,
   ruleIdFromMenuItem,
@@ -76,4 +77,17 @@ test('menuTitle doubles an ampersand and cuts a long name', () => {
   const long = menuTitle('x'.repeat(200));
   assert.equal(long.length, 60);
   assert.ok(long.endsWith('…'));
+});
+
+test('the short name replaces only the top menu title', () => {
+  assert.equal(displayName(true), 'FFS');
+  assert.equal(displayName(false), 'Folder Filter Scheduler');
+  assert.equal(displayName('yes'), 'Folder Filter Scheduler');
+  const rules = [{ id: 'a1', name: 'Banks' }];
+  const full = menuItems(rules);
+  const short = menuItems(rules, undefined, displayName(true));
+  assert.equal(full[0].title, 'Folder Filter Scheduler');
+  assert.equal(short[0].title, 'FFS');
+  assert.deepEqual(short.slice(1), full.slice(1));
+  assert.deepEqual(short[0].contexts, ['message_list']);
 });

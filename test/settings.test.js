@@ -94,6 +94,13 @@ test('showMenu is off only for a literal false', () => {
   assert.equal(sanitizeAdvanced({ showMenu: false }).settings.showMenu, false);
 });
 
+test('shortName is on only for a literal true', () => {
+  assert.equal(ADVANCED_DEFAULTS.shortName, false);
+  assert.equal(sanitizeAdvanced({}).settings.shortName, false);
+  assert.equal(sanitizeAdvanced({ shortName: 'yes' }).settings.shortName, false);
+  assert.equal(sanitizeAdvanced({ shortName: true }).settings.shortName, true);
+});
+
 test('logScheduleRuns is on only for a literal true', () => {
   assert.equal(ADVANCED_DEFAULTS.logScheduleRuns, false);
   assert.equal(sanitizeAdvanced({}).settings.logScheduleRuns, false);

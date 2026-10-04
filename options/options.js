@@ -953,6 +953,7 @@ const ADVANCED_INPUTS = {
   runOnNewMail: '#adv-new-mail',
   logScheduleRuns: '#adv-log-schedule',
   showMenu: '#adv-show-menu',
+  shortName: '#adv-short-name',
   newMailDelaySeconds: '#adv-new-mail-delay',
   catchUpEveryMinutes: '#adv-catchup-every',
   catchUpLookbackDays: '#adv-catchup-days',

@@ -20,6 +20,12 @@ const MENU_RULE_PREFIX = `${MENU_RUN_RULE}.`;
 
 const TITLE_MAX = 60;
 
+export const FULL_NAME = 'Folder Filter Scheduler';
+export const SHORT_NAME = 'FFS';
+
+/** The name on the toolbar button and the right-click menu. */
+export const displayName = (short) => (short === true ? SHORT_NAME : FULL_NAME);
+
 /** Rules a manual run accepts: saved, with an id, and turned on. */
 export function runnableRules(rules) {
   return (rules ?? [])
@@ -42,10 +48,10 @@ export function menuTitle(name) {
  * With no rule to run, "Run a rule" is shown but turned off, so the menu keeps
  * its shape and the user sees why nothing is listed.
  */
-export function menuItems(rules, contexts = ['message_list']) {
+export function menuItems(rules, contexts = ['message_list'], rootTitle = FULL_NAME) {
   const runnable = runnableRules(rules);
   return [
-    { id: MENU_ROOT, title: 'Folder Filter Scheduler', contexts },
+    { id: MENU_ROOT, title: rootTitle, contexts },
     { id: MENU_HARVEST, parentId: MENU_ROOT, title: 'Add spam domains', contexts },
     { id: MENU_RUN_ALL, parentId: MENU_ROOT, title: 'Run all rules now', contexts },
     { id: MENU_RUN_RULE, parentId: MENU_ROOT, title: 'Run a rule', contexts, enabled: runnable.length > 0 },
