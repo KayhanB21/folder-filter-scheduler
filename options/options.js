@@ -486,6 +486,49 @@ function fillFieldSelect(select, value) {
   }
 }
 
+/**
+ * The field select lists every field. A field that the operator rules out is
+ * greyed, with the reason on hover, so the user can tell what to change to
+ * reach it. This adds those fields after the ones the fill functions offer.
+ */
+const GREY_FIELD_REASONS = {
+  list: 'Doesn\'t work with "domain is in list". Change the operator first.',
+  address: 'This operator reads addresses, and this field holds none. Change the operator first.',
+};
+const DOMAIN_SET_REASON = 'Works only with the "domain is in list" operator.';
+
+function greyOtherFields(select, mode) {
+  const offered = new Set([...select.options].map((o) => o.value));
+  const [bothHeaders] = DOMAIN_FIELD_SETS;
+  for (const { value, label } of [...FIELDS.map((f) => ({ value: f, label: f })), bothHeaders]) {
+    if (offered.has(value)) continue;
+    const isSet = value === bothHeaders.value;
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.disabled = true;
+    opt.textContent = isSet ? `${label} (domain list only)` : label;
+    opt.title = isSet ? DOMAIN_SET_REASON : GREY_FIELD_REASONS[mode];
+    select.append(opt);
+  }
+}
+
+/**
+ * The same for operators, by the kind of field each one needs. The label is
+ * the greyed text: it names the field, because "is" alone says nothing there.
+ */
+const GREY_OPERATORS = {
+  age: { suffix: ' (age field only)', reason: 'Works only with the age field.' },
+  state: { suffix: '', reason: 'Works only with the read, star, and junk fields.' },
+  tag: { suffix: ' (tag field only)', reason: 'Works only with the tag field.' },
+  priority: { suffix: '', reason: 'Works only with the priority field.' },
+  plain: { suffix: ' (header fields only)', reason: 'Works only with a header field, such as from or subject.' },
+};
+const GREY_OPERATOR_LABELS = {
+  isOn: 'is read, starred, or junk',
+  isOff: 'is unread, not starred, or not junk',
+  priorityIs: 'priority is',
+};
+
 const AGE_OPERATOR_LABELS = { olderThan: 'older than', newerThan: 'newer than' };
 
 function renderCondition(container, cond = {}) {
@@ -552,11 +595,13 @@ function renderCondition(container, cond = {}) {
       if (isList) fillDomainFieldSelect(fieldSelect, cond);
       else if (isAddress) fillBookFieldSelect(fieldSelect, previous);
       else fillFieldSelect(fieldSelect, FIELDS.includes(previous) ? previous : 'reply-to');
+      greyOtherFields(fieldSelect, nextMode);
       mode = nextMode;
     }
 
     // Age, the three states, tag, and priority each take their own operators
-    // and nothing else. Every other field takes the rest.
+    // and nothing else. Every other field takes the rest. An operator that the
+    // field rules out stays in the list, greyed, with the reason on hover.
     const field = fieldSelect.value;
     const isAge = field === AGE_FIELD;
     const isState = STATE_FIELDS.includes(field);
@@ -570,9 +615,18 @@ function renderCondition(container, cond = {}) {
     };
     const kind = isAge ? 'age' : isState ? 'state' : isTag ? 'tag' : isPriority ? 'priority' : 'plain';
     for (const option of op.options) {
-      option.hidden = kindOf(option.value) !== kind;
-      option.disabled = option.hidden;
-      if (isState && option.value in STATE_OPERATORS) option.textContent = STATE_LABELS[field][option.value];
+      const needs = kindOf(option.value);
+      option.dataset.label ??= option.textContent;
+      option.disabled = needs !== kind;
+      option.title = option.disabled ? GREY_OPERATORS[needs].reason : '';
+      if (option.disabled) {
+        const label = GREY_OPERATOR_LABELS[option.value] ?? option.dataset.label;
+        option.textContent = `${label}${GREY_OPERATORS[needs].suffix}`;
+      } else if (isState && option.value in STATE_OPERATORS) {
+        option.textContent = STATE_LABELS[field][option.value];
+      } else {
+        option.textContent = option.dataset.label;
+      }
     }
     if (kindOf(op.value) !== kind) {
       op.value = {
