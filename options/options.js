@@ -10,6 +10,7 @@ import { ADVANCED_DEFAULTS, sanitizeAdvanced } from '../src/settings.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
 import { folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
+import { describeCron, nextRun, parseCron } from '../src/cron.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -607,8 +608,22 @@ function renderAction(container, action = {}) {
   container.append(node);
 }
 
-function renderRule(rule = {}) {
+/**
+ * `saved` is true only for a rule drawn from storage. The Run button runs the
+ * stored rule, so a card that differs from it must be saved first: otherwise a
+ * rule just switched from Delete to Tag would still delete.
+ */
+function renderRule(rule = {}, saved = false) {
   const node = $('#rule-template').content.firstElementChild.cloneNode(true);
+  if (!saved) node.dataset.unsaved = 'true';
+  const markUnsaved = (event) => {
+    // The folder filter and the collapse arrow change the view, not the rule.
+    if (event.target.closest('.folder-filter, .rule-collapse, .run-rule')) return;
+    if (event.type === 'click' && !event.target.closest('button')) return;
+    node.dataset.unsaved = 'true';
+  };
+  for (const type of ['input', 'change', 'click']) node.addEventListener(type, markUnsaved);
+  $('.run-rule', node).addEventListener('click', () => runRuleNow(node));
   $('.rule-id', node).value = rule.id ?? crypto.randomUUID();
   $('.rule-name', node).value = rule.name ?? 'New rule';
   $('.rule-enabled', node).checked = rule.enabled !== false;
@@ -629,6 +644,15 @@ function renderRule(rule = {}) {
   $('.add-action', node).addEventListener('click', () => renderAction(actionContainer, {}));
   wireFolderPicker(node);
 
+  $('.rule-schedule-on', node).checked = rule.schedule?.enabled === true;
+  $('.rule-cron', node).value = rule.schedule?.cron ?? '';
+  $('.rule-schedule-on', node).addEventListener('change', () => {
+    refreshSchedule(node);
+    if ($('.rule-schedule-on', node).checked) $('.rule-cron', node).focus();
+  });
+  $('.rule-cron', node).addEventListener('input', () => refreshSchedule(node));
+  refreshSchedule(node);
+
   $('.del-rule', node).addEventListener('click', () => {
     collapsed.delete($('.rule-id', node).value);
     saveCollapsed(collapsed);
@@ -643,6 +667,39 @@ function renderRule(rule = {}) {
   rulesEl.append(node);
   // Restore the remembered view state. A rule the user just added stays open.
   if (rule.id && collapsed.has(rule.id)) setCollapsed(node, true);
+}
+
+/**
+ * Show or hide a rule's schedule fields, and say in plain words what the cron
+ * expression means and when it next matches, so a user can check it without
+ * knowing the syntax.
+ */
+function refreshSchedule(node) {
+  const on = $('.rule-schedule-on', node).checked;
+  $('.schedule-fields', node).classList.toggle('hidden', !on);
+  if (!on) return;
+
+  const text = $('.schedule-text', node);
+  const cron = parseCron($('.rule-cron', node).value);
+  text.classList.toggle('danger', !cron.ok);
+  if (!cron.ok) {
+    text.textContent = `${cron.error}.`;
+    $('.cron-help', node).href = 'https://crontab.guru/';
+    return;
+  }
+  const next = nextRun(cron);
+  text.textContent = `${describeCron(cron)}. ${
+    next ? `Next run: ${next.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}.` : 'This date never comes, so the rule never runs.'
+  }`;
+  // Opens the same expression in the editor the link points to.
+  $('.cron-help', node).href = `https://crontab.guru/#${cron.expression.replaceAll(' ', '_')}`;
+}
+
+/** The schedule a rule card holds, or null when it has none worth storing. */
+function scheduleFrom(node) {
+  const enabled = $('.rule-schedule-on', node).checked;
+  const cron = $('.rule-cron', node).value.trim();
+  return enabled || cron ? { enabled, cron } : null;
 }
 
 /** A one-line digest of a rule, shown while it is collapsed. */
@@ -684,7 +741,10 @@ function ruleSummary(node) {
   const where = `${folderCount} folder${folderCount === 1 ? '' : 's'}${subs}`;
   const what = conditions.join(joiner) || 'no conditions';
 
-  return `${what} → ${actions.join(' + ') || 'no action'} · ${where}`;
+  const cron = $('.rule-schedule-on', node).checked ? parseCron($('.rule-cron', node).value) : null;
+  const when = cron?.ok ? ` · ${describeCron(cron)}` : '';
+
+  return `${what} → ${actions.join(' + ') || 'no action'} · ${where}${when}`;
 }
 
 function setCollapsed(node, isCollapsed) {
@@ -756,6 +816,7 @@ function collectConfig(rejected = []) {
       match: $('.rule-match', node).value,
       folderIds: [...$('.rule-folders', node).selectedOptions].map((o) => o.value),
       includeSubfolders: $('.rule-subfolders', node).checked,
+      ...(scheduleFrom(node) ? { schedule: scheduleFrom(node) } : {}),
       conditions: [...node.querySelectorAll('.condition')].map((c) => {
         const operator = $('.cond-op', c).value;
         const condition = {
@@ -805,6 +866,7 @@ function collectConfig(rejected = []) {
 /** Each advanced setting and the input that holds it. */
 const ADVANCED_INPUTS = {
   runOnNewMail: '#adv-new-mail',
+  logScheduleRuns: '#adv-log-schedule',
   newMailDelaySeconds: '#adv-new-mail-delay',
   catchUpEveryMinutes: '#adv-catchup-every',
   catchUpLookbackDays: '#adv-catchup-days',
@@ -814,7 +876,7 @@ const ADVANCED_INPUTS = {
 function fillAdvanced(settings) {
   for (const [key, selector] of Object.entries(ADVANCED_INPUTS)) {
     const el = $(selector);
-    if (key === 'runOnNewMail') el.checked = settings[key] !== false;
+    if (el.type === 'checkbox') el.checked = settings[key] === true;
     else el.value = settings[key];
   }
 }
@@ -824,7 +886,7 @@ function collectAdvanced() {
   const raw = {};
   for (const [key, selector] of Object.entries(ADVANCED_INPUTS)) {
     const el = $(selector);
-    raw[key] = key === 'runOnNewMail' ? el.checked : el.value.trim();
+    raw[key] = el.type === 'checkbox' ? el.checked : el.value.trim();
   }
   return raw;
 }
@@ -857,6 +919,19 @@ async function save() {
     return;
   }
 
+  // Refused for the same reason: a schedule that does not parse would leave the
+  // rule on the default timer while the card says otherwise.
+  const badSchedule = [...rulesEl.querySelectorAll('.rule')].find(
+    (node) => $('.rule-schedule-on', node).checked && !parseCron($('.rule-cron', node).value).ok,
+  );
+  if (badSchedule) {
+    setCollapsed(badSchedule, false);
+    $('.rule-cron', badSchedule).focus();
+    const name = $('.rule-name', badSchedule).value.trim() || 'Untitled rule';
+    flash(`Not saved: the schedule of “${name}” is not a valid cron expression.`, true);
+    return;
+  }
+
   const rejected = [];
   const collected = collectConfig(rejected);
   // Merge, so keys the options page does not own (harvestRuleId,
@@ -867,7 +942,7 @@ async function save() {
 
   // Re-render so the user sees exactly what was stored, dropped lines included.
   rulesEl.innerHTML = '';
-  for (const rule of collected.rules) renderRule(rule);
+  for (const rule of collected.rules) renderRule(rule, true);
   $('#allowlist').value = collected.allowlist.join('\n');
   fillAdvanced(collected.advanced);
 
@@ -1013,6 +1088,29 @@ async function runNow() {
   }
 }
 
+/** Run one saved rule on every message in its folders. */
+async function runRuleNow(node) {
+  const name = $('.rule-name', node).value.trim() || 'Untitled rule';
+  if (node.dataset.unsaved === 'true') {
+    flash(`Save your changes before you run “${name}”.`, true);
+    return;
+  }
+  if (!$('.rule-enabled', node).checked) {
+    flash(`“${name}” is turned off. Turn it on and save before you run it.`, true);
+    return;
+  }
+  flash(`Running “${name}”…`);
+  try {
+    const res = await messenger.runtime.sendMessage({
+      command: 'runNow',
+      ruleId: $('.rule-id', node).value,
+    });
+    flash(`Done. “${name}” affected ${res?.affected ?? 0} message(s).`);
+  } catch (e) {
+    flash(`Run failed: ${e.message}`, true);
+  }
+}
+
 async function init() {
   await loadFolders();
   await loadAddressBooks();
@@ -1024,7 +1122,8 @@ async function init() {
   // On a first visit with many rules, start collapsed: a folder multi-select
   // makes each card tall enough that a dozen rules cannot be scanned otherwise.
   const firstVisit = localStorage.getItem(COLLAPSED_KEY) === null;
-  for (const r of rules) renderRule(r);
+  // The blank starter card of a fresh install is not in storage yet.
+  for (const r of rules) renderRule(r, Boolean(config?.rules?.length));
   if (firstVisit && rules.length > 3) setAllCollapsed(true);
 
   $('#allowlist').value = (config?.allowlist ?? DEFAULT_ALLOWLIST).join('\n');

@@ -7,9 +7,10 @@ import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
-import { ADVANCED_DEFAULTS, sanitizeAdvanced } from './settings.js';
-import { createRunner } from './runner.js';
+import { ADVANCED_DEFAULTS, alarmNeedsReset, sanitizeAdvanced } from './settings.js';
+import { createRunner, withTimeout } from './runner.js';
 import { resolveRuleFolders } from './folders.js';
+import { cronAlarmNeedsReset, missedRun, nextRun, scheduleOf } from './cron.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -33,11 +34,26 @@ import {
  * `messages.onNewMailReceived` starts a run within seconds of mail landing, so
  * a rule does not have to wait out the interval. Both go through `runner`,
  * which keeps two runs from overlapping and corrupting the per-rule run state.
+ *
+ * A rule can opt out of both and carry its own cron schedule (see cron.js). It
+ * then has an alarm of its own and runs only when that fires, or by hand.
  */
 
 const ALARM_NAME = 'folder-filter-scheduler.tick';
+/** One alarm per rule with its own schedule, named by the rule id. */
+const CRON_ALARM_PREFIX = 'folder-filter-scheduler.rule.';
 const MENU_ID = 'folder-filter-scheduler.harvest-domains';
 const DEFAULT_INTERVAL_MINUTES = 10;
+
+/**
+ * How long one header download may take, and how many may time out before the
+ * run stops downloading. The first download of a run can include the IMAP
+ * login, so the limit is generous: a false timeout makes a working rule skip
+ * mail, which is worse than a slow run. It still fires well inside the 30
+ * seconds after which Thunderbird suspends an idle event page.
+ */
+const HEADER_TIMEOUT_MS = 10_000;
+const HEADER_TIMEOUT_LIMIT = 3;
 
 /**
  * Headers the right-click harvest reads, most trustworthy first.
@@ -88,6 +104,17 @@ const log = (...args) => {
 const warn = (...args) => {
   console.warn('[FolderFilterScheduler]', ...args);
   record('warn', args);
+};
+
+/**
+ * A routine line about a run on a rule's own schedule. It reaches the console
+ * always, and the diagnostics log only when `quiet` is false. A rule on a
+ * 1-minute schedule would otherwise fill the log within hours and push out
+ * the entries a report is for. Runs that change mail or fail are never quiet.
+ */
+const logUnless = (quiet, ...args) => {
+  if (quiet) console.log('[FolderFilterScheduler]', ...args);
+  else log(...args);
 };
 
 const newId = () => globalThis.crypto.randomUUID();
@@ -164,10 +191,55 @@ async function saveRunState(runState) {
  */
 let advancedCache = { ...ADVANCED_DEFAULTS };
 
+/**
+ * Rules with their own schedule whose time has come. The alarm handler adds an
+ * id and asks the runner for a run; the run takes the whole set. A set, because
+ * two rules can be due in the same minute and one run serves both.
+ */
+const dueCronRules = new Set();
+
+/**
+ * Give every rule with its own schedule one alarm for its next time, and drop
+ * the alarms of rules that no longer have one. An alarm fires once, so the
+ * handler sets the next one after each run.
+ */
+async function syncCronAlarms(rules, advanced) {
+  const wanted = new Map();
+  for (const rule of rules) {
+    const cron = scheduleOf(rule);
+    if (cron && rule.id && rule.enabled !== false) wanted.set(CRON_ALARM_PREFIX + rule.id, { cron, rule });
+  }
+
+  const existing = new Map((await messenger.alarms.getAll()).map((a) => [a.name, a]));
+  for (const name of existing.keys()) {
+    if (name.startsWith(CRON_ALARM_PREFIX) && !wanted.has(name)) await messenger.alarms.clear(name);
+  }
+
+  const now = Date.now();
+  for (const [name, { cron, rule }] of wanted) {
+    const next = nextRun(cron, new Date(now));
+    if (!next) {
+      await messenger.alarms.clear(name);
+      continue;
+    }
+    if (!cronAlarmNeedsReset(existing.get(name), next.getTime(), now)) continue;
+    messenger.alarms.create(name, { when: next.getTime() });
+    logUnless(
+      !advanced.logScheduleRuns,
+      `rule "${rule.name}": own schedule (${cron.expression}), next run ${next.toISOString()}`,
+    );
+  }
+}
+
 async function applySettings() {
-  const { intervalMinutes, advanced } = await loadConfig();
+  const { intervalMinutes, advanced, rules } = await loadConfig();
   advancedCache = advanced;
+  await syncCronAlarms(rules, advanced).catch((e) => warn('could not set the rule schedules', e));
   const minutes = Math.max(1, Number(intervalMinutes) || DEFAULT_INTERVAL_MINUTES);
+  // Keep a running alarm: this also runs on every wake, and re-creating the
+  // alarm would restart its countdown each time new mail arrives.
+  const alarm = await messenger.alarms.get(ALARM_NAME).catch(() => null);
+  if (!alarmNeedsReset(alarm, minutes)) return;
   await messenger.alarms.clear(ALARM_NAME);
   messenger.alarms.create(ALARM_NAME, { periodInMinutes: minutes });
   log(
@@ -193,7 +265,7 @@ async function readHeaders(messageId) {
  * a non-indexed header (reply-to, list-id, …) do we read the headers, which
  * fetches from the server on demand on a non-offline IMAP folder.
  */
-async function normalize(messageHeader, fetchFull) {
+async function normalize(messageHeader, fetchFull, headerReads) {
   const fields = {};
   const push = (name, value) => {
     if (value == null || value === '') return;
@@ -201,13 +273,30 @@ async function normalize(messageHeader, fetchFull) {
     (fields[key] ??= []).push(String(value));
   };
 
+  // A message whose headers cannot be read is left out of the run. Matching it
+  // on the indexed fields alone is unsafe: "Reply-To does not contain X" is
+  // true for a missing header, and a rule that deletes would then act on mail
+  // it never read.
+  if (fetchFull && headerReads.timeouts >= HEADER_TIMEOUT_LIMIT) {
+    headerReads.skipped += 1;
+    return null;
+  }
   if (fetchFull) {
     try {
-      const headers = await readHeaders(messageHeader.id);
+      const headers = await withTimeout(readHeaders(messageHeader.id), HEADER_TIMEOUT_MS);
       for (const [name, values] of Object.entries(headers)) {
         for (const v of values ?? []) push(name, v);
       }
     } catch (e) {
+      if (e?.name === 'TimeoutError') {
+        headerReads.timeouts += 1;
+        headerReads.skipped += 1;
+        if (headerReads.timeouts === HEADER_TIMEOUT_LIMIT) {
+          warn(`${HEADER_TIMEOUT_LIMIT} header reads timed out, no more header reads this run`);
+        }
+        warn('header read timed out', messageHeader.id);
+        return null;
+      }
       warn('header read failed', messageHeader.id, e);
     }
   }
@@ -258,7 +347,7 @@ async function loadAllFolders(rules) {
 }
 
 /** Run one rule across all its source folders. Returns count of affected messages. */
-async function runRule(rule, folderIds, runState, manual, addressBooks, settings) {
+async function runRule(rule, folderIds, runState, manual, addressBooks, settings, headerReads, quiet) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
@@ -270,13 +359,15 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   let scanned = 0;
   let matched = 0;
   let scanFailed = false;
+  const skippedBefore = headerReads.skipped;
 
   for (const folderId of folderIds) {
     const matchedIds = [];
     try {
       for await (const header of messagesInFolder(folderId, bounds)) {
         scanned += 1;
-        const message = await normalize(header, fetchFull);
+        const message = await normalize(header, fetchFull, headerReads);
+        if (!message) continue;
         if (evaluateRule(message, rule, { now: startedAt, addressBooks })) matchedIds.push(header.id);
       }
     } catch (e) {
@@ -294,6 +385,10 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
     }
   }
 
+  // A message whose headers did not arrive was left out, so the pass is not
+  // clean and the next run reads it again.
+  if (headerReads.skipped > skippedBefore) scanFailed = true;
+
   // Only advance the watermark on a clean pass, so a transient failure does not
   // permanently skip the messages it could not read.
   if (!scanFailed && rule.id) {
@@ -303,7 +398,8 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
     bounds.fromDate ? `from ${bounds.fromDate.toISOString()}` : 'from start',
     bounds.toDate ? `to ${bounds.toDate.toISOString()}` : null,
   ].filter(Boolean).join(' ');
-  log(
+  logUnless(
+    quiet && affected === 0 && !scanFailed,
     `rule "${rule.name}": ${kind} scan (${range}), ${scanned} scanned, ${matched} matched, ` +
       `${affected} actioned, ${Date.now() - startedAt.getTime()} ms${scanFailed ? ', WITH ERRORS' : ''}`,
   );
@@ -317,36 +413,72 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
  * a new-mail trigger avoids re-querying every folder of every rule because one
  * message landed somewhere. A rule left out keeps its watermark, so the next
  * scheduled run still covers it.
+ *
+ * `ruleIds` narrows a manual run to the rules named, which is the Run button on
+ * one rule: only those get the full scan. `background` is true when a scheduled
+ * or new-mail trigger shares the run, and the other rules then get their usual
+ * incremental pass. See runner.js.
  */
-async function runAllRules(reason = 'manual', { folderIds = null } = {}) {
+async function runAllRules(
+  reason = 'manual',
+  { folderIds = null, ruleIds = null, background = false } = {},
+) {
+  // Taken before the first await, so an alarm that fires during this run adds
+  // to a fresh set and is served by the run queued behind this one.
+  const due = new Set(dueCronRules);
+  dueCronRules.clear();
   const { rules, advanced } = await loadConfig();
   const runState = await loadRunState();
   const manual = reason === 'manual';
+  const isManual = (rule) => manual && (!ruleIds || ruleIds.has(rule.id));
   const allFolders = await loadAllFolders(rules);
   const scanned = new Map(rules.map((rule) => [rule, resolveRuleFolders(rule, allFolders)]));
-  // New mail in a subfolder counts for a rule that includes subfolders.
-  const selected = folderIds
-    ? rules.filter((rule) => scanned.get(rule).some((id) => folderIds.has(id)))
-    : rules;
+  const selected = rules.filter((rule) => {
+    if (isManual(rule)) return true;
+    // A rule with its own schedule ignores the timer and new mail.
+    if (scheduleOf(rule)) return due.has(rule.id);
+    if (manual && !background) return false;
+    // New mail in a subfolder counts for a rule that includes subfolders.
+    return !folderIds || scanned.get(rule).some((id) => folderIds.has(id));
+  });
 
-  // Mail landed somewhere no rule watches. Return before touching the run
-  // state: stamping watermarks for a scan that never happened would be wrong,
-  // and writing storage on every unrelated arrival is pure noise.
-  if (folderIds && selected.length === 0) {
-    log(`run (${reason}) skipped: no rule watches the ${folderIds.size} folder(s) involved`);
+  // Mail landed somewhere no rule watches, or the rule asked for is not saved.
+  // Return before touching the run state: stamping watermarks for a scan that
+  // never happened would be wrong, and writing storage on every unrelated
+  // arrival is pure noise.
+  if (selected.length === 0 && (folderIds || ruleIds)) {
+    let why = 'the rule asked for is not saved';
+    if (folderIds) {
+      why = folderIds.size > 0
+        ? `no rule watches the ${folderIds.size} folder(s) involved`
+        : 'no rule is due';
+    }
+    logUnless(folderIds?.size === 0 && !advanced.logScheduleRuns, `run (${reason}) skipped: ${why}`);
     await flushLog();
     return 0;
   }
 
+  // Routine lines about rules on their own schedule stay out of the log, see
+  // `logUnless`. The whole run is quiet only when it holds nothing else.
+  const quietRule = (rule) => !advanced.logScheduleRuns && due.has(rule.id) && !isManual(rule);
+  const quietRun = selected.length > 0 && selected.every(quietRule);
+  // Logged before the scan so a run that never finishes still leaves a trace.
+  logUnless(quietRun, `run (${reason}) started: ${selected.length} of ${rules.length} rule(s)`);
   const addressBooks = await loadAddressBooks(selected);
+  // Shared by every rule of the run: see HEADER_TIMEOUT_LIMIT.
+  const headerReads = { timeouts: 0, skipped: 0 };
   let total = 0;
 
   for (const rule of selected) {
-    total += await runRule(rule, scanned.get(rule), runState, manual, addressBooks, advanced);
+    total += await runRule(
+      rule, scanned.get(rule), runState, isManual(rule), addressBooks, advanced, headerReads,
+      quietRule(rule),
+    );
   }
 
   await saveRunState(runState);
-  log(
+  logUnless(
+    quietRun && total === 0,
     `run (${reason}) complete: ${total} message(s) affected across ` +
       `${selected.length} of ${rules.length} rule(s)`,
   );
@@ -642,9 +774,56 @@ messenger.menus.onClicked.addListener((info) => {
   handleHarvest(info).catch((e) => warn('harvest failed', e));
 });
 
+/**
+ * Ask for a run of the rules in `dueCronRules`. The empty folder set keeps the
+ * run to those rules: it matches no rule on the default timer, and merged into
+ * a queued run it widens nothing.
+ */
+const requestCronRun = () => runner.request('cron', { folderIds: new Set() });
+
+/** A rule's own alarm fired: run the rule, and set the alarm for its next time. */
+async function handleCronAlarm(alarm) {
+  const ruleId = alarm.name.slice(CRON_ALARM_PREFIX.length);
+  dueCronRules.add(ruleId);
+  const run = requestCronRun();
+
+  const { rules } = await loadConfig();
+  const rule = rules.find((r) => r.id === ruleId);
+  const cron = rule?.enabled === false ? null : scheduleOf(rule);
+  // From the scheduled time when that is later, so an alarm that fires a
+  // moment early cannot pick the same minute again.
+  const from = new Date(Math.max(Date.now(), alarm.scheduledTime ?? 0));
+  const next = cron ? nextRun(cron, from) : null;
+  if (next) messenger.alarms.create(alarm.name, { when: next.getTime() });
+  await run;
+}
+
+/**
+ * Thunderbird was closed when a rule's time came. Run those rules once at
+ * startup, as the default timer does for the mail it missed.
+ */
+async function runMissedCronRules() {
+  const { rules } = await loadConfig();
+  const runState = await loadRunState();
+  const now = new Date();
+  let missed = 0;
+  for (const rule of rules) {
+    const cron = rule.enabled === false ? null : scheduleOf(rule);
+    if (!cron || !missedRun(cron, runState[rule.id]?.lastRunAt, now)) continue;
+    dueCronRules.add(rule.id);
+    missed += 1;
+  }
+  if (missed === 0) return;
+  log(`${missed} rule(s) missed their own schedule while Thunderbird was closed, running`);
+  await requestCronRun();
+}
+
 messenger.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name !== ALARM_NAME) return;
-  runner.request('scheduled').catch((e) => warn('scheduled run failed', e));
+  if (alarm.name === ALARM_NAME) {
+    runner.request('scheduled').catch((e) => warn('scheduled run failed', e));
+  } else if (alarm.name.startsWith(CRON_ALARM_PREFIX)) {
+    handleCronAlarm(alarm).catch((e) => warn('run on a rule schedule failed', e));
+  }
 });
 
 // --- New mail ----------------------------------------------------------------
@@ -687,7 +866,9 @@ if (messenger.messages?.onNewMailReceived?.addListener) {
 
 messenger.runtime.onMessage.addListener((msg) => {
   if (msg?.command === 'runNow') {
-    return runner.request('manual').then((affected) => ({ ok: true, affected }));
+    // A rule id is the Run button on one rule; without it, every rule runs.
+    const scope = typeof msg.ruleId === 'string' ? { ruleIds: new Set([msg.ruleId]) } : {};
+    return runner.request('manual', scope).then((affected) => ({ ok: true, affected }));
   }
   if (msg?.command === 'reschedule') {
     return applySettings().then(() => ({ ok: true }));
@@ -713,7 +894,10 @@ messenger.runtime.onMessage.addListener((msg) => {
 });
 
 messenger.runtime.onInstalled.addListener(applySettings);
-messenger.runtime.onStartup.addListener(applySettings);
+messenger.runtime.onStartup.addListener(() => {
+  applySettings();
+  runMissedCronRules().catch((e) => warn('missed-schedule run failed', e));
+});
 applySettings();
 registerMenu();
 

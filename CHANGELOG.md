@@ -4,6 +4,40 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6]
+
+### Added
+- **A schedule for each rule.** Turn on **Run this rule on its own schedule**
+  on a rule card and enter a cron expression, such as `0 21 * * *` for 21:00
+  every day. The smallest step is 1 minute. The card describes the expression
+  in plain words, shows the next run time, and links to a cron editor. It is off
+  by default. A rule with its own schedule runs only at those times: the timer
+  and new mail no longer start it. A run that Thunderbird missed while it was
+  closed happens at the next start. The diagnostics log records a run on a rule
+  schedule only when it changes mail or fails, so a 1-minute schedule doesn't
+  push older entries out. **Log every run on a rule's own schedule** under
+  **Advanced** records them all. Import counts two rules that differ only by
+  their schedule as different rules.
+- **Run button on each rule.** It runs only that rule, on every message in its
+  folders, and leaves the other rules alone. The button runs the saved rule, so
+  it asks you to save first when the card has changes.
+- **Common problems** section on the options page and in the README. It
+  explains why a rule can miss mail in an IMAP folder other than the Inbox, and
+  which Thunderbird folder setting fixes it (#12).
+
+### Fixed
+- **New mail delayed scheduled runs** (#12). Each new message woke the add-on,
+  which restarted the 10-minute timer, so steady mail pushed the scheduled run
+  back again and again. The add-on now keeps a running timer and re-creates it
+  only when the interval changes.
+- **A header download that never answers no longer blocks a run** (#15). A
+  rule that reads Reply-To, List-Id, or Sender downloads the headers of each
+  message. Each download now has a 10-second limit. After 3 downloads time out,
+  the run stops downloading and leaves the remaining messages for the next
+  run.
+- **Diagnostics log shows when a run starts** (#15), so a run that Thunderbird
+  suspends partway leaves a trace.
+
 ## [0.3.5]
 
 ### Added

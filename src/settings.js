@@ -23,6 +23,7 @@ export const ADVANCED_DEFAULTS = Object.freeze({
   scanOverlapMinutes: 90,
   catchUpEveryMinutes: 30,
   catchUpLookbackDays: 30,
+  logScheduleRuns: false,
 });
 
 /**
@@ -63,7 +64,13 @@ function clampInteger(raw, { min, max }, fallback) {
  */
 export function sanitizeAdvanced(raw) {
   const problems = [];
-  const settings = { runOnNewMail: raw?.runOnNewMail !== false };
+  const settings = {
+    runOnNewMail: raw?.runOnNewMail !== false,
+    // Off unless literally true. A rule on a 1-minute schedule writes several
+    // log lines a minute, which pushes everything else out of the diagnostics
+    // log within hours. See `quiet` in background.js.
+    logScheduleRuns: raw?.logScheduleRuns === true,
+  };
 
   for (const [key, limit] of Object.entries(ADVANCED_LIMITS)) {
     const { value, problem } = clampInteger(raw?.[key], limit, ADVANCED_DEFAULTS[key]);
@@ -76,4 +83,13 @@ export function sanitizeAdvanced(raw) {
 /** True when every value already equals its default. Drives "Restore defaults". */
 export function isDefaultAdvanced(settings) {
   return Object.keys(ADVANCED_DEFAULTS).every((k) => settings?.[k] === ADVANCED_DEFAULTS[k]);
+}
+
+/**
+ * Whether the schedule alarm must be (re)created. Thunderbird wakes the event
+ * page for every new message, and re-creating the alarm on each wake restarts
+ * its countdown, so steady mail kept pushing the scheduled run back (#12).
+ */
+export function alarmNeedsReset(alarm, minutes) {
+  return !alarm || alarm.periodInMinutes !== minutes;
 }

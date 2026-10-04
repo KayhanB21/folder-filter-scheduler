@@ -101,7 +101,11 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   arrived since the last one, so a per-message header read stays affordable. A
   wider catch-up scan every 30 minutes picks up mail whose `Date` header lags
   its real arrival. **Run all rules now** always scans the whole folder.
-- **Run now** button for immediate, on-demand runs.
+- **Run now** button for immediate, on-demand runs, and a **Run** button on each
+  rule that runs only that rule.
+- **A schedule for each rule**, written as a cron expression such as
+  `0 21 * * *`, to the minute. It is off by default. The options page describes
+  the expression in plain words and shows the next run time.
 
 ## Install (temporary / development)
 
@@ -200,8 +204,10 @@ Rules can also be **collapsed** to a one-line summary, individually or with
 **Collapse all**. That is a view preference stored in the browser only: it never
 changes what is saved or exported.
 
-Click **Save**, then **Run all rules now** to test immediately — the status line
-reports how many messages were affected (e.g. *"Done — 1 message(s) affected."*).
+Click **Save**, then **Run all rules now** to test immediately. To test one
+rule, click **Run** on its card: it scans every message in that rule's folders
+and leaves the other rules alone. Either way, the status line reports how many
+messages were affected.
 
 > **Speed of `Reply-To` rules.** A rule matching a non-indexed header reads the
 > headers of each candidate message. Scheduled runs are incremental, so in steady
@@ -231,6 +237,51 @@ reports how many messages were affected (e.g. *"Done — 1 message(s) affected."
 > fetched on demand, so it works either way. For speed and offline use, enable
 > offline storage for the folder (Account Settings → Synchronization & Storage) and
 > run **Repair Folder** once.
+
+## Give a rule its own schedule
+
+By default every rule runs on the timer at the top of the options page, and when
+new mail arrives. To run one rule at set times instead, turn on **Run this rule
+on its own schedule** on its card and enter a cron expression.
+
+A cron expression has five fields: minute, hour, day of month, month, and day of
+week. Times are your computer's local time. The table shows some examples.
+
+| Expression | When the rule runs |
+| --- | --- |
+| `0 21 * * *` | At 21:00 every day |
+| `*/5 * * * *` | Every 5 minutes |
+| `0 9 * * mon-fri` | At 09:00 on Monday through Friday |
+| `30 8 1 * *` | At 08:30 on day 1 of the month |
+
+The card shows the expression in plain words and the next run time, and links to
+[crontab.guru](https://crontab.guru/), an editor that explains each field.
+
+A rule with its own schedule runs only at those times. The timer and new mail
+don't start it. The **Run** button on the card and **Run all rules now** still
+do. If Thunderbird is closed at a scheduled time, the rule runs one time when
+Thunderbird next starts.
+
+The diagnostics log records a run on a rule's own schedule only when it changes
+mail or fails. To record every such run, turn on **Log every run on a rule's own
+schedule** under **Advanced**.
+
+## Common problems
+
+**A rule misses mail in Sent or another folder that isn't the Inbox.** For IMAP
+accounts, Thunderbird checks only the Inbox for new mail by default. The add-on
+can process only messages that Thunderbird has downloaded, so mail that another
+program sends through your account, or that a server rule files, waits until you
+open the folder. **Run all rules now** seems to work because you opened the folder
+first. To fix this, right-click the folder and open **Properties**. On the
+**General** tab, turn on **When getting new messages for this account, always
+check this folder** (#12).
+
+**Mail arrived while Thunderbird was closed.** Rules run only while Thunderbird
+is running. After Thunderbird starts, the first scheduled run checks the
+catch-up window (30 days by default) and processes anything it missed.
+
+The options page has the same list under **Common problems**.
 
 ## Reporting a problem
 

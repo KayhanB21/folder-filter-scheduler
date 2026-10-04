@@ -19,6 +19,7 @@
 import { AGE_OPERATORS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, fieldsOf, isAgeCondition } from './matcher.js';
 import { actionsOf, orderActions } from './actions.js';
 import { ADVANCED_DEFAULTS } from './settings.js';
+import { nextRun, scheduleOf } from './cron.js';
 
 /** Most recent log entries kept. At a 2-minute interval that is several hours. */
 export const LOG_CAP = 1000;
@@ -84,7 +85,7 @@ export function describeAction(a, { includeValues = false } = {}) {
   return type;
 }
 
-function describeRule(rule, runState, { includeValues }) {
+function describeRule(rule, runState, { includeValues, generatedAt }) {
   const lines = [];
   const status = rule.enabled === false ? 'disabled' : 'enabled';
   lines.push(`- "${rule.name}" [${status}] id ${String(rule.id ?? '?').slice(0, 8)}`);
@@ -97,6 +98,17 @@ function describeRule(rule, runState, { includeValues }) {
   // order they happen to be stored in.
   for (const a of orderActions(actionsOf(rule))) {
     lines.push(`    then: ${describeAction(a, { includeValues })}`);
+  }
+  if (rule.schedule?.enabled === true) {
+    const cron = scheduleOf(rule);
+    // The next run is worked out here because the log leaves routine runs on
+    // a rule schedule out by default.
+    const next = cron ? nextRun(cron, generatedAt) : null;
+    lines.push(
+      cron
+        ? `    schedule: cron ${cron.expression}; next run: ${next ? next.toISOString() : 'never'}`
+        : '    schedule: invalid cron, the default timer applies',
+    );
   }
   const state = runState?.[rule.id];
   lines.push(`    last run: ${state?.lastRunAt ?? 'never'}; last catch-up: ${state?.lastCatchUpAt ?? 'never'}`);
@@ -148,12 +160,13 @@ export function buildReport(input) {
     `run on new mail: ${adv.runOnNewMail ? `yes, ${adv.newMailDelaySeconds}s after the last arrival` : 'no'}`,
     `scan overlap: ${adv.scanOverlapMinutes} min`,
     `catch-up: every ${adv.catchUpEveryMinutes} min over the last ${adv.catchUpLookbackDays} day(s)`,
+    `rule schedule runs in the log: ${adv.logScheduleRuns ? 'all' : 'only those that change mail or fail'}`,
     `address book access: ${permissions?.addressBooks ? 'granted' : 'not granted'}`,
     `tag list access: ${permissions?.messagesTagsList ? 'granted' : 'not granted'}`,
     `protected domains: ${Array.isArray(config?.allowlist) ? config.allowlist.length : '?'}`,
     '',
     `rules (${rules.length}):`,
-    ...rules.flatMap((r) => describeRule(r, runState, { includeValues })),
+    ...rules.flatMap((r) => describeRule(r, runState, { includeValues, generatedAt })),
     '',
     `log (last ${entries?.length ?? 0} entries, oldest first):`,
     ...(entries ?? []).map(formatEntry),

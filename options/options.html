@@ -135,7 +135,48 @@
         dated slightly early is not missed.
       </p>
 
+      <label class="toggle adv-row">
+        <input id="adv-log-schedule" type="checkbox" /> Log every run on a rule's own schedule
+      </label>
+      <p class="adv-hint">
+        Without this, the diagnostics log records such a run only when it changes
+        mail or fails. A rule that runs every minute would otherwise push the older
+        entries out of the log within hours.
+      </p>
+
       <button id="reset-advanced" type="button">Restore defaults</button>
+    </details>
+
+    <details id="help-box" class="allowlist help">
+      <summary>Common problems</summary>
+
+      <h3>A rule misses mail in Sent or another folder that isn't the Inbox</h3>
+      <p>
+        For IMAP accounts, Thunderbird checks only the Inbox for new mail by default. The
+        add-on can process only messages that Thunderbird has downloaded, so mail that
+        another program sends through your account, or that a server rule files, waits
+        until you open the folder. <b>Run all rules now</b> seems to work because you
+        opened the folder first.
+      </p>
+      <p>
+        To fix this, right-click the folder and open <b>Properties</b>. On the
+        <b>General</b> tab, turn on <b>When getting new messages for this account, always
+        check this folder</b>.
+      </p>
+
+      <h3>Mail arrived while Thunderbird was closed</h3>
+      <p>
+        Rules run only while Thunderbird is running. After Thunderbird starts, the first
+        scheduled run checks the last 30 days, or the number of days set under
+        <b>Advanced</b>, and processes anything it missed.
+      </p>
+
+      <h3>Something else doesn't work</h3>
+      <p>
+        Open <b>Diagnostics</b> and attach the report to a
+        <a href="https://github.com/KayhanB21/folder-filter-scheduler/issues" target="_blank" rel="noopener">GitHub issue</a>.
+        The report shows what each recent run scanned and matched.
+      </p>
     </details>
 
     <!-- Template for a single rule card. -->
@@ -147,6 +188,7 @@
           <button class="rule-collapse" type="button" aria-expanded="true" title="Collapse or expand this rule">▾</button>
           <input class="rule-name" type="text" placeholder="Rule name" />
           <label class="toggle"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
+          <button class="run-rule" type="button" title="Run only this rule now, on every message in its folders">Run</button>
           <button class="del-rule danger" type="button">Delete</button>
         </div>
         <!-- One-line digest, shown in place of the body while collapsed. -->
@@ -181,6 +223,27 @@
 
         <div class="actions"></div>
         <button class="add-action" type="button">+ Add action</button>
+
+        <!-- Off by default: a rule runs on the timer at the top of the page. -->
+        <div class="row schedule">
+          <span class="lbl">Schedule</span>
+          <div class="schedule-box">
+            <label class="toggle">
+              <input class="rule-schedule-on" type="checkbox" /> Run this rule on its own schedule
+            </label>
+            <div class="schedule-fields hidden">
+              <input class="rule-cron" type="text" placeholder="0 21 * * *" spellcheck="false" autocomplete="off" aria-label="Cron expression" />
+              <a class="cron-help" href="https://crontab.guru/" target="_blank" rel="noopener">How to write a cron expression</a>
+              <p class="schedule-text" aria-live="polite"></p>
+              <p class="schedule-hint">
+                A cron expression has five fields: minute, hour, day of month, month, and
+                day of week, in your computer's local time. With its own schedule, the rule
+                runs only at these times. The timer at the top of the page and new mail no
+                longer start it.
+              </p>
+            </div>
+          </div>
+        </div>
         </div>
       </article>
     </template>
