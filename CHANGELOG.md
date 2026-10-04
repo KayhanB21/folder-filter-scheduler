@@ -18,6 +18,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   push older entries out. **Log every run on a rule's own schedule** under
   **Diagnostics** records them all. Import counts two rules that differ only by
   their schedule as different rules.
+- **Read, star, junk, and tag conditions** (#14). A rule can check whether a
+  message is read or unread, starred or not, junk or not, and whether it has
+  one of your Thunderbird tags. None of them downloads anything. A scheduled
+  run checks older mail only in the catch-up scan, so a rule can take up to 30
+  minutes to act after you star, tag, or read an older message.
+- **Three more actions** (#14): **Mark as unread**, **Remove star**, and
+  **Mark as not junk**. The **Flag** action is now named **Add star**, as
+  Thunderbird names it. Saved rules keep working.
 - **`name shows a different address` condition.** It matches when the sender
   name contains an email address from a different domain than the real
   address, as in `"Lena <lena@yahoo.com>" <someone@sina.com>`. Spam does this

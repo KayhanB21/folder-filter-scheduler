@@ -21,8 +21,11 @@ import {
   DOMAIN_IN_LIST,
   IN_ADDRESS_BOOK,
   NAME_SHOWS_OTHER_ADDRESS,
+  STATE_LABELS,
   fieldsOf,
   isAgeCondition,
+  isStateCondition,
+  isTagCondition,
 } from './matcher.js';
 import { actionsOf, orderActions } from './actions.js';
 import { ADVANCED_DEFAULTS } from './settings.js';
@@ -70,6 +73,11 @@ export function describeCondition(c, { includeValues = false } = {}) {
   if (isAgeCondition(c)) {
     return `age ${not}${AGE_LABELS[c.operator] ?? c.operator} ${c.days} day(s)`;
   }
+  if (isStateCondition(c)) {
+    return `${not}${STATE_LABELS[String(c.field).toLowerCase()]?.[c.operator] ?? c.operator}`;
+  }
+  // A tag key is a value, like a tag in an action.
+  if (isTagCondition(c)) return `${not}has tag ${includeValues ? c.tagKey : '(tag)'}`;
   const fields = fieldsOf(c).join(' or ') || '(no field)';
   if (c?.operator === DOMAIN_IN_LIST) {
     const domains = Array.isArray(c.domains) ? c.domains : [];

@@ -470,3 +470,80 @@ test('a name check survives an export and import round trip', () => {
   assert.deepEqual(problems, []);
   assert.equal(rules[0].conditions[0].operator, 'nameShowsOtherAddress');
 });
+
+// --- Read, star, junk, and tag conditions ------------------------------------
+
+const withConditions = (conditions) => file({ rules: [{ ...validRule, match: 'all', conditions }] });
+
+test('import accepts state conditions and stores no value for them', () => {
+  const { rules, problems } = sanitizeImport(withConditions([
+    { field: 'read', operator: 'isOff', value: 'x' },
+    { field: 'STAR', operator: 'isOn' },
+    { field: 'junk', operator: 'isOff', negate: true },
+  ]));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [
+    { operator: 'isOff', negate: false, field: 'read' },
+    { operator: 'isOn', negate: false, field: 'star' },
+    { operator: 'isOff', negate: true, field: 'junk' },
+  ]);
+});
+
+test('import accepts a tag condition and trims its key', () => {
+  const { rules, problems } = sanitizeImport(withConditions([{ field: 'tag', operator: 'hasTag', tagKey: ' $label1 ' }]));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ operator: 'hasTag', negate: false, field: 'tag', tagKey: '$label1' }]);
+});
+
+test('import rejects a state or tag condition with the wrong operator or field', () => {
+  for (const c of [
+    { field: 'read', operator: 'contains', value: 'x' },
+    { field: 'from', operator: 'isOn' },
+    { field: 'tag', operator: 'isOn' },
+    { field: 'read', operator: 'hasTag', tagKey: 'work' },
+    { field: 'subject', operator: 'hasTag', tagKey: 'work' },
+    { field: 'age', operator: 'isOff' },
+    { fields: ['from', 'read'], operator: 'domainInList', domains: ['evil.com'] },
+    { fields: ['read', 'star'], operator: 'isOn' },
+    { field: 'tag', operator: 'hasTag' },
+    { field: 'tag', operator: 'hasTag', tagKey: '  ' },
+  ]) {
+    const { rules, problems } = sanitizeImport(withConditions([c]));
+    assert.equal(rules.length, 0, JSON.stringify(c));
+    assert.ok(problems.length > 0, JSON.stringify(c));
+  }
+});
+
+test('state and tag conditions survive an export and import round trip', () => {
+  const conditions = [
+    { field: 'read', operator: 'isOff', negate: false },
+    { field: 'tag', operator: 'hasTag', tagKey: 'work', negate: true },
+  ];
+  const exported = buildExport({ rules: [{ ...validRule, id: 's1', conditions }] });
+  const { rules, problems } = sanitizeImport(JSON.parse(JSON.stringify(exported)));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions.map((c) => [c.field, c.operator, c.tagKey, c.negate]), [
+    ['read', 'isOff', undefined, false],
+    ['tag', 'hasTag', 'work', true],
+  ]);
+});
+
+test('the fingerprint tells apart the state, the operator, and the tag', () => {
+  const print = (c) => ruleFingerprint({ ...validRule, conditions: [c] });
+  const unread = print({ field: 'read', operator: 'isOff' });
+  assert.notEqual(unread, print({ field: 'read', operator: 'isOn' }));
+  assert.notEqual(unread, print({ field: 'star', operator: 'isOff' }));
+  assert.equal(unread, print({ field: 'read', operator: 'isOff', value: 'ignored' }));
+  assert.notEqual(
+    print({ field: 'tag', operator: 'hasTag', tagKey: 'work' }),
+    print({ field: 'tag', operator: 'hasTag', tagKey: 'home' }),
+  );
+});
+
+test('import accepts the mark-as-unread, remove-star, and not-junk actions', () => {
+  for (const type of ['markUnread', 'markUnflagged', 'markNotJunk']) {
+    const { rules, problems } = sanitizeImport(file({ rules: [{ ...validRule, actions: [{ type }] }] }));
+    assert.deepEqual(problems, [], type);
+    assert.deepEqual(rules[0].actions, [{ type }]);
+  }
+});

@@ -442,3 +442,81 @@ test('an address-book check sees the real sender behind a decoy name', () => {
   const cond = { field: 'from', operator: IN_ADDRESS_BOOK, addressBookId: 'all' };
   assert.equal(evaluateCondition(decoy, cond, { addressBooks }), false);
 });
+
+// --- Read, star, junk, and tag conditions ------------------------------------
+
+import { FIELDS, HAS_TAG, STATE_FIELDS, STATE_LABELS, STATE_OPERATORS, TAG_FIELD } from '../src/matcher.js';
+
+const stateMsg = (state, tags = []) => ({ fields: {}, state, tags });
+const unreadStarred = stateMsg({ read: false, star: true, junk: false }, ['$label1', 'newsletter']);
+
+test('a state condition reads the message state', () => {
+  const check = (field, operator) => evaluateCondition(unreadStarred, { field, operator });
+  assert.equal(check('read', 'isOn'), false);
+  assert.equal(check('read', 'isOff'), true);
+  assert.equal(check('star', 'isOn'), true);
+  assert.equal(check('star', 'isOff'), false);
+  assert.equal(check('junk', 'isOn'), false);
+  assert.equal(check('junk', 'isOff'), true);
+});
+
+test('a state condition honours negation', () => {
+  assert.equal(evaluateCondition(unreadStarred, { field: 'star', operator: 'isOn', negate: true }), false);
+  assert.equal(evaluateCondition(unreadStarred, { field: 'read', operator: 'isOn', negate: true }), true);
+});
+
+test('an unknown state never matches, negated or not', () => {
+  for (const message of [msg({}), stateMsg({}), stateMsg({ read: 'yes' }), stateMsg({ read: undefined })]) {
+    for (const operator of Object.keys(STATE_OPERATORS)) {
+      for (const negate of [false, true]) {
+        assert.equal(evaluateCondition(message, { field: 'read', operator, negate }), false);
+      }
+    }
+  }
+});
+
+test('a state condition with a foreign operator throws', () => {
+  assert.throws(() => evaluateCondition(unreadStarred, { field: 'read', operator: 'contains', value: 'x' }));
+});
+
+test('a tag condition matches a tag key on the message', () => {
+  const has = (tagKey, negate = false) => evaluateCondition(unreadStarred, { field: 'tag', operator: HAS_TAG, tagKey, negate });
+  assert.equal(has('newsletter'), true);
+  assert.equal(has('work'), false);
+  assert.equal(has('news'), false);
+  assert.equal(has('work', true), true);
+  assert.equal(has('newsletter', true), false);
+});
+
+test('a tag condition with no tag, or on unknown tags, never matches', () => {
+  for (const negate of [false, true]) {
+    for (const tagKey of ['', '   ', undefined, 7]) {
+      assert.equal(evaluateCondition(unreadStarred, { field: 'tag', operator: HAS_TAG, tagKey, negate }), false);
+    }
+    assert.equal(evaluateCondition(msg({}), { field: 'tag', operator: HAS_TAG, tagKey: 'work', negate }), false);
+  }
+});
+
+test('state and tag conditions need no header download and combine with others', () => {
+  const rule = {
+    match: 'all',
+    conditions: [
+      { field: 'read', operator: 'isOff' },
+      { field: 'tag', operator: HAS_TAG, tagKey: 'newsletter' },
+      { field: 'from', operator: 'contains', value: 'news@' },
+    ],
+  };
+  assert.equal(requiresFullMessage(rule), false);
+  assert.equal(evaluateRule({ ...unreadStarred, fields: { from: ['news@example.org'] } }, rule), true);
+  assert.equal(evaluateRule({ ...unreadStarred, fields: { from: ['a@example.org'] } }, rule), false);
+});
+
+test('the new fields are listed, cheap, and labelled', () => {
+  for (const field of [...STATE_FIELDS, TAG_FIELD]) {
+    assert.ok(FIELDS.includes(field), field);
+    assert.ok(CHEAP_FIELDS.includes(field), field);
+  }
+  for (const field of STATE_FIELDS) {
+    assert.deepEqual(Object.keys(STATE_LABELS[field]), ['isOn', 'isOff']);
+  }
+});

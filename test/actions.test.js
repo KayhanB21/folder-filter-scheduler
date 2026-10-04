@@ -177,3 +177,19 @@ test('runActions on an empty id list does nothing', async () => {
   await runActions(m, [], [{ type: 'trash' }]);
   assert.equal(m.calls.length, 0);
 });
+
+test('each mark action sets its own state, on or off', async () => {
+  const expected = {
+    markRead: { read: true },
+    markUnread: { read: false },
+    markFlagged: { flagged: true },
+    markUnflagged: { flagged: false },
+    markJunk: { junk: true },
+    markNotJunk: { junk: false },
+  };
+  for (const [type, change] of Object.entries(expected)) {
+    const m = fakeMessenger();
+    await runAction(m, [7], { type });
+    assert.deepEqual(m.calls, [{ name: 'update', args: [7, change] }], type);
+  }
+});

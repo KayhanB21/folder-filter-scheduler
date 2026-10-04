@@ -254,3 +254,5 @@ button { white-space: nowrap; flex: none; }
 
 /* --- Condition hint -------------------------------------------------------- */
 .cond-hint { flex-basis: 100%; margin: 0 0 4px; font-size: 12px; opacity: 0.7; max-width: 70ch; }
+/* One rule shows the state hint one time, under its first state or tag row. */
+.condition:has(.cond-state-hint:not(.hidden)) ~ .condition .cond-state-hint { display: none; }
