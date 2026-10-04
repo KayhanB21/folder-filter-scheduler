@@ -16,7 +16,14 @@
  * them, and the options page shows the exact text before it leaves.
  */
 
-import { AGE_OPERATORS, DOMAIN_IN_LIST, IN_ADDRESS_BOOK, fieldsOf, isAgeCondition } from './matcher.js';
+import {
+  AGE_OPERATORS,
+  DOMAIN_IN_LIST,
+  IN_ADDRESS_BOOK,
+  NAME_SHOWS_OTHER_ADDRESS,
+  fieldsOf,
+  isAgeCondition,
+} from './matcher.js';
 import { actionsOf, orderActions } from './actions.js';
 import { ADVANCED_DEFAULTS } from './settings.js';
 import { nextRun, scheduleOf } from './cron.js';
@@ -72,6 +79,7 @@ export function describeCondition(c, { includeValues = false } = {}) {
   if (c?.operator === IN_ADDRESS_BOOK) {
     return `${fields} ${not}in address book ${c.addressBookId === 'all' ? '(all)' : `id ${c.addressBookId}`}`;
   }
+  if (c?.operator === NAME_SHOWS_OTHER_ADDRESS) return `${fields} ${not}name shows a different address`;
   const value = String(c?.value ?? '');
   const shown = includeValues ? JSON.stringify(value) : `<${value.length} chars>`;
   return `${fields} ${not}${c?.operator} ${shown}`;

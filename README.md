@@ -144,6 +144,11 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
   Choosing the `age` field swaps the row to `older than` / `newer than` and a
   number of days. Choosing `is in address book` swaps the value for a book picker;
   the first time, it shows **Allow address book access…** instead.
+  Choosing `name shows a different address` needs no value. It matches when the
+  sender name contains an email address from a different domain than the real
+  address, as in `"Lena <lena@yahoo.com>" <someone@sina.com>`. Spam does this
+  to look like another sender. Some mailing lists do it too, so try the rule
+  with a move to a folder before you use Trash.
 - **Then** — one or more actions, e.g. *Tag as… Friends* followed by *Move to
   folder…*. The hint line under each explains exactly what it does. **+ Add
   action** adds another; the action that moves or deletes always runs last, so

@@ -276,6 +276,7 @@
           <option value="matchesRegex">matches regex</option>
           <option value="domainInList">domain is in list</option>
           <option value="inAddressBook">is in address book</option>
+          <option value="nameShowsOtherAddress">name shows a different address</option>
           <!-- Shown only for the age field. -->
           <option value="olderThan" class="op-age">older than</option>
           <option value="newerThan" class="op-age">newer than</option>
@@ -297,6 +298,15 @@
           spellcheck="false"
           placeholder="One domain per line, e.g. evil.com&#10;Subdomains are matched automatically."
         ></textarea>
+        <!-- Shown only for the nameShowsOtherAddress operator. -->
+        <p class="cond-hint hidden">
+          Matches when the sender name contains an email address from a different
+          domain than the real address. Example: the name is
+          <code>Lena &lt;lena@yahoo.com&gt;</code> and the real address is
+          <code>someone@sina.com</code>. Spam does this to look like another
+          sender. Some mailing lists do it too, so try the rule with a move to a
+          folder before you use Trash.
+        </p>
       </div>
     </template>
 

@@ -15,7 +15,7 @@
  */
 
 import { ACTIONS_BY_ID, actionsOf, orderActions } from './actions.js';
-import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, ageDays } from './matcher.js';
+import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, ageDays } from './matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 import { sanitizeAdvanced } from './settings.js';
@@ -29,6 +29,7 @@ const KNOWN_OPERATORS = new Set([
   ...Object.keys(OPERATORS),
   DOMAIN_IN_LIST,
   IN_ADDRESS_BOOK,
+  NAME_SHOWS_OTHER_ADDRESS,
   ...Object.keys(AGE_OPERATORS),
 ]);
 const AGE_OPERATOR_SET = new Set(Object.keys(AGE_OPERATORS));
@@ -58,7 +59,7 @@ export function ruleFingerprint(rule) {
         shape.days = ageDays(c);
       } else if (shape.operator === IN_ADDRESS_BOOK) {
         shape.addressBookId = String(c?.addressBookId ?? '');
-      } else {
+      } else if (shape.operator !== NAME_SHOWS_OTHER_ADDRESS) {
         shape.value = String(c?.value ?? '');
       }
       return JSON.stringify(shape, Object.keys(shape).sort());
@@ -205,6 +206,14 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
       problems.push(`${where}: address book not in this profile, choose one before saving`);
     }
     condition.addressBookId = id;
+    return condition;
+  }
+
+  if (operator === NAME_SHOWS_OTHER_ADDRESS) {
+    if (!fields.every((f) => ADDRESS_BOOK_FIELDS.includes(f))) {
+      problems.push(`${where}: the name check only applies to ${ADDRESS_BOOK_FIELDS.join(', ')}`);
+      return null;
+    }
     return condition;
   }
 

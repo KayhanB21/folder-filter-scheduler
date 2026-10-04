@@ -18,6 +18,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   push older entries out. **Log every run on a rule's own schedule** under
   **Advanced** records them all. Import counts two rules that differ only by
   their schedule as different rules.
+- **`name shows a different address` condition.** It matches when the sender
+  name contains an email address from a different domain than the real
+  address, as in `"Lena <lena@yahoo.com>" <someone@sina.com>`. Spam does this
+  to look like another sender. No rule uses the condition until you add it.
+  Some mailing lists write names this way too, so try the rule with a move to
+  a folder before you use Trash.
 - **Run button on each rule.** It runs only that rule, on every message in its
   folders, and leaves the other rules alone. The button runs the saved rule, so
   it asks you to save first when the card has changes.
@@ -37,6 +43,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   run.
 - **Diagnostics log shows when a run starts** (#15), so a run that Thunderbird
   suspends partway leaves a trace.
+- **An address inside the sender name hid the real sender.** For a sender such
+  as `"Lena <lena@yahoo.com>" <someone@sina.com>`, the add-on read
+  `yahoo.com`, the address in the name. So a domain list with `sina.com`
+  missed the message, **Add spam domains** offered nothing because
+  `yahoo.com` is protected, and an address-book check compared the wrong
+  address. All three now read the real address, `someone@sina.com`.
 
 ## [0.3.5]
 

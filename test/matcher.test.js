@@ -403,3 +403,42 @@ test('an address-book rule on from stays on the cheap path', () => {
   assert.equal(requiresFullMessage({ conditions: [inBook('all')] }), false);
   assert.equal(requiresFullMessage({ conditions: [{ ...inBook('all'), field: 'reply-to' }] }), true);
 });
+
+// --- nameShowsOtherAddress ---------------------------------------------------
+
+import { NAME_SHOWS_OTHER_ADDRESS } from '../src/matcher.js';
+
+const decoy = msg({ from: ['"LENA <Lena2005@yahoo.com>" <tianwan1234@sina.com>'] });
+const honest = msg({ from: ['"Bella" <bella@example.org>'] });
+const nameCheck = (extra = {}) => ({ field: 'from', operator: NAME_SHOWS_OTHER_ADDRESS, ...extra });
+
+test('nameShowsOtherAddress matches a display name with a decoy address', () => {
+  assert.equal(evaluateCondition(decoy, nameCheck()), true);
+  assert.equal(evaluateCondition(honest, nameCheck()), false);
+  assert.equal(evaluateCondition(msg({}), nameCheck()), false);
+});
+
+test('nameShowsOtherAddress checks every address and honours negation', () => {
+  const m = msg({ to: ['"Ann" <ann@ok.com>, "Bob <bob@gmail.com>" <x@evil.com>'] });
+  assert.equal(evaluateCondition(m, nameCheck({ field: 'to' })), true);
+  assert.equal(evaluateCondition(decoy, nameCheck({ negate: true })), false);
+  assert.equal(evaluateCondition(honest, nameCheck({ negate: true })), true);
+});
+
+test('a nameShowsOtherAddress rule on from needs no header download', () => {
+  const rule = { match: 'all', conditions: [nameCheck()] };
+  assert.equal(requiresFullMessage(rule), false);
+  assert.equal(evaluateRule(decoy, rule), true);
+});
+
+test('a domain list sees the real sender domain behind a decoy name', () => {
+  const inList = (domains) => evaluateCondition(decoy, { field: 'from', operator: DOMAIN_IN_LIST, domains });
+  assert.equal(inList(['sina.com']), true);
+  assert.equal(inList(['yahoo.com']), false);
+});
+
+test('an address-book check sees the real sender behind a decoy name', () => {
+  const addressBooks = new Map([['all', new Set(['lena2005@yahoo.com'])]]);
+  const cond = { field: 'from', operator: IN_ADDRESS_BOOK, addressBookId: 'all' };
+  assert.equal(evaluateCondition(decoy, cond, { addressBooks }), false);
+});

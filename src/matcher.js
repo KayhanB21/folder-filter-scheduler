@@ -15,7 +15,13 @@
  * (lowercased keys, array values because a header may legally repeat).
  */
 
-import { addressesFromHeaderValue, domainsFromHeaderValue, matchesDomainList, normalizeDomain } from './domains.js';
+import {
+  addressesFromHeaderValue,
+  domainsFromHeaderValue,
+  matchesDomainList,
+  nameShowsOtherAddress,
+  normalizeDomain,
+} from './domains.js';
 import { normalizeAddress } from './contacts.js';
 
 /** Operators are positive predicates; negation is a separate flag on a condition. */
@@ -49,6 +55,14 @@ export const DOMAIN_IN_LIST = 'domainInList';
  * evaluateRule's options, which keeps this module free of extension APIs.
  */
 export const IN_ADDRESS_BOOK = 'inAddressBook';
+
+/**
+ * "The sender name shows a different address". True when a display name in
+ * the field contains an email address from another domain than the real
+ * address beside it, which is how spam shows a sender it is not. It takes no
+ * value. Shape: `{ field, operator: 'nameShowsOtherAddress', negate }`.
+ */
+export const NAME_SHOWS_OTHER_ADDRESS = 'nameShowsOtherAddress';
 
 /**
  * The message-age pseudo-field. Not a header: it compares the message date
@@ -214,12 +228,21 @@ function evaluateAddressBookCondition(message, condition, addressBooks) {
   return condition.negate ? !anyKnown : anyKnown;
 }
 
+function evaluateNameCondition(message, condition) {
+  const anySatisfied = fieldsOf(condition)
+    .flatMap((field) => valuesFor(message, field))
+    .flatMap((value) => addressesFromHeaderValue(value))
+    .some(nameShowsOtherAddress);
+  return condition.negate ? !anySatisfied : anySatisfied;
+}
+
 export function evaluateCondition(message, condition, { now = new Date(), addressBooks } = {}) {
   if (isAgeCondition(condition)) return evaluateAgeCondition(message, condition, now);
   if (condition.operator === IN_ADDRESS_BOOK) {
     return evaluateAddressBookCondition(message, condition, addressBooks);
   }
   if (condition.operator === DOMAIN_IN_LIST) return evaluateDomainCondition(message, condition);
+  if (condition.operator === NAME_SHOWS_OTHER_ADDRESS) return evaluateNameCondition(message, condition);
 
   const predicate = OPERATORS[condition.operator];
   if (!predicate) {
