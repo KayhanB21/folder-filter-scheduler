@@ -326,10 +326,11 @@ extension APIs precisely so it stays this easy to test.
 ## Compatibility
 
 Targets Thunderbird **147+**. Version 0.1.x supported 128+; 0.2.0 raised the floor
-to use `messengerUtilities.parseMailboxString()` (TB 137+) and
-`messages.getHeaders()` (TB 147+), the latter being substantially faster than
-`getFull()` for the header-only reads a `Reply-To` rule performs. ESR 140 reached
-end of life in August 2026, so supported installations are on 153 or newer.
+to use `messages.getHeaders()` (TB 147+), which skips the MIME parsing that
+`getFull()` does for the header-only reads a `Reply-To` rule performs. The add-on
+still calls `getFull()` if `getHeaders()` is missing, so 147 is a support
+decision more than a technical one. ESR 140 reached end of life in August 2026,
+so supported installations are on 153 or newer.
 
 ## Privacy
 
