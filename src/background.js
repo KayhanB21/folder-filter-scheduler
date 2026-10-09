@@ -19,6 +19,7 @@ import {
   harvestDomains,
   mergeDomainLists,
 } from './domains.js';
+import { getFiltaQuillaMessagesByRawHeaders } from './custom.js';
 
 /**
  * Background engine.
@@ -356,6 +357,10 @@ async function* eachMessage(list) {
 
 /** Iterate a folder, optionally bounded by Date on either side. */
 async function* messagesInFolder(folderId, { fromDate, toDate } = {}) {
+  await getFiltaQuillaMessagesByRawHeaders(folderId).then(subjects => {
+    console.log("Subjects fetched directly from raw streams:", subjects);
+  });
+
   const query = { folderId, autoPaginationTimeout: 0 };
   if (fromDate instanceof Date) query.fromDate = fromDate;
   if (toDate instanceof Date) query.toDate = toDate;
@@ -920,6 +925,11 @@ if (messenger.messages?.onNewMailReceived?.addListener) {
     newMailTimer = setTimeout(fireNewMailRun, advancedCache.newMailDelaySeconds * 1000);
   }, true);
 }
+
+// Listen for the main window toolbar button click
+messenger.action.onClicked.addListener(async (tab) => {
+    return runAllRules('manual').then((affected) => ({ ok: true, affected }));
+});
 
 messenger.runtime.onMessage.addListener((msg) => {
   if (msg?.command === 'runNow') {

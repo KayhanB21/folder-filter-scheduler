@@ -38,5 +38,10 @@
   "options_ui": {
     "page": "options/options.html",
     "open_in_tab": true
+  },
+  "action": {
+    "default_title": "Rules",
+    "default_icon": "icons/icon.svg",
+    "allowed_spaces": ["mail"]
   }
 }
