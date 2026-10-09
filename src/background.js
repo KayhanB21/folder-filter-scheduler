@@ -358,7 +358,7 @@ async function* eachMessage(list) {
 /** Iterate a folder, optionally bounded by Date on either side. */
 async function* messagesInFolder(folderId, { fromDate, toDate } = {}) {
   await getFiltaQuillaMessagesByRawHeaders(folderId).then(subjects => {
-    console.log("Subjects fetched directly from raw streams:", subjects);
+    if (subjects.length > 0) console.log("Subjects fetched directly from raw streams:", subjects);
   });
 
   const query = { folderId, autoPaginationTimeout: 0 };
