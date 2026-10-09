@@ -20,6 +20,7 @@ import {
   mergeDomainLists,
 } from './domains.js';
 import { getFiltaQuillaMessagesByRawHeaders } from './custom.js';
+import { getsendNotifications } from '../options/options.js';
 
 /**
  * Background engine.
@@ -516,12 +517,14 @@ async function runAllRules(
   }
 
   await saveRunState(runState);
+  let msg = `run (${reason}) complete: ${total} message(s) affected across ` +
+      `${selected.length} of ${rules.length} rule(s)`;
   logUnless(
     quietRun && total === 0,
-    `run (${reason}) complete: ${total} message(s) affected across ` +
-      `${selected.length} of ${rules.length} rule(s)`,
+    msg,
   );
   await flushLog();
+  if (total > 0) sendBalloon(msg, `Folder Filter Scheduler processed ${total} message(s)`);
   return total;
 }
 
@@ -970,6 +973,21 @@ messenger.runtime.onStartup.addListener(() => {
 });
 applySettings();
 registerMenu();
+/**
+ * Triggers a balloon/toast notification in the lower right corner of the screen.
+ * @param {string} titleText - The bold heading of the balloon.
+ * @param {string} bodyText - The description message underneath.
+ */
+async function sendBalloon(bodyText, titleText = "Folder Filter Scheduler") {
+  if (await getsendNotifications() === "1")
+    messenger.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon.svg",
+      title: titleText,
+      message: bodyText
+    });
+}
+
 
 // Re-exported so the options UI can render the supported field list from one source of truth.
 export { FIELDS };

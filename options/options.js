@@ -54,23 +54,26 @@ function loadTheme() {
   }
 }
 
+const rulesEl = $('#rules');
+const statusEl = $('#status');
+const isUIContext = rulesEl !== null && statusEl !== null;
+
 // Applied before anything renders, so the page does not flash the other theme.
 {
   const current = applyTheme(loadTheme());
   const radio = $(`#theme input[value="${current}"]`);
   if (radio) radio.checked = true;
 }
+if (isUIContext) {
 $('#theme').addEventListener('change', (e) => {
-  const value = applyTheme(e.target.value);
-  try {
-    localStorage.setItem(THEME_KEY, value);
-  } catch {
-    // Without localStorage the choice lasts until the page closes.
-  }
-});
-
-const rulesEl = $('#rules');
-const statusEl = $('#status');
+    const value = applyTheme(e.target.value);
+    try {
+      localStorage.setItem(THEME_KEY, value);
+    } catch {
+      // Without localStorage the choice lasts until the page closes.
+    }
+  });
+}
 
 let folders = []; // [{ id, label, accountId, accountName, path, name, depth }]
 let guides = new Map(); // folder id -> treeGuides() entry, rebuilt with `folders`
@@ -994,6 +997,7 @@ function collectConfig(rejected = []) {
   rejected.push(...advanced.problems);
   return {
     intervalMinutes: Math.max(1, Number($('#interval').value) || 10),
+    sendNotifications: $('#send-notifications').checked ? "1" : "0",
     advanced: advanced.settings,
     rules,
     allowlist,
@@ -1033,6 +1037,10 @@ function collectAdvanced() {
 }
 
 function flash(message, isError = false) {
+if (isError) {
+  let x = 1;
+}
+  if (!isUIContext) return; 
   statusEl.textContent = message;
   statusEl.style.color = isError ? 'var(--danger)' : 'var(--accent-text)';
 }
@@ -1110,7 +1118,7 @@ async function save() {
   flash(
     (rejected.length > 0
       ? `Saved, with ${rejected.length} correction${rejected.length === 1 ? '' : 's'}: ${rejected.join('; ')}.`
-      : 'Saved. Schedule updated.') + note,
+      : 'Saved. Options updated.') + note,
     note !== '',
   );
 }
@@ -1214,6 +1222,9 @@ async function importRules(file) {
   for (const rule of rules) renderRule(rule);
   if (allowlist?.length) $('#allowlist').value = allowlist.join('\n');
   if (intervalMinutes) $('#interval').value = intervalMinutes;
+  if (data?.sendNotifications !== undefined) {
+    $('#send-notifications').checked = data.sendNotifications === "1";
+  }
   if (advanced) fillAdvanced(advanced);
 
   const skipped = problems.length > 0 ? ` Skipped: ${problems.join('; ')}.` : '';
@@ -1262,6 +1273,7 @@ async function init() {
   await loadTags();
   const { config } = await messenger.storage.local.get({ config: null });
   $('#interval').value = config?.intervalMinutes ?? 10;
+  $('#send-notifications').checked = config?.sendNotifications === "1";
   const rules = config?.rules?.length ? config.rules : [{}];
 
   // On a first visit with many rules, start collapsed: a folder multi-select
@@ -1333,4 +1345,9 @@ async function init() {
   }
 }
 
-init().catch((e) => flash(e.message, true));
+export async function getsendNotifications() {
+  const { config } = await messenger.storage.local.get({ config: null });
+  return config?.sendNotifications;
+}
+
+if (isUIContext) init().catch((e) => flash(e.message, true));
