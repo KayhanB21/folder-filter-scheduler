@@ -74,14 +74,31 @@ test('matchesRegex with an invalid pattern never throws, just fails to match', (
   );
 });
 
-test('matchesRegex sees the original case and ignores it unless the pattern says so (#28)', () => {
+// Thunderbird 157 supports (?-i:...) groups. Node 22, which CI runs, does not.
+const supportsModifiers = (() => {
+  try {
+    return new RegExp('(?-i:a)', 'i').test('a');
+  } catch {
+    return false;
+  }
+})();
+
+test('matchesRegex ignores case by default (#28)', () => {
   const m = msg({ from: ['R5AVPEIE@OPZ9IFJCU849IACNAXECRVMZ.AS9D'] });
-  const regex = (value) => evaluateCondition(m, { field: 'from', operator: 'matchesRegex', value });
-  assert.equal(regex('(?-i:\\x52\\x35)'), true);
-  assert.equal(regex('(?-i:\\x72\\x35)'), false);
-  assert.equal(regex('\\x72\\x35'), true);
-  assert.equal(regex('@(?-i:[A-Z0-9.]+)$'), true);
+  assert.equal(evaluateCondition(m, { field: 'from', operator: 'matchesRegex', value: '\\x72\\x35' }), true);
 });
+
+test(
+  'matchesRegex sees the original case inside a (?-i:...) group (#28)',
+  { skip: !supportsModifiers && 'this Node has no regex modifiers' },
+  () => {
+    const m = msg({ from: ['R5AVPEIE@OPZ9IFJCU849IACNAXECRVMZ.AS9D'] });
+    const regex = (value) => evaluateCondition(m, { field: 'from', operator: 'matchesRegex', value });
+    assert.equal(regex('(?-i:\\x52\\x35)'), true);
+    assert.equal(regex('(?-i:\\x72\\x35)'), false);
+    assert.equal(regex('@(?-i:[A-Z0-9.]+)$'), true);
+  },
+);
 
 test('matchesRegex keeps upper-case escapes such as \\D (#28)', () => {
   const m = msg({ subject: ['12345'] });
