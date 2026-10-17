@@ -378,8 +378,11 @@ export function evaluateCondition(message, condition, { now = new Date(), addres
   if (!predicate) {
     throw new Error(`Unknown operator: ${condition.operator}`);
   }
-  const needle = foldCase(condition.value);
-  let values = valuesFor(message, condition.field).map(foldCase);
+  // A regex gets the text and pattern unchanged. Its own `i` flag ignores case,
+  // and folding the pattern would turn `\D` into `\d` and break `(?-i:...)`.
+  const fold = condition.operator === 'matchesRegex' ? (s) => (s ?? '').toString() : foldCase;
+  const needle = fold(condition.value);
+  let values = valuesFor(message, condition.field).map(fold);
   if (values.length === 0) values = [''];
 
   const anySatisfied = values.some((v) => predicate(v, needle));
