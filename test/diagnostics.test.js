@@ -12,6 +12,7 @@ import {
   describeCondition,
   diagnosticsFilename,
   formatEntry,
+  formatLocalTime,
   makeEntry,
 } from '../src/diagnostics.js';
 
@@ -73,6 +74,7 @@ const base = {
   permissions: { addressBooks: true, messagesTagsList: false },
   entries,
   generatedAt: now,
+  offsetMinutes: 0,
 };
 
 test('the default report carries no addresses, domains, patterns, or folders', () => {
@@ -98,7 +100,7 @@ test('the default report carries no addresses, domains, patterns, or folders', (
   assert.match(report, /priority is not high/);
   assert.match(report, /not has tag/);
   assert.match(report, /age older than 30 day/);
-  assert.match(report, /last run: 2026-09-11T08:28:00\.000Z; last catch-up: 2026-09-11T08:10:00\.000Z/);
+  assert.match(report, /last run: 2026-09-11 08:28:00 \+00:00; last catch-up: 2026-09-11 08:10:00 \+00:00/);
   assert.match(report, /incremental scan, 3 scanned/);
 });
 
@@ -132,6 +134,7 @@ test('the report shows the advanced settings actually in force', () => {
 test('describeCondition and formatEntry read as plain text', () => {
   assert.equal(describeCondition({ field: 'subject', operator: 'contains', value: 'abc' }), 'subject contains <3 chars>');
   assert.equal(formatEntry({ t: 'T', level: 'warn', msg: 'm' }), 'T WARN m');
+  assert.equal(formatEntry({ t: '2026-10-15T21:38:36.000Z', level: 'info', msg: 'm' }, -120), '2026-10-15 23:38:36 +02:00 info m');
   assert.equal(describeAction({ type: 'tag', tagKey: '$label1' }), 'tag -> (tag)');
   assert.equal(describeAction({ type: 'tag', tagKey: '$label1' }, { includeValues: true }), 'tag -> $label1');
   assert.equal(describeAction({ type: 'markRead' }), 'markRead');
@@ -184,4 +187,15 @@ test('the report shows a rule\'s own schedule', () => {
   );
   assert.doesNotMatch(buildReport({ ...base, config: withRule({ enabled: false, cron: '0 21 * * *' }) }), /schedule:/);
   assert.doesNotMatch(buildReport(base), /schedule:/);
+});
+
+test('formatLocalTime shows local time with the UTC offset (#28)', () => {
+  const t = '2026-10-15T21:38:36.000Z';
+  assert.equal(formatLocalTime(t, 0), '2026-10-15 21:38:36 +00:00');
+  assert.equal(formatLocalTime(t, -120), '2026-10-15 23:38:36 +02:00');
+  assert.equal(formatLocalTime(t, 240), '2026-10-15 17:38:36 -04:00');
+  assert.equal(formatLocalTime(t, -330), '2026-10-16 03:08:36 +05:30');
+  assert.equal(formatLocalTime(new Date(t), -60), '2026-10-15 22:38:36 +01:00');
+  assert.equal(formatLocalTime('not a date', 0), 'not a date');
+  assert.equal(formatLocalTime(undefined, 0), '?');
 });

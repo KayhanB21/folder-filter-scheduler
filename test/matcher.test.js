@@ -74,6 +74,21 @@ test('matchesRegex with an invalid pattern never throws, just fails to match', (
   );
 });
 
+test('matchesRegex sees the original case and ignores it unless the pattern says so (#28)', () => {
+  const m = msg({ from: ['R5AVPEIE@OPZ9IFJCU849IACNAXECRVMZ.AS9D'] });
+  const regex = (value) => evaluateCondition(m, { field: 'from', operator: 'matchesRegex', value });
+  assert.equal(regex('(?-i:\\x52\\x35)'), true);
+  assert.equal(regex('(?-i:\\x72\\x35)'), false);
+  assert.equal(regex('\\x72\\x35'), true);
+  assert.equal(regex('@(?-i:[A-Z0-9.]+)$'), true);
+});
+
+test('matchesRegex keeps upper-case escapes such as \\D (#28)', () => {
+  const m = msg({ subject: ['12345'] });
+  assert.equal(evaluateCondition(m, { field: 'subject', operator: 'matchesRegex', value: '\\D' }), false);
+  assert.equal(evaluateCondition(m, { field: 'subject', operator: 'matchesRegex', value: '^\\d+$' }), true);
+});
+
 test('multi-value header: negated contains is false if ANY value matches', () => {
   const m = msg({ 'reply-to': ['clean@ok.com', 'spammer@example.com'] });
   assert.equal(

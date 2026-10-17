@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Regex conditions see the original case** (#28). The add-on lowercased the
+  header text and the pattern before a regex ran, so a case-sensitive group
+  such as `(?-i:[A-Z]+)` never matched upper-case text. Lowercasing the pattern
+  also turned `\D`, `\S`, `\W`, and `\B` into `\d`, `\s`, `\w`, and `\b`. A regex
+  still ignores case by default, so existing rules match the same mail.
+- **Diagnostics times use your local time zone** (#28). The log and the report
+  show times such as `2026-10-15 23:38:36 +02:00`, not UTC. The offset keeps a
+  shared report exact.
+
 ## [0.3.6]
 
 ### Added

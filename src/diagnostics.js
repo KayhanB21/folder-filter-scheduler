@@ -62,8 +62,31 @@ export function appendEntries(existing, entries, cap = LOG_CAP) {
   return all.length > cap ? all.slice(all.length - cap) : all;
 }
 
-export function formatEntry(entry) {
-  return `${entry?.t ?? '?'} ${entry?.level === 'warn' ? 'WARN' : 'info'} ${entry?.msg ?? ''}`;
+const pad = (n) => String(n).padStart(2, '0');
+
+/**
+ * A time in the user's local zone with its UTC offset, such as
+ * "2026-10-15 23:38:36 +02:00". The offset keeps a shared report exact. Takes a
+ * Date or an ISO string; anything unreadable comes back as text unchanged.
+ * `offsetMinutes` follows getTimezoneOffset(): minutes behind UTC.
+ */
+export function formatLocalTime(time, offsetMinutes) {
+  const date = time instanceof Date ? time : new Date(time);
+  if (time == null || Number.isNaN(date.getTime())) return String(time ?? '?');
+  const offset = offsetMinutes ?? date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60_000);
+  const sign = offset > 0 ? '-' : '+';
+  const abs = Math.abs(offset);
+  return (
+    `${local.getUTCFullYear()}-${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())} ` +
+    `${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}:${pad(local.getUTCSeconds())} ` +
+    `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
+  );
+}
+
+export function formatEntry(entry, offsetMinutes) {
+  const t = entry?.t == null ? '?' : formatLocalTime(entry.t, offsetMinutes);
+  return `${t} ${entry?.level === 'warn' ? 'WARN' : 'info'} ${entry?.msg ?? ''}`;
 }
 
 const AGE_LABELS = { [AGE_OPERATORS.olderThan]: 'older than', [AGE_OPERATORS.newerThan]: 'newer than' };
@@ -104,7 +127,7 @@ export function describeAction(a, { includeValues = false } = {}) {
   return type;
 }
 
-function describeRule(rule, runState, { includeValues, generatedAt }) {
+function describeRule(rule, runState, { includeValues, generatedAt, offsetMinutes }) {
   const lines = [];
   const status = rule.enabled === false ? 'disabled' : 'enabled';
   lines.push(`- "${rule.name}" [${status}] id ${String(rule.id ?? '?').slice(0, 8)}`);
@@ -125,12 +148,14 @@ function describeRule(rule, runState, { includeValues, generatedAt }) {
     const next = cron ? nextRun(cron, generatedAt) : null;
     lines.push(
       cron
-        ? `    schedule: cron ${cron.expression}; next run: ${next ? next.toISOString() : 'never'}`
+        ? `    schedule: cron ${cron.expression}; next run: ${next ? formatLocalTime(next, offsetMinutes) : 'never'}`
         : '    schedule: invalid cron, the default timer applies',
     );
   }
   const state = runState?.[rule.id];
-  lines.push(`    last run: ${state?.lastRunAt ?? 'never'}; last catch-up: ${state?.lastCatchUpAt ?? 'never'}`);
+  const lastRun = state?.lastRunAt ? formatLocalTime(state.lastRunAt, offsetMinutes) : 'never';
+  const lastCatchUp = state?.lastCatchUpAt ? formatLocalTime(state.lastCatchUpAt, offsetMinutes) : 'never';
+  lines.push(`    last run: ${lastRun}; last catch-up: ${lastCatchUp}`);
   return lines;
 }
 
@@ -161,6 +186,9 @@ export function buildReport(input) {
     entries,
     includeValues = false,
     generatedAt = new Date(),
+    // Minutes behind UTC, as getTimezoneOffset() gives it. Tests fix it; the
+    // background script leaves it out, so times use the local zone.
+    offsetMinutes,
   } = input ?? {};
 
   const rules = Array.isArray(config?.rules) ? config.rules : [];
@@ -168,14 +196,14 @@ export function buildReport(input) {
   const adv = { ...ADVANCED_DEFAULTS, ...(config?.advanced ?? {}) };
   const lines = [
     'Folder Filter Scheduler diagnostics',
-    `generated: ${generatedAt.toISOString()}`,
+    `generated: ${formatLocalTime(generatedAt, offsetMinutes)}`,
     `extension: ${version ?? '?'}`,
     `thunderbird: ${browser ? `${browser.name ?? ''} ${browser.version ?? ''}`.trim() : '?'}`,
     `platform: ${platform ? `${platform.os ?? '?'} ${platform.arch ?? ''}`.trim() : '?'}`,
     `values included: ${includeValues ? 'yes' : 'no (addresses, domains, patterns and folders are hidden)'}`,
     '',
     `interval: every ${config?.intervalMinutes ?? '?'} min`,
-    `next scheduled run: ${alarm?.scheduledTime ? new Date(alarm.scheduledTime).toISOString() : 'none scheduled'}`,
+    `next scheduled run: ${alarm?.scheduledTime ? formatLocalTime(new Date(alarm.scheduledTime), offsetMinutes) : 'none scheduled'}`,
     `run on new mail: ${adv.runOnNewMail ? `yes, ${adv.newMailDelaySeconds}s after the last arrival` : 'no'}`,
     `scan overlap: ${adv.scanOverlapMinutes} min`,
     `catch-up: every ${adv.catchUpEveryMinutes} min over the last ${adv.catchUpLookbackDays} day(s)`,
@@ -186,10 +214,10 @@ export function buildReport(input) {
     `protected domains: ${Array.isArray(config?.allowlist) ? config.allowlist.length : '?'}`,
     '',
     `rules (${rules.length}):`,
-    ...rules.flatMap((r) => describeRule(r, runState, { includeValues, generatedAt })),
+    ...rules.flatMap((r) => describeRule(r, runState, { includeValues, generatedAt, offsetMinutes })),
     '',
     `log (last ${entries?.length ?? 0} entries, oldest first):`,
-    ...(entries ?? []).map(formatEntry),
+    ...(entries ?? []).map((entry) => formatEntry(entry, offsetMinutes)),
   ];
   return `${lines.join('\n')}\n`;
 }
