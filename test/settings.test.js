@@ -107,3 +107,34 @@ test('logScheduleRuns is on only for a literal true', () => {
   assert.equal(sanitizeAdvanced({ logScheduleRuns: 'yes' }).settings.logScheduleRuns, false);
   assert.equal(sanitizeAdvanced({ logScheduleRuns: true }).settings.logScheduleRuns, true);
 });
+
+import { AUTH_DOH_SERVERS, dohOrigin, trustedServerList } from '../src/settings.js';
+
+test('the own DKIM check is on unless it was explicitly turned off', () => {
+  assert.equal(sanitizeAdvanced({}).settings.authOwnCheck, true);
+  assert.equal(sanitizeAdvanced({ authOwnCheck: 'no' }).settings.authOwnCheck, true);
+  assert.equal(sanitizeAdvanced({ authOwnCheck: false }).settings.authOwnCheck, false);
+});
+
+test('the preferred result and the DNS server take only their listed values', () => {
+  const ok = sanitizeAdvanced({ authPrefer: 'provider', authDohServer: 'google' });
+  assert.equal(ok.settings.authPrefer, 'provider');
+  assert.equal(ok.settings.authDohServer, 'google');
+  assert.deepEqual(ok.problems, []);
+
+  const bad = sanitizeAdvanced({ authPrefer: 'theirs', authDohServer: 'https://evil.example/dns-query' });
+  assert.equal(bad.settings.authPrefer, 'own');
+  assert.equal(bad.settings.authDohServer, 'cloudflare');
+  assert.equal(bad.problems.length, 2);
+});
+
+test('trusted servers are lowercased, deduplicated, and stripped of junk', () => {
+  assert.deepEqual(trustedServerList('MTA.yahoo.com, mx.google.com mta.yahoo.com;bad/one -x'), ['mta.yahoo.com', 'mx.google.com']);
+  assert.deepEqual(trustedServerList(undefined), []);
+  assert.equal(sanitizeAdvanced({ authTrustedServers: 'b.example a.example' }).settings.authTrustedServers, 'b.example, a.example');
+});
+
+test('each DNS server has an https origin for its host permission', () => {
+  for (const key of Object.keys(AUTH_DOH_SERVERS)) assert.match(dohOrigin(key), /^https:\/\/[a-z0-9.-]+\/\*$/);
+  assert.equal(dohOrigin('nope'), null);
+});

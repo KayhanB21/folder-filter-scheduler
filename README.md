@@ -46,6 +46,14 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   book` · one book or all of them, negatable. "Move mail from people I don't know
   out of this folder" becomes one condition. Access to address books is an
   optional permission, asked for only when you use it.
+- **Authentication conditions**: `authentication` · `passes` · SPF, DKIM, or
+  DMARC, negatable. "Move mail that fails DKIM out of this folder" becomes one
+  condition. SPF comes from the `Authentication-Results` header your provider
+  adds. The add-on verifies DKIM itself, because a sender can forge that header,
+  and works out DMARC from both. The check downloads each full message once and
+  asks a DNS server over HTTPS (Cloudflare or Google) for the signing key, after
+  you allow it. Results are cached. The DKIM code comes from
+  [DKIM Verifier](https://github.com/lieser/dkim_verifier) (MIT license).
 - **Diagnostics**: a report you can copy or save from the options page, with
   your Thunderbird version, the shape of each rule, and what recent runs did.
   Addresses, domains, patterns and folder names are left out unless you opt in.

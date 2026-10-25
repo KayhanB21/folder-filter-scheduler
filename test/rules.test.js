@@ -579,3 +579,35 @@ test('a priority condition survives a round trip and fingerprints by level', () 
   const low = { ...rule, conditions: [{ ...rule.conditions[0], value: 'low' }] };
   assert.notEqual(ruleFingerprint(rule), ruleFingerprint(low));
 });
+
+// --- Authentication condition ----------------------------------------------------
+
+test('import accepts an authentication condition and normalises its method', () => {
+  const { rules, problems } = sanitizeImport(withConditions([{ field: 'auth', operator: 'authPasses', value: ' DKIM ', negate: true }]));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ operator: 'authPasses', negate: true, field: 'auth', value: 'dkim' }]);
+});
+
+test('import rejects an authentication condition with a bad method, operator, or field', () => {
+  for (const c of [
+    { field: 'auth', operator: 'authPasses', value: 'arc' },
+    { field: 'auth', operator: 'authPasses' },
+    { field: 'auth', operator: 'contains', value: 'dkim' },
+    { field: 'subject', operator: 'authPasses', value: 'dkim' },
+    { field: 'priority', operator: 'authPasses', value: 'dkim' },
+    { fields: ['auth', 'from'], operator: 'domainInList', domains: ['evil.com'] },
+  ]) {
+    const { rules, problems } = sanitizeImport(withConditions([c]));
+    assert.equal(rules.length, 0, JSON.stringify(c));
+    assert.ok(problems.length > 0, JSON.stringify(c));
+  }
+});
+
+test('an authentication condition survives a round trip and fingerprints by method', () => {
+  const rule = { ...validRule, id: 'a1', conditions: [{ field: 'auth', operator: 'authPasses', value: 'dmarc', negate: true }] };
+  const { rules, problems } = sanitizeImport(JSON.parse(JSON.stringify(buildExport({ rules: [rule] }))));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ operator: 'authPasses', negate: true, field: 'auth', value: 'dmarc' }]);
+  const spf = { ...rule, conditions: [{ ...rule.conditions[0], value: 'spf' }] };
+  assert.notEqual(ruleFingerprint(rule), ruleFingerprint(spf));
+});

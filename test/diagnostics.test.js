@@ -56,6 +56,7 @@ const config = {
         { field: 'read', operator: 'isOff' },
         { field: 'priority', operator: 'priorityIs', value: 'high', negate: true },
         { field: 'tag', operator: 'hasTag', tagKey: 'Secret tag', negate: true },
+        { field: 'auth', operator: 'authPasses', value: 'dkim', negate: true },
       ],
       actions: [{ type: 'tag', tagKey: 'Family secrets' }, { type: 'move', folderId: 'account1://Archive' }],
     },
@@ -98,6 +99,7 @@ test('the default report carries no addresses, domains, patterns, or folders', (
   assert.match(report, /from name shows a different address/);
   assert.match(report, /if is unread/);
   assert.match(report, /priority is not high/);
+  assert.match(report, /dkim does not pass/);
   assert.match(report, /not has tag/);
   assert.match(report, /age older than 30 day/);
   assert.match(report, /last run: 2026-09-11 08:28:00 \+00:00; last catch-up: 2026-09-11 08:10:00 \+00:00/);
@@ -198,4 +200,23 @@ test('formatLocalTime shows local time with the UTC offset (#28)', () => {
   assert.equal(formatLocalTime(new Date(t), -60), '2026-10-15 22:38:36 +01:00');
   assert.equal(formatLocalTime('not a date', 0), 'not a date');
   assert.equal(formatLocalTime(undefined, 0), '?');
+});
+
+test('the report shows the authentication settings and hides the trusted servers', () => {
+  const plain = buildReport(base);
+  assert.match(plain, /own DKIM check: on, DNS server cloudflare \(not granted\)/);
+  assert.match(plain, /when the checks disagree: use the own result/);
+  assert.match(plain, /trusted authentication servers: none set, the topmost header is trusted/);
+
+  const advanced = { authOwnCheck: true, authDohServer: 'google', authPrefer: 'provider', authTrustedServers: 'mta.yahoo.com' };
+  const input = { ...base, config: { ...config, advanced }, permissions: { ...base.permissions, dnsServer: true } };
+  const report = buildReport(input);
+  assert.match(report, /own DKIM check: on, DNS server google \(granted\)/);
+  assert.match(report, /when the checks disagree: use the provider's header/);
+  assert.match(report, /trusted authentication servers: 1 set/);
+  assert.ok(!report.includes('mta.yahoo.com'));
+  assert.match(buildReport({ ...input, includeValues: true }), /trusted authentication servers: mta.yahoo.com/);
+
+  const off = buildReport({ ...base, config: { ...config, advanced: { authOwnCheck: false } } });
+  assert.match(off, /own DKIM check: off/);
 });

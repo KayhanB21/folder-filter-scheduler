@@ -1,0 +1,24 @@
+Received: from 10.217.137.136
+ by atlas122.free.mail.ne1.yahoo.com pod-id NONE with HTTPS; Thu, 22 Oct 2026 13:05:05 +0000
+Return-Path: <mari1304@bb4u.ne.jp>
+X-Originating-Ip: [92.67.67.69]
+Received-SPF: softfail (domain of transitioning bb4u.ne.jp does not designate 92.67.67.69 as permitted sender)
+Authentication-Results: mta.yahoo.com;
+ dkim=unknown;
+ spf=softfail smtp.mailfrom=bb4u.ne.jp arc_overridden_status=NOT_OVERRIDDEN;
+ dmarc=unknown header.from=bb4u.ne.jp arc_overridden_status=NOT_OVERRIDDEN;
+X-Apparently-To: recipient@example.com; Thu, 22 Oct 2026 13:05:05 +0000
+Received: from 92.67.67.69 (EHLO bb4u.ne.jp)
+ by 10.217.137.136 with SMTP;
+ Thu, 22 Oct 2026 13:05:05 +0000
+Received: from unknown (HELO m1.gns.snv.thisdomainl.com) (Thu, 22 Oct 2026 13:03:41 +0000)
+    by qnx.mdrost.com with SMTP; Thu, 22 Oct 2026 13:03:41 +0000
+From:=?utf-8?B?8J+SnQ==?="Natalia Ramirez" <mari1304@bb4u.ne.jp>
+Message-ID: 2671106473247207.0618452235342121@yahoo.com
+Date: Thu, 22 Oct 2026 12:44:28 +0000
+Subject: You Have a Match=?utf-8?B?8J+UpQ==?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+I'm online now and I want to see you.

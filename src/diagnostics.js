@@ -24,12 +24,13 @@ import {
   STATE_LABELS,
   fieldsOf,
   isAgeCondition,
+  isAuthCondition,
   isPriorityCondition,
   isStateCondition,
   isTagCondition,
 } from './matcher.js';
 import { actionsOf, orderActions } from './actions.js';
-import { ADVANCED_DEFAULTS } from './settings.js';
+import { ADVANCED_DEFAULTS, trustedServerList } from './settings.js';
 import { nextRun, scheduleOf } from './cron.js';
 
 /** Most recent log entries kept. At a 2-minute interval that is several hours. */
@@ -104,6 +105,8 @@ export function describeCondition(c, { includeValues = false } = {}) {
   if (isTagCondition(c)) return `${not}has tag ${includeValues ? c.tagKey : '(tag)'}`;
   // One of five fixed levels, so there is nothing to hide.
   if (isPriorityCondition(c)) return `priority ${c?.negate ? 'is not' : 'is'} ${c.value}`;
+  // spf, dkim, or dmarc: a fixed choice too.
+  if (isAuthCondition(c)) return `${c.value} ${c?.negate ? 'does not pass' : 'passes'}`;
   const fields = fieldsOf(c).join(' or ') || '(no field)';
   if (c?.operator === DOMAIN_IN_LIST) {
     const domains = Array.isArray(c.domains) ? c.domains : [];
@@ -159,6 +162,13 @@ function describeRule(rule, runState, { includeValues, generatedAt, offsetMinute
   return lines;
 }
 
+/** The trusted servers name your provider, so they are a value. */
+function describeTrusted(text, includeValues) {
+  const servers = trustedServerList(text);
+  if (servers.length === 0) return 'none set, the topmost header is trusted';
+  return includeValues ? servers.join(', ') : `${servers.length} set`;
+}
+
 /**
  * The full plain-text report.
  *
@@ -169,7 +179,7 @@ function describeRule(rule, runState, { includeValues, generatedAt, offsetMinute
  * @param {object} input.config          stored config
  * @param {object} input.runState        per-rule run state
  * @param {object} [input.alarm]         the scheduled alarm, if any
- * @param {object} [input.permissions]   { addressBooks: boolean, messagesTagsList: boolean }
+ * @param {object} [input.permissions]   { addressBooks, messagesTagsList, dnsServer }, each a boolean
  * @param {Array}  input.entries         log entries, oldest first
  * @param {boolean} [input.includeValues]
  * @param {Date}   [input.generatedAt]
@@ -211,6 +221,9 @@ export function buildReport(input) {
     `right-click menu: ${adv.showMenu ? 'shown' : 'hidden'}; name: ${adv.shortName ? 'FFS' : 'full'}`,
     `address book access: ${permissions?.addressBooks ? 'granted' : 'not granted'}`,
     `tag list access: ${permissions?.messagesTagsList ? 'granted' : 'not granted'}`,
+    `own DKIM check: ${adv.authOwnCheck ? `on, DNS server ${adv.authDohServer} (${permissions?.dnsServer ? 'granted' : 'not granted'})` : 'off'}`,
+    `when the checks disagree: use the ${adv.authPrefer === 'provider' ? "provider's header" : 'own result'}`,
+    `trusted authentication servers: ${describeTrusted(adv.authTrustedServers, includeValues)}`,
     `protected domains: ${Array.isArray(config?.allowlist) ? config.allowlist.length : '?'}`,
     '',
     `rules (${rules.length}):`,

@@ -23,7 +23,7 @@ INCLUDE=(manifest.json src options confirm popup _locales icons LICENSE)
 mkdir -p "$OUT_DIR"
 rm -f "$OUT"
 
-zip -r -X "$OUT" "${INCLUDE[@]}" -x '*.DS_Store' >/dev/null
+zip -r -X "$OUT" "${INCLUDE[@]}" -x '*.DS_Store' '*/.impeccable/*' >/dev/null
 
 # Fail loudly if manifest.json is not at the archive root (the #1 upload error).
 # Capture the listing and feed it to grep without a pipe: `grep -q` exits on the
