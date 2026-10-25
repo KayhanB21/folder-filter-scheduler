@@ -1,0 +1,13 @@
+Adds SPF, DKIM, and DMARC conditions, so a rule can act on mail whose sender fails these checks.
+
+<ul>
+<li>New "authentication" field with "passes" and SPF, DKIM, or DMARC. Turn on "not" to match mail that fails, such as spam with a forged From address</li>
+<li>A sender can forge the Authentication-Results header, so the add-on verifies DKIM signatures itself and works out DMARC from the result. Only the topmost header counts, because your provider adds it last</li>
+<li>To check DKIM, the add-on downloads each full message the condition looks at, one time, and keeps the result for up to 90 days. It asks Cloudflare or Google for the signing key over DNS over HTTPS, which you allow the first time</li>
+<li>If a check can't finish, the condition doesn't match. The add-on tries again 3 times in the first minute, then every 30 minutes for 24 hours</li>
+<li>Settings under Advanced turn the own check off, choose the DNS server, choose which result wins when the two disagree, and name the servers whose header you trust</li>
+<li>No rule uses the new condition until you add it. Without it, the add-on sends no DNS requests and downloads no extra messages</li>
+<li>Regex conditions now see the original case, so a case-sensitive group such as (?-i:[A-Z]+) works. A regex still ignores case by default</li>
+<li>The diagnostics log and report show times in your local time zone, with the UTC offset</li>
+</ul>
+The DKIM code comes from DKIM Verifier by Philippe Lieser, under the MIT license.
