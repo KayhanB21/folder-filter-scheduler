@@ -160,6 +160,10 @@ input, select {
 .action.unchosen .action-type { border-color: var(--danger); }
 .action.unchosen .action-hint { opacity: 1; }
 
+/* Header names and addresses inside hints. Without a family the platform
+   default fixed-width font applies, which can be a serif font. */
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+
 /* Domain-list condition: the textarea takes its own line under the operator row. */
 textarea {
   font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
