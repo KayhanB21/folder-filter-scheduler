@@ -201,12 +201,17 @@
 
       <label class="adv-row">
         Trusted authentication servers
-        <input id="adv-auth-trusted" type="text" placeholder="for example mta.yahoo.com" spellcheck="false" />
+        <textarea
+          id="adv-auth-trusted"
+          rows="3"
+          spellcheck="false"
+          placeholder="One server per line, for example&#10;mta.yahoo.com&#10;mx.google.com"
+        ></textarea>
       </label>
       <p class="adv-hint">
         Leave this empty to trust the topmost <code>Authentication-Results</code>
-        header, which your provider adds last. If you enter server names, separated
-        by commas, the add-on uses the topmost header from one of them. The name is
+        header, which your provider adds last. If you enter server names, one per
+        line, the add-on uses the topmost header from one of them. The name is
         the first word of the header, such as <code>mta.yahoo.com</code> or
         <code>mx.google.com</code>.
       </p>

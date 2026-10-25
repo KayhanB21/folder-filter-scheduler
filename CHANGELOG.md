@@ -10,6 +10,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Code text in hints uses a monospace font.** The options page showed header
   names such as `Authentication-Results` and the example addresses in the hints
   in a serif font, because it had no font rule for that text.
+- **Trusted authentication servers take one name per line.** The setting under
+  **Advanced** is a text area like the domain list, so several servers are
+  easier to read. A list saved with commas still works.
 
 ## [0.4.0]
 

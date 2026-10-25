@@ -149,7 +149,8 @@ input, select {
 .adv-row input[type='number'] { width: 5.5em; }
 .adv-hint { margin: 0; font-size: 12px; opacity: 0.7; max-width: 70ch; }
 .adv-heading { margin: 22px 0 0; font-size: 13px; }
-#adv-auth-trusted { min-width: 22em; }
+/* One name per line, so the list takes its own line under the label. */
+#adv-auth-trusted { flex-basis: 100%; max-width: 40em; }
 .hidden { display: none; }
 .actions { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
 /* Each action is one row plus its hint on a line of its own underneath. */
