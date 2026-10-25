@@ -6,7 +6,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.4.1]
 
+### Added
+- **Collapse accounts and folders in the folder list.** Click an account name
+  to hide or show all of its folders. A folder with subfolders shows an arrow:
+  click the arrow to hide or show its subfolders, and click the name to select
+  the folder. A collapsed account or folder names how many selected folders it
+  hides, and the filter box still searches every folder. Each one stays
+  collapsed until you expand it, in every rule. **Expand** and **Collapse**
+  under the **Folders** label open or close every account and folder at once.
+
+- **The log counts SPF, DKIM, and DMARC results.** After the auth check line,
+  a run with an authentication condition logs how many messages passed, didn't
+  pass, or stayed unknown for each method, such as
+  `dmarc 1 pass, 9 not pass, 0 unknown`. The log still names no sender or
+  domain.
+
 ### Changed
+- **An enabled rule needs a folder.** **Save** stops and names the rule when an
+  enabled rule has no folder, because that rule scans nothing. A disabled rule
+  still saves without folders.
 - **Trusted authentication servers take one name per line.** The setting under
   **Advanced** is a text area like the domain list, so several servers are
   easier to read. A list saved with commas still works.
@@ -15,6 +33,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Code text in hints uses a monospace font.** The options page showed header
   names such as `Authentication-Results` and the example addresses in the hints
   in a serif font, because it had no font rule for that text.
+- **Operators that don't fit the field sit under their own heading.** For the
+  authentication, priority, and tag fields, Thunderbird drew the operators you
+  can't choose in the normal text color, so they looked available. They now
+  move to the end of the menu, under "Works with other fields".
+- **The delete button stays on the condition row.** The operator list grew as
+  wide as its longest label, which pushed the button onto the next line.
 
 ## [0.4.0]
 
