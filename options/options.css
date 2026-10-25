@@ -136,11 +136,22 @@ input, select {
 .rule-folders option.top-level { font-weight: 600; }
 .rule-folders option.covered { color: var(--accent-text); font-style: italic; }
 .folder-picker .toggle { align-self: flex-start; }
+/* The label column of the folder row also holds the expand and collapse
+   buttons. Their labels are one word each, so they fit the 64px column. */
+.lbl-col { width: 64px; flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.lbl-col .lbl { width: auto; }
+.lbl-col button { font-size: 11px; padding: 2px 4px; }
 .rule-name, .cond-value { min-width: 0; }
 
 .conditions { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
 .condition { display: flex; align-items: center; gap: 6px; }
 .condition .cond-value { flex: 1; }
+/* The greyed operator labels carry notes such as "(header fields only)", which
+   widen a select to its longest label. The cap keeps the delete button on the
+   row; the open list still shows each label in full. */
+.condition .cond-field, .condition .cond-op { max-width: 18em; }
+/* The menu draws a disabled option in the normal text color without this. */
+option:disabled { color: GrayText; }
 
 .toggle { display: inline-flex; align-items: center; gap: 4px; opacity: 0.85; white-space: nowrap; }
 
