@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1]
+
+### Fixed
+- **Code text in hints uses a monospace font.** The options page showed header
+  names such as `Authentication-Results` and the example addresses in the hints
+  in a serif font, because it had no font rule for that text.
+
 ## [0.4.0]
 
 ### Added
