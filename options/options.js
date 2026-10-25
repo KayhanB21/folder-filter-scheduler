@@ -17,12 +17,15 @@ import {
   PRIORITY_FIELD,
   PRIORITY_IS,
   PRIORITY_LEVELS,
+  AUTH_FIELD,
+  AUTH_PASSES,
+  AUTH_METHODS,
   ageDays,
 } from '../src/matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
 import { diagnosticsFilename } from '../src/diagnostics.js';
 import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } from '../src/actions.js';
-import { ADVANCED_DEFAULTS, sanitizeAdvanced } from '../src/settings.js';
+import { ADVANCED_DEFAULTS, dohOrigin, sanitizeAdvanced } from '../src/settings.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
 import { folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
@@ -147,6 +150,45 @@ function requestBookAccess() {
       );
     })
     .catch((e) => flash(`Could not request address book access: ${e.message}`, true));
+}
+
+/**
+ * The own DKIM check sends DNS lookups to the server chosen under Advanced, so
+ * it needs that server as an optional host permission. It is asked for only
+ * when someone uses an authentication condition.
+ */
+let dnsAccess = false;
+
+async function loadDnsAccess() {
+  const origin = dohOrigin($('#adv-auth-server').value);
+  try {
+    dnsAccess = origin ? await messenger.permissions.contains({ origins: [origin] }) : false;
+  } catch {
+    dnsAccess = false;
+  }
+}
+
+function refreshDnsRows() {
+  for (const row of rulesEl.querySelectorAll('.condition')) row.syncDns?.();
+}
+
+function requestDnsAccess() {
+  const origin = dohOrigin($('#adv-auth-server').value);
+  if (!origin) return;
+  // permissions.request must be called directly from the click, before any await.
+  messenger.permissions
+    .request({ origins: [origin] })
+    .then(async (granted) => {
+      await loadDnsAccess();
+      refreshDnsRows();
+      flash(
+        granted
+          ? 'DNS server access allowed. DKIM and DMARC conditions can now run.'
+          : 'DNS server access was not allowed. DKIM and DMARC conditions will not match until it is.',
+        !granted,
+      );
+    })
+    .catch((e) => flash(`Could not request DNS server access: ${e.message}`, true));
 }
 
 /**
@@ -475,12 +517,16 @@ function fillDomainFieldSelect(select, cond) {
   if (!DOMAIN_FIELD_SETS.some((s) => s.value === current)) select.value = 'reply-to,from';
 }
 
+/** Fields whose name in the list differs from their stored name. */
+const FIELD_LABELS = { [AUTH_FIELD]: 'authentication' };
+const fieldLabel = (field) => FIELD_LABELS[field] ?? field;
+
 function fillFieldSelect(select, value) {
   select.innerHTML = '';
   for (const field of FIELDS) {
     const opt = document.createElement('option');
     opt.value = field;
-    opt.textContent = field;
+    opt.textContent = fieldLabel(field);
     opt.selected = field === value;
     select.append(opt);
   }
@@ -500,7 +546,7 @@ const DOMAIN_SET_REASON = 'Works only with the "domain is in list" operator.';
 function greyOtherFields(select, mode) {
   const offered = new Set([...select.options].map((o) => o.value));
   const [bothHeaders] = DOMAIN_FIELD_SETS;
-  for (const { value, label } of [...FIELDS.map((f) => ({ value: f, label: f })), bothHeaders]) {
+  for (const { value, label } of [...FIELDS.map((f) => ({ value: f, label: fieldLabel(f) })), bothHeaders]) {
     if (offered.has(value)) continue;
     const isSet = value === bothHeaders.value;
     const opt = document.createElement('option');
@@ -521,6 +567,7 @@ const GREY_OPERATORS = {
   state: { suffix: '', reason: 'Works only with the read, star, and junk fields.' },
   tag: { suffix: ' (tag field only)', reason: 'Works only with the tag field.' },
   priority: { suffix: '', reason: 'Works only with the priority field.' },
+  auth: { suffix: ' (authentication only)', reason: 'Works only with the authentication field.' },
   plain: { suffix: ' (header fields only)', reason: 'Works only with a header field, such as from or subject.' },
 };
 const GREY_OPERATOR_LABELS = {
@@ -543,6 +590,9 @@ function renderCondition(container, cond = {}) {
   $('.cond-days', node).value = ageDays(cond) ?? '';
   // A new priority row starts on High: the level people most often filter on.
   $('.cond-priority', node).value = PRIORITY_LEVELS.includes(cond.value) ? cond.value : 'high';
+  // A new authentication row starts on DKIM: the check the add-on runs itself.
+  $('.cond-auth', node).value = AUTH_METHODS.includes(cond.value) ? cond.value : 'dkim';
+  $('.cond-auth-grant', node).addEventListener('click', requestDnsAccess);
 
   // The row changes shape with its field and operator. A domain list needs a
   // textarea, not a one-line input: a harvested list runs to hundreds of
@@ -607,13 +657,20 @@ function renderCondition(container, cond = {}) {
     const isState = STATE_FIELDS.includes(field);
     const isTag = field === TAG_FIELD;
     const isPriority = field === PRIORITY_FIELD;
+    const isAuth = field === AUTH_FIELD;
     const kindOf = (value) => {
       if (value in AGE_OPERATORS) return 'age';
       if (value in STATE_OPERATORS) return 'state';
       if (value === PRIORITY_IS) return 'priority';
+      if (value === AUTH_PASSES) return 'auth';
       return value === HAS_TAG ? 'tag' : 'plain';
     };
-    const kind = isAge ? 'age' : isState ? 'state' : isTag ? 'tag' : isPriority ? 'priority' : 'plain';
+    let kind = 'plain';
+    if (isAge) kind = 'age';
+    else if (isState) kind = 'state';
+    else if (isTag) kind = 'tag';
+    else if (isPriority) kind = 'priority';
+    else if (isAuth) kind = 'auth';
     for (const option of op.options) {
       const needs = kindOf(option.value);
       option.dataset.label ??= option.textContent;
@@ -634,6 +691,7 @@ function renderCondition(container, cond = {}) {
         state: STATE_OPERATORS.isOn,
         tag: HAS_TAG,
         priority: PRIORITY_IS,
+        auth: AUTH_PASSES,
         plain: 'contains',
       }[kind];
     }
@@ -644,9 +702,14 @@ function renderCondition(container, cond = {}) {
     if (isState) negate.checked = false;
 
     $('.cond-domains', node).classList.toggle('hidden', !isList);
-    $('.cond-value', node).classList.toggle('hidden', isList || isAge || isAddress || isState || isTag || isPriority);
+    $('.cond-value', node).classList.toggle(
+      'hidden', isList || isAge || isAddress || isState || isTag || isPriority || isAuth,
+    );
     $('.cond-priority', node).classList.toggle('hidden', !isPriority);
     $('.cond-priority-hint', node).classList.toggle('hidden', !isPriority);
+    $('.cond-auth', node).classList.toggle('hidden', !isAuth);
+    $('.cond-auth-hint', node).classList.toggle('hidden', !isAuth);
+    node.syncDns();
     $('.cond-hint', node).classList.toggle('hidden', !isName);
     $('.cond-state-hint', node).classList.toggle('hidden', !isState && !isTag);
     $('.cond-days', node).classList.toggle('hidden', !isAge);
@@ -654,6 +717,14 @@ function renderCondition(container, cond = {}) {
     node.syncBooks();
     node.syncTags();
   };
+  // The grant button shows only while the own check is on and the DNS server
+  // is not allowed yet, because DKIM and DMARC never match until then.
+  node.syncDns = () => {
+    const isAuth = fieldSelect.value === AUTH_FIELD;
+    const wantsDns = $('#adv-auth-own').checked && $('.cond-auth', node).value !== 'spf';
+    $('.cond-auth-grant', node).classList.toggle('hidden', !isAuth || !wantsDns || dnsAccess);
+  };
+  $('.cond-auth', node).addEventListener('change', node.syncDns);
   op.addEventListener('change', syncRow);
   fieldSelect.addEventListener('change', syncRow);
   syncRow();
@@ -841,6 +912,9 @@ function ruleSummary(node) {
       return `${negate ? 'does not have' : 'has'} tag ${tagLabel(c.dataset.tagKey)}`;
     }
     if (field === PRIORITY_FIELD) return `priority ${negate ? 'is not' : 'is'} ${$('.cond-priority', c).value}`;
+    if (field === AUTH_FIELD) {
+      return `${$('.cond-auth', c).value.toUpperCase()} ${negate ? 'does not pass' : 'passes'}`;
+    }
     if ($('.cond-op', c).value === IN_ADDRESS_BOOK) {
       return `${field} ${negate}in ${bookLabel(c.dataset.bookId)}`;
     }
@@ -970,6 +1044,8 @@ function collectConfig(rejected = []) {
           if (!condition.tagKey) rejected.push('a tag condition has no tag chosen, so it will not match');
         } else if (condition.field === PRIORITY_FIELD) {
           condition.value = $('.cond-priority', c).value;
+        } else if (condition.field === AUTH_FIELD) {
+          condition.value = $('.cond-auth', c).value;
         } else if (operator === IN_ADDRESS_BOOK) {
           condition.addressBookId = c.dataset.bookId || ALL_ADDRESS_BOOKS;
         } else if (operator === DOMAIN_IN_LIST) {
@@ -1012,6 +1088,10 @@ const ADVANCED_INPUTS = {
   catchUpEveryMinutes: '#adv-catchup-every',
   catchUpLookbackDays: '#adv-catchup-days',
   scanOverlapMinutes: '#adv-overlap',
+  authOwnCheck: '#adv-auth-own',
+  authDohServer: '#adv-auth-server',
+  authPrefer: '#adv-auth-prefer',
+  authTrustedServers: '#adv-auth-trusted',
 };
 
 function fillAdvanced(settings) {
@@ -1020,6 +1100,8 @@ function fillAdvanced(settings) {
     if (el.type === 'checkbox') el.checked = settings[key] === true;
     else el.value = settings[key];
   }
+  // The DNS server or the own check might have changed.
+  return loadDnsAccess().then(refreshDnsRows);
 }
 
 /** Raw values straight from the inputs; settings.js does the clamping. */
@@ -1261,6 +1343,12 @@ async function init() {
   await loadAddressBooks();
   await loadTags();
   const { config } = await messenger.storage.local.get({ config: null });
+  // Before the rules, because an authentication row reads the own check
+  // setting and the DNS server access.
+  await fillAdvanced(sanitizeAdvanced(config?.advanced).settings);
+  for (const id of ['#adv-auth-own', '#adv-auth-server']) {
+    $(id).addEventListener('change', () => loadDnsAccess().then(refreshDnsRows));
+  }
   $('#interval').value = config?.intervalMinutes ?? 10;
   const rules = config?.rules?.length ? config.rules : [{}];
 
@@ -1277,7 +1365,6 @@ async function init() {
     flash('Protected domains restored to defaults. Press Save to keep them.');
   });
 
-  fillAdvanced(sanitizeAdvanced(config?.advanced).settings);
   $('#reset-advanced').addEventListener('click', () => {
     fillAdvanced(ADVANCED_DEFAULTS);
     flash('Advanced settings restored to defaults. Press Save to keep them.');
@@ -1307,7 +1394,11 @@ async function init() {
   // Keep book rows honest if access is granted or revoked in the Add-ons Manager
   // while this page is open.
   const onPermissionsChanged = () =>
-    Promise.all([loadAddressBooks().then(refreshBookRows), loadTags().then(refreshTagRows)]);
+    Promise.all([
+      loadAddressBooks().then(refreshBookRows),
+      loadTags().then(refreshTagRows),
+      loadDnsAccess().then(refreshDnsRows),
+    ]);
   messenger.permissions.onAdded?.addListener(onPermissionsChanged);
   messenger.permissions.onRemoved?.addListener(onPermissionsChanged);
 

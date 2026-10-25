@@ -1,0 +1,18 @@
+Received: from 10.217.137.136
+ by atlas122.free.mail.ne1.yahoo.com pod-id NONE with HTTPS; Thu, 22 Oct 2026 13:05:05 +0000
+Authentication-Results: mta.yahoo.com;
+ dkim=unknown;
+ spf=softfail smtp.mailfrom=bb4u.ne.jp;
+ dmarc=unknown header.from=bb4u.ne.jp;
+Received: from 92.67.67.69 (EHLO bb4u.ne.jp)
+ by 10.217.137.136 with SMTP;
+ Thu, 22 Oct 2026 13:05:05 +0000
+Authentication-Results: mx.example.net;
+ dkim=pass header.d=bank.example;
+ spf=pass smtp.mailfrom=bank.example;
+ dmarc=pass header.from=bank.example
+From: Bank <alerts@bank.example>
+Date: Thu, 22 Oct 2026 12:44:28 +0000
+Subject: Your account
+
+Hello.

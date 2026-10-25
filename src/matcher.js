@@ -11,8 +11,9 @@
  *
  * A normalized message is `{ fields: { <lowercased-name>: string[] } }`, plus
  * `date`, `state` (read, star, junk), and `tags` for the conditions that are
- * not about a header, and `headersRead`, true when the full headers were
- * downloaded and are in `fields`.
+ * not about a header, `headersRead`, true when the full headers were
+ * downloaded and are in `fields`, and `auth`, the SPF, DKIM, and DMARC
+ * results when a rule needs them.
  * Header-like fields ("from", "subject", "reply-to", "x-anything") map to the
  * raw header values exactly as Thunderbird's header APIs return them
  * (lowercased keys, array values because a header may legally repeat).
@@ -113,6 +114,16 @@ export const PRIORITY_FIELD = 'priority';
 export const PRIORITY_IS = 'priorityIs';
 export const PRIORITY_LEVELS = Object.freeze(['highest', 'high', 'normal', 'low', 'lowest']);
 
+/**
+ * The SPF, DKIM, and DMARC pseudo-field. Shape:
+ * `{ field: 'auth', operator: 'authPasses', value: <method>, negate }`.
+ * background.js downloads the raw message and fills `message.auth` with
+ * `pass`, `notPass`, or `unknown` for each method; see src/auth/check.js.
+ */
+export const AUTH_FIELD = 'auth';
+export const AUTH_PASSES = 'authPasses';
+export const AUTH_METHODS = Object.freeze(['spf', 'dkim', 'dmarc']);
+
 export const FIELDS = Object.freeze([
   'from',
   'to',
@@ -125,6 +136,7 @@ export const FIELDS = Object.freeze([
   ...STATE_FIELDS,
   TAG_FIELD,
   PRIORITY_FIELD,
+  AUTH_FIELD,
 ]);
 
 /**
@@ -157,6 +169,10 @@ export function isTagCondition(condition) {
 
 export function isPriorityCondition(condition) {
   return foldCase(condition?.field) === PRIORITY_FIELD;
+}
+
+export function isAuthCondition(condition) {
+  return foldCase(condition?.field) === AUTH_FIELD;
 }
 
 /**
@@ -224,11 +240,21 @@ export function fieldsOf(condition) {
 export function requiresFullMessage(rule) {
   const cheap = new Set(CHEAP_FIELDS);
   return (rule?.conditions ?? []).some((c) => {
+    // The raw download covers it, see requiresRaw.
+    if (isAuthCondition(c)) return false;
     // A condition naming no field at all is treated as expensive, erring toward
     // fetching rather than silently evaluating against nothing.
     const fields = fieldsOf(c);
     return (fields.length > 0 ? fields : ['']).some((f) => !cheap.has(foldCase(f)));
   });
+}
+
+/**
+ * True when a rule checks SPF, DKIM, or DMARC, so the engine must download
+ * the raw message.
+ */
+export function requiresRaw(rule) {
+  return (rule?.conditions ?? []).some(isAuthCondition);
 }
 
 function valuesFor(message, field) {
@@ -355,6 +381,24 @@ function evaluatePriorityCondition(message, condition) {
   return condition.negate ? !satisfied : satisfied;
 }
 
+/**
+ * Evaluate an SPF, DKIM, or DMARC condition. NEVER matches, negated or not,
+ * when the method is unknown or the result is anything but pass or not pass.
+ * A DNS error or a download that timed out leaves the result unknown, and
+ * "DKIM does not pass" on a rule that deletes would otherwise act on mail it
+ * never checked.
+ */
+function evaluateAuthCondition(message, condition) {
+  if (condition.operator !== AUTH_PASSES) throw new Error(`Unknown auth operator: ${condition.operator}`);
+  const method = foldCase(condition.value).trim();
+  if (!AUTH_METHODS.includes(method)) return false;
+  const result = message?.auth?.[method];
+  if (result !== 'pass' && result !== 'notPass') return false;
+
+  const satisfied = result === 'pass';
+  return condition.negate ? !satisfied : satisfied;
+}
+
 function evaluateNameCondition(message, condition) {
   const anySatisfied = fieldsOf(condition)
     .flatMap((field) => valuesFor(message, field))
@@ -368,6 +412,7 @@ export function evaluateCondition(message, condition, { now = new Date(), addres
   if (isStateCondition(condition)) return evaluateStateCondition(message, condition);
   if (isTagCondition(condition)) return evaluateTagCondition(message, condition);
   if (isPriorityCondition(condition)) return evaluatePriorityCondition(message, condition);
+  if (isAuthCondition(condition)) return evaluateAuthCondition(message, condition);
   if (condition.operator === IN_ADDRESS_BOOK) {
     return evaluateAddressBookCondition(message, condition, addressBooks);
   }

@@ -26,6 +26,7 @@
     "alarms"
   ],
   "optional_permissions": ["addressBooks", "messagesTagsList"],
+  "optional_host_permissions": ["https://cloudflare-dns.com/*", "https://dns.google/*"],
   "background": {
     "scripts": ["src/background.js"],
     "type": "module"

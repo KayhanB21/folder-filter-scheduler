@@ -26,7 +26,41 @@ export const ADVANCED_DEFAULTS = Object.freeze({
   logScheduleRuns: false,
   showMenu: true,
   shortName: false,
+  authOwnCheck: true,
+  authPrefer: 'own',
+  authDohServer: 'cloudflare',
+  authTrustedServers: '',
 });
+
+/**
+ * The DNS over HTTPS servers the own DKIM check can use. The manifest lists
+ * each origin as an optional host permission, so the add-on asks for the one
+ * chosen before it sends any lookup.
+ */
+export const AUTH_DOH_SERVERS = Object.freeze({
+  cloudflare: 'https://cloudflare-dns.com/dns-query',
+  google: 'https://dns.google/dns-query',
+});
+
+/** The origin pattern a DoH server needs as a host permission. */
+export function dohOrigin(key) {
+  const url = AUTH_DOH_SERVERS[key];
+  return url ? `${new URL(url).origin}/*` : null;
+}
+
+const AUTH_PREFER_VALUES = Object.freeze(['own', 'provider']);
+
+/**
+ * The trusted authentication servers as a list. They are host names, such as
+ * `mta.yahoo.com`, typed into one box and separated by commas or spaces.
+ */
+export function trustedServerList(text) {
+  const names = String(text ?? '')
+    .toLowerCase()
+    .split(/[\s,;]+/)
+    .filter((name) => /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(name));
+  return [...new Set(names)];
+}
 
 /**
  * `newMailDelaySeconds` is capped hard at 15.
@@ -76,7 +110,21 @@ export function sanitizeAdvanced(raw) {
     // keeps its right-click menu.
     showMenu: raw?.showMenu !== false,
     shortName: raw?.shortName === true,
+    authOwnCheck: raw?.authOwnCheck !== false,
+    authTrustedServers: trustedServerList(raw?.authTrustedServers).join(', '),
   };
+
+  // Two settings with a fixed list of values. Anything else falls back to the
+  // default and is reported, like a number out of range.
+  const pick = (key, allowed, label) => {
+    const value = raw?.[key];
+    if (value === undefined || value === null || value === '') return ADVANCED_DEFAULTS[key];
+    if (allowed.includes(value)) return value;
+    problems.push(`${label} must be one of ${allowed.join(', ')}, using ${ADVANCED_DEFAULTS[key]}`);
+    return ADVANCED_DEFAULTS[key];
+  };
+  settings.authPrefer = pick('authPrefer', AUTH_PREFER_VALUES, 'result to use when the checks disagree');
+  settings.authDohServer = pick('authDohServer', Object.keys(AUTH_DOH_SERVERS), 'DNS server');
 
   for (const [key, limit] of Object.entries(ADVANCED_LIMITS)) {
     const { value, problem } = clampInteger(raw?.[key], limit, ADVANCED_DEFAULTS[key]);

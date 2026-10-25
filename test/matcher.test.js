@@ -622,3 +622,56 @@ test('a priority rule needs the header download', () => {
   assert.equal(CHEAP_FIELDS.includes(PRIORITY_FIELD), false);
   assert.equal(requiresFullMessage({ conditions: [priorityIs('high')] }), true);
 });
+
+// --- Authentication condition ----------------------------------------------------
+
+import { AUTH_FIELD, AUTH_METHODS, AUTH_PASSES, requiresRaw } from '../src/matcher.js';
+
+const withAuth = (auth) => ({ fields: {}, auth });
+const authPasses = (value, extra = {}) => ({ field: 'auth', operator: AUTH_PASSES, value, ...extra });
+
+test('the authentication field is offered, costs a raw download, and no header read', () => {
+  assert.ok(FIELDS.includes(AUTH_FIELD));
+  assert.ok(!CHEAP_FIELDS.includes(AUTH_FIELD));
+  assert.deepEqual(AUTH_METHODS, ['spf', 'dkim', 'dmarc']);
+  const rule = { conditions: [authPasses('dkim')] };
+  assert.equal(requiresRaw(rule), true);
+  assert.equal(requiresFullMessage(rule), false);
+  assert.equal(requiresRaw({ conditions: [{ field: 'from', operator: 'contains', value: 'x' }] }), false);
+  assert.equal(requiresFullMessage({ conditions: [authPasses('dkim'), { field: 'reply-to', operator: 'contains', value: 'x' }] }), true);
+});
+
+test('an authentication condition reads the result, and honours negation', () => {
+  const message = withAuth({ spf: 'notPass', dkim: 'pass', dmarc: 'notPass' });
+  assert.equal(evaluateCondition(message, authPasses('dkim')), true);
+  assert.equal(evaluateCondition(message, authPasses('DKIM ')), true);
+  assert.equal(evaluateCondition(message, authPasses('dkim', { negate: true })), false);
+  assert.equal(evaluateCondition(message, authPasses('spf')), false);
+  assert.equal(evaluateCondition(message, authPasses('spf', { negate: true })), true);
+  assert.equal(evaluateCondition(message, authPasses('dmarc', { negate: true })), true);
+});
+
+test('an authentication condition never matches an unknown result, negated or not', () => {
+  for (const message of [
+    withAuth({ spf: 'unknown', dkim: 'unknown', dmarc: 'unknown' }),
+    withAuth({ spf: 'temp', dkim: 'temp', dmarc: 'temp' }),
+    withAuth(undefined),
+    msg({}),
+  ]) {
+    for (const method of AUTH_METHODS) {
+      for (const negate of [false, true]) {
+        assert.equal(evaluateCondition(message, authPasses(method, { negate })), false);
+      }
+    }
+  }
+});
+
+test('an authentication condition with an unknown method never matches', () => {
+  const message = withAuth({ spf: 'notPass', dkim: 'notPass', dmarc: 'notPass' });
+  for (const value of ['', 'arc', undefined]) {
+    for (const negate of [false, true]) {
+      assert.equal(evaluateCondition(message, authPasses(value, { negate })), false);
+    }
+  }
+  assert.throws(() => evaluateCondition(message, { field: 'auth', operator: 'contains', value: 'dkim' }));
+});

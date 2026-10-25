@@ -163,6 +163,54 @@
         full name. Select <b>Save</b> to apply a change.
       </p>
 
+      <h3 class="adv-heading">Authentication conditions</h3>
+      <label class="toggle adv-row">
+        <input id="adv-auth-own" type="checkbox" checked /> Verify DKIM myself
+      </label>
+      <p class="adv-hint">
+        A sender can add a fake <code>Authentication-Results</code> header, so the
+        add-on verifies DKIM signatures itself and works out DMARC from the result.
+        It downloads each full message an authentication condition looks at and asks
+        the DNS server below for the signing key. The server sees the domain names it
+        is asked about. Without this, the add-on reads DKIM and DMARC from the header
+        your mail provider adds.
+      </p>
+
+      <label class="adv-row">
+        DNS server
+        <select id="adv-auth-server">
+          <option value="cloudflare">Cloudflare (cloudflare-dns.com)</option>
+          <option value="google">Google (dns.google)</option>
+        </select>
+      </label>
+      <p class="adv-hint">
+        Thunderbird asks you to allow the server the first time you use it.
+      </p>
+
+      <label class="adv-row">
+        When my check and the provider's header disagree, use
+        <select id="adv-auth-prefer">
+          <option value="own">my check</option>
+          <option value="provider">the provider's header</option>
+        </select>
+      </label>
+      <p class="adv-hint">
+        With the provider's header, the add-on uses its own result only for a check
+        that the header doesn't report.
+      </p>
+
+      <label class="adv-row">
+        Trusted authentication servers
+        <input id="adv-auth-trusted" type="text" placeholder="for example mta.yahoo.com" spellcheck="false" />
+      </label>
+      <p class="adv-hint">
+        Leave this empty to trust the topmost <code>Authentication-Results</code>
+        header, which your provider adds last. If you enter server names, separated
+        by commas, the add-on uses the topmost header from one of them. The name is
+        the first word of the header, such as <code>mta.yahoo.com</code> or
+        <code>mx.google.com</code>.
+      </p>
+
       <button id="reset-advanced" type="button">Restore defaults</button>
     </details>
 
@@ -308,6 +356,8 @@
           <!-- For the priority field only. options.js greys out each
                operator that the chosen field rules out. -->
           <option value="priorityIs">is</option>
+          <!-- For the authentication field only. -->
+          <option value="authPasses">passes</option>
         </select>
         <label class="toggle"><input class="cond-negate" type="checkbox" /> not</label>
         <input class="cond-value" type="text" placeholder="value" />
@@ -330,6 +380,13 @@
           <option value="low">Low</option>
           <option value="lowest">Lowest</option>
         </select>
+        <!-- Shown only for the authentication field. -->
+        <select class="cond-auth hidden">
+          <option value="spf">SPF</option>
+          <option value="dkim">DKIM</option>
+          <option value="dmarc">DMARC</option>
+        </select>
+        <button class="cond-auth-grant hidden" type="button">Allow DNS server access…</button>
         <button class="del-cond danger" type="button">×</button>
         <!-- Shown only for the domainInList operator: one domain per line. -->
         <textarea
@@ -352,6 +409,16 @@
           To read the priority, the add-on downloads the headers of each message,
           so this check is slower than the others. A message with no priority
           counts as Normal.
+        </p>
+        <!-- Shown only for the authentication field. -->
+        <p class="cond-auth-hint cond-hint hidden">
+          Checks whether the sender is who the From address claims. To check, the
+          add-on downloads each full message the rule looks at, once, and keeps the
+          result. SPF comes from the <code>Authentication-Results</code> header your
+          mail provider adds. The add-on verifies DKIM itself and works out DMARC from
+          both. If a check can't finish, for example because the DNS server doesn't
+          answer, the condition doesn't match. The add-on tries again for 24 hours.
+          See <b>Advanced</b> for the settings.
         </p>
         <!-- Shown only for the read, star, junk, and tag fields. -->
         <p class="cond-state-hint cond-hint hidden">

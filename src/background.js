@@ -2,14 +2,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { evaluateRule, requiresFullMessage, addressBookIdsOf, FIELDS, DOMAIN_IN_LIST } from './matcher.js';
+import { evaluateRule, requiresFullMessage, requiresRaw, addressBookIdsOf, FIELDS, DOMAIN_IN_LIST } from './matcher.js';
 import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
-import { ADVANCED_DEFAULTS, alarmNeedsReset, sanitizeAdvanced } from './settings.js';
+import { ADVANCED_DEFAULTS, AUTH_DOH_SERVERS, alarmNeedsReset, dohOrigin, sanitizeAdvanced, trustedServerList } from './settings.js';
 import { createRunner } from './runner.js';
 import { createHeaderReads } from './headers.js';
+import { createAuthReads } from './auth/reads.js';
+import { AUTH_CACHE_KEY } from './auth/cache.js';
+import { OWN_BLOCKED, OWN_OFF, OWN_ON } from './auth/check.js';
+import { dohQuery } from './auth/doh.js';
 import { resolveRuleFolders } from './folders.js';
 import { cronAlarmNeedsReset, missedRun, nextRun, scheduleOf } from './cron.js';
 import { MENU_HARVEST, MENU_RUN_ALL, SHORT_NAME, displayName, menuItems, ruleIdFromMenuItem } from './menu.js';
@@ -57,6 +61,17 @@ const DEFAULT_INTERVAL_MINUTES = 10;
  */
 const HEADER_TIMEOUT_MS = 7_000;
 const HEADER_TIMEOUT_LIMIT = 2;
+
+/**
+ * The SPF, DKIM, and DMARC check downloads whole messages. One download may
+ * take 7 seconds, like a header read, and all downloads of a run together 20
+ * seconds, so the run ends well inside the 30-second limit of an idle event
+ * page. Messages left over wait for the next run. See auth/reads.js.
+ */
+const RAW_TIMEOUT_MS = 7_000;
+const RAW_BUDGET_MS = 20_000;
+/** A one-shot alarm for the quick retries after a DNS error. See auth/cache.js. */
+const AUTH_RETRY_ALARM = 'folder-filter-scheduler.auth-retry';
 
 /**
  * Headers the right-click harvest reads, most trustworthy first.
@@ -289,6 +304,80 @@ async function newHeaderReads() {
   });
 }
 
+// --- SPF, DKIM, and DMARC ----------------------------------------------------
+
+async function hasOrigin(origin) {
+  try {
+    return await messenger.permissions.contains({ origins: [origin] });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether the own DKIM check runs. It needs the host permission for the DNS
+ * server, which the options page asks for. Without it the check is blocked,
+ * and DKIM and DMARC conditions never match until you grant it or turn the
+ * own check off.
+ */
+async function ownCheckState(advanced) {
+  if (!advanced.authOwnCheck) return OWN_OFF;
+  const origin = dohOrigin(advanced.authDohServer);
+  return origin && (await hasOrigin(origin)) ? OWN_ON : OWN_BLOCKED;
+}
+
+/**
+ * A whole message as a binary string, one character per byte, which is what
+ * the DKIM code reads. Thunderbird returns a File unless asked for a string,
+ * so a File is converted too.
+ */
+async function rawMessage(id) {
+  const raw = await messenger.messages.getRaw(id, { data_format: 'BinaryString' });
+  if (typeof raw === 'string') return raw;
+  const bytes = new Uint8Array(await raw.arrayBuffer());
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return text;
+}
+
+/** The SPF, DKIM, and DMARC reads of one run. See auth/reads.js. */
+async function newAuthReads(advanced) {
+  const ownState = await ownCheckState(advanced);
+  const stored = await messenger.storage.local.get({ [AUTH_CACHE_KEY]: {} }).catch(() => ({}));
+  if (ownState === OWN_BLOCKED) {
+    warn('DNS server access not granted; DKIM and DMARC conditions will not match');
+  }
+  return createAuthReads({
+    getRaw: (id) => rawMessage(id),
+    queryFunction: dohQuery(AUTH_DOH_SERVERS[advanced.authDohServer]),
+    ownState,
+    prefer: advanced.authPrefer,
+    trustedServers: trustedServerList(advanced.authTrustedServers),
+    cache: stored?.[AUTH_CACHE_KEY] ?? {},
+    timeoutMs: RAW_TIMEOUT_MS,
+    budgetMs: RAW_BUDGET_MS,
+  });
+}
+
+/** Save the cache, set the next quick retry, and log what the run did. */
+async function finishAuthReads(authReads, quiet) {
+  const { cache, retryDelayMs } = authReads.finish();
+  if (cache) {
+    await messenger.storage.local.set({ [AUTH_CACHE_KEY]: cache })
+      .catch((e) => warn('could not save the auth check cache', e));
+  }
+  if (retryDelayMs !== null) messenger.alarms.create(AUTH_RETRY_ALARM, { when: Date.now() + retryDelayMs });
+  const c = authReads.counts;
+  logUnless(
+    quiet && c.checked === 0 && c.unchecked === 0,
+    `auth checks (own check ${authReads.ownState}): ${c.checked} checked, ${c.cached} from cache, ` +
+      `${c.failed} failed for now, ${c.deferred} left for the next run, ` +
+      `${c.unchecked} unchecked after retries, ${c.disagree} disagreed with the provider`,
+  );
+}
+
 /**
  * Build the normalized `{ fields }` object matcher.js expects from a message.
  *
@@ -298,7 +387,7 @@ async function newHeaderReads() {
  * a non-indexed header (reply-to, list-id, …) do we read the headers, which
  * fetches from the server on demand on a non-offline IMAP folder.
  */
-async function normalize(messageHeader, fetchFull, headerReads) {
+async function normalize(messageHeader, fetchFull, headerReads, authReads) {
   const fields = {};
   const push = (name, value) => {
     if (value == null || value === '') return;
@@ -331,6 +420,13 @@ async function normalize(messageHeader, fetchFull, headerReads) {
   if (!fields.to) for (const r of messageHeader.recipients ?? []) push('to', r);
   if (!fields.cc) for (const c of messageHeader.ccList ?? []) push('cc', c);
 
+  // SPF, DKIM, and DMARC, only for a rule that checks them. A pending result
+  // is unknown for now, so its conditions don't match, and the run keeps the
+  // watermark so the message is checked again.
+  let auth;
+  let authPending = false;
+  if (authReads) ({ auth, pending: authPending } = await authReads.read(messageHeader));
+
   // The indexed Date, state, and tags, for the conditions that are not about a
   // header. Free, no fetch.
   return {
@@ -340,6 +436,8 @@ async function normalize(messageHeader, fetchFull, headerReads) {
     tags: messageHeader.tags,
     // A priority condition needs to know the headers are really there.
     headersRead,
+    auth,
+    authPending,
     _header: messageHeader,
   };
 }
@@ -379,9 +477,10 @@ async function loadAllFolders(rules) {
 }
 
 /** Run one rule across all its source folders. Returns count of affected messages. */
-async function runRule(rule, folderIds, runState, manual, addressBooks, settings, headerReads, quiet) {
+async function runRule(rule, folderIds, runState, manual, addressBooks, settings, headerReads, authReads, quiet) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
+  const ruleAuthReads = requiresRaw(rule) ? authReads : null;
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
   const startedAt = new Date();
   const plan = planScan(runState[rule.id], { manual, now: startedAt, settings });
@@ -391,6 +490,7 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   let scanned = 0;
   let matched = 0;
   let scanFailed = false;
+  let authPending = 0;
   const skippedBefore = headerReads.skipped;
 
   for (const folderId of folderIds) {
@@ -398,8 +498,9 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
     try {
       for await (const header of messagesInFolder(folderId, bounds)) {
         scanned += 1;
-        const message = await normalize(header, fetchFull, headerReads);
+        const message = await normalize(header, fetchFull, headerReads, ruleAuthReads);
         if (!message) continue;
+        if (message.authPending) authPending += 1;
         if (evaluateRule(message, rule, { now: startedAt, addressBooks })) matchedIds.push(header.id);
       }
     } catch (e) {
@@ -421,10 +522,13 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   // clean and the next run reads it again.
   const skipped = headerReads.skipped - skippedBefore;
   if (skipped > 0) scanFailed = true;
+  // The same for a message whose SPF, DKIM, and DMARC check waits for a retry.
+  // This is not an error, so the log line doesn't say WITH ERRORS.
+  const holdWatermark = scanFailed || authPending > 0;
 
   // Only advance the watermark on a clean pass, so a transient failure does not
   // permanently skip the messages it could not read.
-  if (!scanFailed && rule.id) {
+  if (!holdWatermark && rule.id) {
     runState[rule.id] = stampScan(runState[rule.id], kind, startedAt);
   }
   const range = [
@@ -434,7 +538,8 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   logUnless(
     quiet && affected === 0 && !scanFailed,
     `rule "${rule.name}": ${kind} scan (${range}), ${scanned} scanned, ` +
-      `${skipped > 0 ? `${skipped} skipped (headers unread), ` : ''}${matched} matched, ` +
+      `${skipped > 0 ? `${skipped} skipped (headers unread), ` : ''}` +
+      `${authPending > 0 ? `${authPending} waiting for an auth check, ` : ''}${matched} matched, ` +
       `${affected} actioned, ${Date.now() - startedAt.getTime()} ms${scanFailed ? ', WITH ERRORS' : ''}`,
   );
   return affected;
@@ -501,16 +606,19 @@ async function runAllRules(
   const addressBooks = await loadAddressBooks(selected);
   // Shared by every rule of the run: see HEADER_TIMEOUT_LIMIT.
   const headerReads = await newHeaderReads();
+  // Shared too, so the download budget covers the whole run.
+  const authReads = selected.some(requiresRaw) ? await newAuthReads(advanced) : null;
   let total = 0;
 
   for (const rule of selected) {
     total += await runRule(
       rule, scanned.get(rule), runState, isManual(rule), addressBooks, advanced, headerReads,
-      quietRule(rule),
+      authReads, quietRule(rule),
     );
   }
 
   await saveRunState(runState);
+  if (authReads) await finishAuthReads(authReads, quietRun);
   logUnless(
     quietRun && total === 0,
     `run (${reason}) complete: ${total} message(s) affected across ` +
@@ -612,7 +720,8 @@ async function loadAddressBooks(rules) {
 
 async function diagnosticsReport(includeValues) {
   await flushLog();
-  const [{ config, runState, diagnostics }, alarm, browser, platform, addressBooks, messagesTagsList] =
+  const advanced = (await loadConfig()).advanced;
+  const [{ config, runState, diagnostics }, alarm, browser, platform, addressBooks, messagesTagsList, dnsServer] =
     await Promise.all([
       messenger.storage.local.get({ config: null, runState: {}, diagnostics: [] }),
       messenger.alarms.get(ALARM_NAME).catch(() => null),
@@ -620,6 +729,7 @@ async function diagnosticsReport(includeValues) {
       messenger.runtime.getPlatformInfo?.().catch(() => null) ?? null,
       hasAddressBookAccess(),
       hasPermission('messagesTagsList'),
+      hasOrigin(dohOrigin(advanced.authDohServer)),
     ]);
   return buildReport({
     version: messenger.runtime.getManifest().version,
@@ -628,7 +738,7 @@ async function diagnosticsReport(includeValues) {
     config,
     runState,
     alarm,
-    permissions: { addressBooks, messagesTagsList },
+    permissions: { addressBooks, messagesTagsList, dnsServer },
     entries: diagnostics,
     includeValues: includeValues === true,
   });
@@ -880,6 +990,8 @@ messenger.alarms.onAlarm.addListener((alarm) => {
     runner.request('scheduled').catch((e) => warn('scheduled run failed', e));
   } else if (alarm.name.startsWith(CRON_ALARM_PREFIX)) {
     handleCronAlarm(alarm).catch((e) => warn('run on a rule schedule failed', e));
+  } else if (alarm.name === AUTH_RETRY_ALARM) {
+    runner.request('authRetry').catch((e) => warn('auth check retry failed', e));
   }
 });
 

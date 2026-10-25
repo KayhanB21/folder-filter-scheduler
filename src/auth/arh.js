@@ -1,0 +1,437 @@
+/**
+ * Parser for the Authentication-Results header as specified in RFC 7601/8601.
+ *
+ * Internationalized Email support (RFC 8601) is incomplete:
+ * - IDNA A-labels and U-labels are not verified to be valid.
+ * - A-labels are not converted into U-labels (e.g. to compare "authserv-id")
+ *
+ * Email Authentication Parameters:
+ * https://www.iana.org/assignments/email-auth/email-auth.xhtml
+ *
+ * Copyright (c) 2014-2023;2025 Philippe Lieser
+ *
+ * This software is licensed under the terms of the MIT License.
+ *
+ * The above copyright and license notice shall be
+ * included in all copies or substantial portions of the Software.
+ */
+
+// @ts-check
+/* eslint-disable camelcase */
+/* eslint-disable no-use-before-define */
+
+import RfcParser, { RfcParserI } from "./rfc.js";
+import { DKIM_Error } from "./errors.js";
+import Logging from "./log.js";
+import { decodeBinaryString } from "./utils.js";
+
+const log = Logging.getLogger("ArhParser");
+
+
+class Token {
+	/**
+	 * "Keyword" as specified in Section 4.1.2 of RFC 5321 [SMTP].
+	 *
+	 * @readonly
+	 */
+	static Keyword = RfcParser.Keyword;
+
+	/**
+	 * @param {boolean} internationalized
+	 */
+	constructor(internationalized) {
+		const parser = internationalized ? RfcParserI : RfcParser;
+
+		/**
+		 * "CFWS" as specified in Section 3.2.2 of RFC 5322 [MAIL].
+		 *
+		 * @readonly
+		 */
+		this.CFWS = RfcParserI.CFWS;
+		/**
+		 * Optional "CFWS" as specified in Section 3.2.2 of RFC 5322 [MAIL].
+		 *
+		 * @readonly
+		 */
+		this.CFWS_op = RfcParserI.CFWS_op;
+
+		/**
+		 * "quoted-string" as specified in Section 3.2.4 of RFC 5322.
+		 * Capturing.
+		 *
+		 * @readonly
+		 */
+		this.quoted_string_cp = `(?:${RfcParser.CFWS_op}"((?:${RfcParser.FWS_op}${parser.qcontent})*)${RfcParser.FWS_op}"${RfcParser.CFWS_op})`;
+
+		/**
+		 * "local-part" as specified in Section 3.4.1 of RFC 5322.
+		 *
+		 * @readonly
+		 */
+		this.local_part = parser.local_part;
+
+		/**
+		 * "value" as specified in Section 5.1 of RFC 2045.
+		 * Capturing.
+		 *
+		 * @readonly
+		 */
+		this.value_cp = `(?:(${RfcParser.token})|${this.quoted_string_cp})`;
+
+		/**
+		 * "domain-name" as specified in Section 3.5 of RFC 6376 [DKIM].
+		 *
+		 * @readonly
+		 */
+		this.domain_name = parser.domain_name;
+	}
+}
+
+/**
+ * @typedef {object} ArhHeader
+ * @property {string} authserv_id
+ * @property {number} authres_version
+ * @property {ArhResInfo[]} resinfo
+ */
+
+/**
+ * @typedef {{[x: string]: string|undefined}} ArhProperty
+ */
+/**
+ * @typedef {{[x: string]: ArhProperty|undefined, smtp: ArhProperty, header: ArhProperty, body: ArhProperty, policy: ArhProperty }} ArhProperties
+ */
+
+/**
+ * @typedef {object} ArhResInfo
+ * @property {string} method
+ * @property {number} method_version
+ * @property {string} result
+ * none|pass|fail|softfail|policy|neutral|temperror|permerror
+ * @property {string} [reason]
+ * @property {ArhProperties} properties
+ */
+
+export default class ArhParser {
+	/**
+	 * Parses an Authentication-Results header.
+	 *
+	 * @param {string} authResHeader - Authentication-Results header
+	 * @param {boolean} [relaxedParsing] - Enable relaxed parsing
+	 * @param {boolean} [internationalized] - Enable internationalized support
+	 * @returns {ArhHeader} Parsed Authentication-Results header
+	 * @throws {DKIM_Error}
+	 */
+	static parse(authResHeader, relaxedParsing = false, internationalized = false) {
+		const token = new Token(internationalized);
+
+		// remove header name
+		const authResHeaderRef = new RefString(authResHeader.replace(
+			new RegExp(`^Authentication-Results:${token.CFWS_op}`, "i"), ""));
+
+		/** @type {ArhHeader} */
+		const res = {
+			authserv_id: "",
+			authres_version: 1,
+			resinfo: [],
+		};
+		let reg_match;
+
+		// get authserv-id and authres-version
+		try {
+			reg_match = match(authResHeaderRef, `${token.value_cp}(?:${token.CFWS}([0-9]+)${token.CFWS_op})?`, token);
+			const authserv_id = reg_match[1] ?? reg_match[2];
+			if (!authserv_id) {
+				throw new Error("Error matching the ARH authserv-id.");
+			}
+			res.authserv_id = decodeBinaryString(authserv_id);
+			res.authres_version = reg_match[3] ? Number.parseInt(reg_match[3], 10) : 1;
+		} catch (error) {
+			log.debug("Parsing of authserv-id and authres-version failed", error);
+			if (!relaxedParsing) {
+				throw error;
+			}
+			authResHeaderRef.value = `;${authResHeaderRef.value}`;
+		}
+
+		// check if message authentication was performed
+		reg_match = match_o(authResHeaderRef, `;${token.CFWS_op}?none`, token);
+		if (reg_match !== null) {
+			log.debug("no-result");
+			return res;
+		}
+
+		// get the resinfos
+		try {
+			while (authResHeaderRef.value !== "") {
+				const arhResInfo = parseResInfo(authResHeaderRef, relaxedParsing, token);
+				if (arhResInfo) {
+					res.resinfo.push(arhResInfo);
+				}
+			}
+		} catch (error) {
+			if (error instanceof Error) {
+				// @ts-expect-error
+				error.authserv_id = res.authserv_id;
+			}
+			throw error;
+		}
+
+		return res;
+	}
+}
+
+/**
+ * Parses the next resinfo in str. The parsed part of str is removed from str.
+ *
+ * @param {RefString} str
+ * @param {boolean} relaxedParsing - Enable relaxed parsing
+ * @param {Token} token - Token to use for parsing; depends on internationalized support
+ * @returns {ArhResInfo|null} Parsed resinfo
+ * @throws {DKIM_Error}
+ */
+function parseResInfo(str, relaxedParsing, token) {
+	let reg_match;
+	/** @type {ArhResInfo} */
+	const res = {};
+
+	// get methodspec
+	const method_version_p = `${token.CFWS_op}/${token.CFWS_op}([0-9]+)`;
+	const method_p = `(${Token.Keyword})(?:${method_version_p})?`;
+	const result_p = `=${token.CFWS_op}(${Token.Keyword})`;
+	const methodspec_p = `;${token.CFWS_op}${method_p}${token.CFWS_op}${result_p}`;
+	try {
+		reg_match = match(str, methodspec_p, token);
+	} catch (error) {
+		if (relaxedParsing) {
+			// allow trailing ";" at the end
+			match_o(str, ";", token);
+			if (str.value.trim() === "") {
+				str.value = "";
+				return null;
+			}
+		}
+		throw error;
+	}
+	if (!reg_match[1]) {
+		throw new Error("Error matching the ARH method.");
+	}
+	if (!reg_match[3]) {
+		throw new Error("Error matching the ARH result.");
+	}
+	res.method = reg_match[1];
+	res.method_version = reg_match[2] ? Number.parseInt(reg_match[2], 10) : 1;
+	res.result = reg_match[3].toLowerCase();
+
+	if (!relaxedParsing) {
+		checkResultKeyword(res.method, reg_match[3]);
+	}
+
+	// get reasonspec (optional)
+	const reasonspec_p = `reason${token.CFWS_op}=${token.CFWS_op}${token.value_cp}`;
+	reg_match = match_o(str, reasonspec_p, token);
+	if (reg_match !== null) {
+		const value = reg_match[1] ?? reg_match[2];
+		if (!value) {
+			throw new Error(`Error matching the ARH reason value for "${res.method}".`);
+		}
+		res.reason = decodeBinaryString(value);
+	}
+
+	// Outlook specific action (optional)
+	// https://learn.microsoft.com/en-us/defender-office-365/message-headers-eop-mdo
+	if (relaxedParsing) {
+		const actionspec_p = `action${token.CFWS_op}=${token.CFWS_op}${token.value_cp}`;
+		match_o(str, actionspec_p, token);
+	}
+
+	// get propspec (optional)
+	res.properties = parseProperties(str, relaxedParsing, token);
+
+	return res;
+}
+
+/**
+ * Parses all properties (propspec) of a resinfo in str. The parsed part of str is removed from str.
+ *
+ * @param {RefString} str
+ * @param {boolean} relaxedParsing - Enable relaxed parsing
+ * @param {Token} token - Token to use for parsing; depends on internationalized support
+ * @returns {ArhProperties} Parsed properties
+ * @throws {DKIM_Error}
+ */
+function parseProperties(str, relaxedParsing, token) {
+	let pvalue_p = `${token.value_cp}|((?:${token.local_part}?@)?${token.domain_name})`;
+	if (relaxedParsing) {
+		// allow "/" and ":" in properties, even if it is not in a quoted-string
+		pvalue_p += String.raw`|([^ \x00-\x1F\x7F()<>@,;\\"[\]?=]+)`;
+	}
+	const special_smtp_verb_p = "mailfrom|rcptto";
+	const property_p = `${special_smtp_verb_p}|${Token.Keyword}`;
+	const propspec_p = String.raw`(${Token.Keyword})${token.CFWS_op}\.${token.CFWS_op}(${property_p})${token.CFWS_op}=${token.CFWS_op}(?:${pvalue_p})`;
+
+	/** @type {ArhProperties} */
+	const properties = {
+		smtp: {},
+		header: {},
+		body: {},
+		policy: {},
+	};
+	// Changed for Folder Filter Scheduler: Yahoo adds tokens such as
+	// "arc_overridden_status=NOT_OVERRIDDEN" with no "ptype." prefix. Relaxed
+	// parsing skips them.
+	const unknownspec_p = `[A-Za-z0-9_-]+${token.CFWS_op}=${token.CFWS_op}(?:${pvalue_p})`;
+	const nextProperty = () => {
+		const found = match_o(str, propspec_p, token);
+		if (found !== null || !relaxedParsing) {
+			return found;
+		}
+		while (match_o(str, unknownspec_p, token) !== null) {
+			const after = match_o(str, propspec_p, token);
+			if (after !== null) {
+				return after;
+			}
+		}
+		return null;
+	};
+	let reg_match;
+	while ((reg_match = nextProperty()) !== null) {
+		if (!reg_match[1]) {
+			throw new Error("Error matching the ARH property name.");
+		}
+		if (!reg_match[2]) {
+			throw new Error("Error matching the ARH property sub-name.");
+		}
+		let property = properties[reg_match[1]];
+		if (!property) {
+			property = {};
+			properties[reg_match[1]] = property;
+		}
+		const value = reg_match[3] ?? reg_match[4] ?? reg_match[5] ?? reg_match[6];
+		if (!value) {
+			throw new Error(`Error matching the ARH property value for "${reg_match[1]}.${reg_match[2]}".`);
+		}
+		property[reg_match[2]] = decodeBinaryString(value);
+	}
+
+	return properties;
+}
+
+/**
+ * Check that a result keyword is valid for a known method.
+ *
+ * See also https://www.iana.org/assignments/email-auth/email-auth.xhtml.
+ *
+ * @param {string} method
+ * @param {string} resultKeyword
+ * @returns {void}
+ * @throws {DKIM_Error} if result keyword is invalid for the method.
+ */
+function checkResultKeyword(method, resultKeyword) {
+	let allowedKeywords;
+
+	// DKIM and DomainKeys (RFC 8601 section 2.7.1.)
+	if (method === "dkim" || method === "domainkeys") {
+		allowedKeywords = ["none", "pass", "fail", "policy", "neutral", "temperror", "permerror"];
+	}
+
+	// SPF and Sender ID (RFC 8601 section 2.7.2.)
+	if (method === "spf" || method === "sender-id") {
+		allowedKeywords = ["none", "pass", "fail", "softfail", "policy", "neutral", "temperror", "permerror",
+			// Deprecated from older ARH RFC 5451.
+			"hardfail",
+			// Older SPF specs (e.g. RFC 4408) used mixed case.
+			"None", "Pass", "Fail", "SoftFail", "Neutral", "TempError", "PermError",
+		];
+	}
+
+	// DMARC (RFC 7489 section 11.2.)
+	if (method === "dmarc") {
+		allowedKeywords = ["none", "pass", "fail", "temperror", "permerror"];
+	}
+
+	// BIMI (https://datatracker.ietf.org/doc/draft-brand-indicators-for-message-identification/04/ section 7.7.)
+	if (method === "bimi") {
+		allowedKeywords = ["pass", "none", "fail", "temperror", "declined", "skipped"];
+	}
+
+	// Note: Both the ARH RFC and the IANA registry contain keywords for more than the above methods.
+	// As we don't really care about them, for simplicity we treat them the same as unknown methods,
+	// And don't restrict the keyword.
+
+	if (allowedKeywords && !allowedKeywords.includes(resultKeyword)) {
+		throw new DKIM_Error(`Result keyword "${resultKeyword}" is not allowed for method "${method}"`);
+	}
+}
+
+/**
+ * Object wrapper around a string.
+ */
+class RefString {
+	/**
+	 * Object wrapper around a string.
+	 *
+	 * @param {string} s
+	 */
+	constructor(s) {
+		this.value = s;
+	}
+
+	/**
+	 * @param {RegExp} regexp
+	 * @returns {RegExpMatchArray?}
+	 */
+	match(regexp) {
+		return this.value.match(regexp);
+	}
+
+	/**
+	 * @param {number} from
+	 * @returns {string}
+	 */
+	slice(from) {
+		return this.value.slice(from);
+	}
+}
+
+/**
+ * Matches a pattern to the beginning of str.
+ * Adds CFWS_op to the beginning of pattern.
+ * pattern must be followed by string end, ";" or CFWS_p.
+ * Removes the found match from str.
+ *
+ * @param {RefString} str
+ * @param {string} pattern
+ * @param {Token} token - Token to use for parsing; depends on internationalized support
+ * @returns {string[]} An Array, containing the matches
+ * @throws {DKIM_Error} if match no match found
+ */
+function match(str, pattern, token) {
+	const reg_match = match_o(str, pattern, token);
+	if (reg_match === null) {
+		throw new DKIM_Error("Parsing error");
+	}
+	return reg_match;
+}
+
+/**
+ * Tries to matches a pattern to the beginning of str.
+ * Adds CFWS_op to the beginning of pattern.
+ * pattern must be followed by string end, ";" or CFWS_p.
+ * If match is found, removes it from str.
+ *
+ * @param {RefString} str
+ * @param {string} pattern
+ * @param {Token} token - Token to use for parsing; depends on internationalized support
+ * @returns {string[]|null} Null if no match for the pattern is found, else
+ * an Array, containing the matches.
+ */
+function match_o(str, pattern, token) {
+	const regexp = new RegExp(`^${token.CFWS_op}(?:${pattern})` +
+		`(?:(?:${token.CFWS_op}\r\n$)|(?=;)|(?=${token.CFWS}))`);
+	const reg_match = str.match(regexp);
+	if (reg_match === null || !reg_match[0]) {
+		return null;
+	}
+	str.value = str.slice(reg_match[0].length);
+	return reg_match;
+}

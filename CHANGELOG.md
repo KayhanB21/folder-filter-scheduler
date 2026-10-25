@@ -6,6 +6,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **SPF, DKIM, and DMARC conditions.** Choose the **authentication** field to
+  check whether SPF, DKIM, or DMARC passes, or with **not**, whether it fails.
+  SPF comes from the `Authentication-Results` header your provider adds. A
+  sender can forge that header, so the add-on verifies DKIM signatures itself
+  and works out DMARC from both. Only the topmost header counts, because your
+  provider adds it last. To check, the add-on downloads each full message the
+  condition looks at, once, and keeps the result for up to 90 days. For the
+  DKIM key it asks a DNS server over HTTPS: Cloudflare or Google, which you
+  allow the first time. If a check can't finish, the condition doesn't match,
+  and the add-on tries again 3 times in the first minute, then every 30 minutes
+  for 24 hours. Settings under **Advanced** turn the own check off, choose the
+  DNS server, choose which result wins when the two disagree, and name the
+  servers whose header you trust. The DKIM code comes from
+  [DKIM Verifier](https://github.com/lieser/dkim_verifier) by Philippe Lieser,
+  under the MIT license.
+
 ### Fixed
 - **Regex conditions see the original case** (#28). The add-on lowercased the
   header text and the pattern before a regex ran, so a case-sensitive group

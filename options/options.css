@@ -148,6 +148,8 @@ input, select {
 .adv-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 14px 0 2px; }
 .adv-row input[type='number'] { width: 5.5em; }
 .adv-hint { margin: 0; font-size: 12px; opacity: 0.7; max-width: 70ch; }
+.adv-heading { margin: 22px 0 0; font-size: 13px; }
+#adv-auth-trusted { min-width: 22em; }
 .hidden { display: none; }
 .actions { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
 /* Each action is one row plus its hint on a line of its own underneath. */
@@ -257,3 +259,4 @@ button { white-space: nowrap; flex: none; }
 /* One rule shows the state hint one time, under its first state or tag row. */
 .condition:has(.cond-state-hint:not(.hidden)) ~ .condition .cond-state-hint { display: none; }
 .condition:has(.cond-priority-hint:not(.hidden)) ~ .condition .cond-priority-hint { display: none; }
+.condition:has(.cond-auth-hint:not(.hidden)) ~ .condition .cond-auth-hint { display: none; }
