@@ -136,11 +136,22 @@ input, select {
 .rule-folders option.top-level { font-weight: 600; }
 .rule-folders option.covered { color: var(--accent-text); font-style: italic; }
 .folder-picker .toggle { align-self: flex-start; }
+/* The label column of the folder row also holds the expand and collapse
+   buttons. Their labels are one word each, so they fit the 64px column. */
+.lbl-col { width: 64px; flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.lbl-col .lbl { width: auto; }
+.lbl-col button { font-size: 11px; padding: 2px 4px; }
 .rule-name, .cond-value { min-width: 0; }
 
 .conditions { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
 .condition { display: flex; align-items: center; gap: 6px; }
 .condition .cond-value { flex: 1; }
+/* The greyed operator labels carry notes such as "(header fields only)", which
+   widen a select to its longest label. The cap keeps the delete button on the
+   row; the open list still shows each label in full. */
+.condition .cond-field, .condition .cond-op { max-width: 18em; }
+/* The menu draws a disabled option in the normal text color without this. */
+option:disabled { color: GrayText; }
 
 .toggle { display: inline-flex; align-items: center; gap: 4px; opacity: 0.85; white-space: nowrap; }
 
@@ -149,7 +160,8 @@ input, select {
 .adv-row input[type='number'] { width: 5.5em; }
 .adv-hint { margin: 0; font-size: 12px; opacity: 0.7; max-width: 70ch; }
 .adv-heading { margin: 22px 0 0; font-size: 13px; }
-#adv-auth-trusted { min-width: 22em; }
+/* One name per line, so the list takes its own line under the label. */
+#adv-auth-trusted { flex-basis: 100%; max-width: 40em; }
 .hidden { display: none; }
 .actions { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
 /* Each action is one row plus its hint on a line of its own underneath. */
@@ -159,6 +171,10 @@ input, select {
 .action-hint.danger { color: var(--danger); opacity: 1; }
 .action.unchosen .action-type { border-color: var(--danger); }
 .action.unchosen .action-hint { opacity: 1; }
+
+/* Header names and addresses inside hints. Without a family the platform
+   default fixed-width font applies, which can be a serif font. */
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
 
 /* Domain-list condition: the textarea takes its own line under the operator row. */
 textarea {

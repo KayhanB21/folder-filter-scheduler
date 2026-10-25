@@ -115,3 +115,27 @@ export function treeGuides(folders) {
   }
   return guides;
 }
+
+/**
+ * Collapsing in the folder picker, for a flat, tree-ordered list.
+ *
+ * `parents` holds the ids of folders that have at least one subfolder, so the
+ * picker knows where to draw an arrow. `hidden` holds every folder under a
+ * collapsed one, at any depth. A collapsed folder itself stays visible.
+ */
+export function collapsedTree(folders, collapsedIds = new Set()) {
+  const key = (accountId, path) => `${accountId}\u0000${path}`;
+  const byPath = new Map(folders.map((f) => [key(f.accountId, f.path), f]));
+  const parents = new Set();
+  const hidden = new Set();
+  for (const f of folders) {
+    const parts = String(f.path ?? '').split('/').filter(Boolean);
+    for (let depth = 1; depth < parts.length; depth += 1) {
+      const ancestor = byPath.get(key(f.accountId, `/${parts.slice(0, depth).join('/')}`));
+      if (!ancestor) continue;
+      if (depth === parts.length - 1) parents.add(ancestor.id);
+      if (collapsedIds.has(ancestor.id)) hidden.add(f.id);
+    }
+  }
+  return { parents, hidden };
+}

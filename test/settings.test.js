@@ -131,7 +131,7 @@ test('the preferred result and the DNS server take only their listed values', ()
 test('trusted servers are lowercased, deduplicated, and stripped of junk', () => {
   assert.deepEqual(trustedServerList('MTA.yahoo.com, mx.google.com mta.yahoo.com;bad/one -x'), ['mta.yahoo.com', 'mx.google.com']);
   assert.deepEqual(trustedServerList(undefined), []);
-  assert.equal(sanitizeAdvanced({ authTrustedServers: 'b.example a.example' }).settings.authTrustedServers, 'b.example, a.example');
+  assert.equal(sanitizeAdvanced({ authTrustedServers: 'b.example a.example' }).settings.authTrustedServers, 'b.example\na.example');
 });
 
 test('each DNS server has an https origin for its host permission', () => {

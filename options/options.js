@@ -28,7 +28,7 @@ import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } fro
 import { ADVANCED_DEFAULTS, dohOrigin, sanitizeAdvanced } from '../src/settings.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
-import { folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
+import { collapsedTree, folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
 import { describeCron, nextRun, parseCron } from '../src/cron.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -261,24 +261,27 @@ function requestTagAccess() {
  * what is saved or exported.
  */
 const COLLAPSED_KEY = 'ffs.collapsedRules';
+/** Accounts and folders collapsed in the folder picker, shared by every rule. Also a view preference. */
+const COLLAPSED_FOLDERS_KEY = 'ffs.collapsedFolders';
 
-function loadCollapsed() {
+function loadCollapsed(key = COLLAPSED_KEY) {
   try {
-    return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]'));
+    return new Set(JSON.parse(localStorage.getItem(key) ?? '[]'));
   } catch {
     return new Set();
   }
 }
 
-function saveCollapsed(ids) {
+function saveCollapsed(ids, key = COLLAPSED_KEY) {
   try {
-    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
+    localStorage.setItem(key, JSON.stringify([...ids]));
   } catch {
     // A missing localStorage only costs the preference, never the rules.
   }
 }
 
 let collapsed = loadCollapsed();
+const collapsedFolders = loadCollapsed(COLLAPSED_FOLDERS_KEY);
 
 /** One picker entry. `label` is the full "Account: /path" form, for tooltips. */
 function folderEntry(folder, accountName) {
@@ -372,16 +375,31 @@ function guideBackground(guide) {
 }
 
 /**
+ * The arrow in front of an account and of a folder that has subfolders. An
+ * option holds plain text, so the size comes from the character. U+FE0E keeps
+ * macOS from drawing the right arrow as a colored emoji.
+ */
+const ARROWS = { open: '\u25BC\uFE0E ', closed: '\u25B6\uFE0E ' };
+/** A collapsed account sits in `collapsedFolders` under this prefix and its id. */
+const ACCOUNT_PREFIX = 'account:';
+
+/**
  * Write one folder option. Indentation is CSS padding, so levels line up and a
  * screen reader hears the name rather than blank space. While filtering, the
- * tree is gone, so the option shows the whole path and no lines.
+ * tree is gone, so the option shows the whole path, no lines, and no arrow.
+ *
+ * `arrow` is `open` or `closed` for a folder with subfolders, and `inside`
+ * counts the selected folders a collapsed one hides.
  */
-function paintFolderOption(opt, folder, { filtering = false, covered = false } = {}) {
+function paintFolderOption(opt, folder, { filtering = false, covered = false, arrow = null, inside = 0 } = {}) {
   const depth = Math.max(1, folder.depth);
   const name = filtering ? folder.path.replace(/^\//, '') : folder.name;
-  const note = covered ? ' · included as a subfolder' : '';
-  opt.textContent = `${name}${note}`;
-  opt.setAttribute('aria-label', `${name}${note}`);
+  let note = covered ? ' · included as a subfolder' : '';
+  if (inside) note += ` · ${inside} selected inside`;
+  opt.textContent = `${arrow ? ARROWS[arrow] : ''}${name}${note}`;
+  const state = arrow ? `, ${arrow === 'open' ? 'expanded' : 'collapsed'}` : '';
+  opt.setAttribute('aria-label', `${name}${state}${note}`);
+  opt.dataset.arrow = arrow ?? '';
   opt.style.paddingInlineStart = filtering ? '' : `${(depth - 1) * INDENT_EM + 0.4}em`;
   const guide = guides.get(folder.id);
   const lines = !filtering && guide && guide.through.length > 0 ? guideBackground(guide) : null;
@@ -405,6 +423,7 @@ function fillFolderSelect(select, selectedIds = []) {
     if (!group || group.dataset.accountId !== f.accountId) {
       group = document.createElement('optgroup');
       group.label = f.accountName || 'Account';
+      group.dataset.name = group.label;
       group.dataset.accountId = f.accountId ?? '';
       select.append(group);
     }
@@ -449,33 +468,97 @@ function wireFolderPicker(node) {
     return new Set(scanned.filter((id) => !chosen.includes(id)));
   };
 
-  const updateCount = () => {
-    const selected = [...select.selectedOptions];
-    const hidden = selected.filter((o) => o.hidden).length;
-    const covered = coveredIds();
-    count.textContent =
-      `${selected.length} selected` +
-      (covered.size ? `, ${covered.size} more as subfolders` : '') +
-      (hidden ? `, ${hidden} hidden by the filter` : '');
-    return covered;
-  };
   const applyFilter = () => {
     const text = filter.value;
     const filtering = text.trim() !== '';
-    const covered = updateCount();
+    const covered = coveredIds();
+    // A filter shows every match, so it opens collapsed folders while it runs.
+    const tree = collapsedTree(folders, filtering ? new Set() : collapsedFolders);
+    const selectedIds = [...select.selectedOptions].map((o) => o.value);
+    const insideOf = (folder) => selectedIds.filter((id) => {
+      const other = byId.get(id);
+      return other?.accountId === folder.accountId && other.path.startsWith(`${folder.path}/`);
+    }).length;
+    let filtered = 0;
+    let folded = 0;
     for (const group of select.querySelectorAll('optgroup')) {
+      const accountKey = ACCOUNT_PREFIX + group.dataset.accountId;
+      const accountClosed = !filtering && collapsedFolders.has(accountKey);
       let visible = 0;
       for (const opt of group.children) {
         const folder = byId.get(opt.value);
-        opt.hidden = !folderMatchesFilter(folder, text);
+        const matches = folderMatchesFilter(folder, text);
+        opt.hidden = !matches || accountClosed || tree.hidden.has(opt.value);
         if (!opt.hidden) visible += 1;
-        if (folder) paintFolderOption(opt, folder, { filtering, covered: covered.has(folder.id) });
+        if (opt.selected && !matches) filtered += 1;
+        else if (opt.selected && opt.hidden) folded += 1;
+        if (!folder) continue;
+        let arrow = null;
+        if (!filtering && tree.parents.has(folder.id)) arrow = collapsedFolders.has(folder.id) ? 'closed' : 'open';
+        const inside = arrow === 'closed' ? insideOf(folder) : 0;
+        paintFolderOption(opt, folder, { filtering, covered: covered.has(folder.id), arrow, inside });
       }
-      group.hidden = visible === 0;
+      // A collapsed account keeps its heading, so you can open it again.
+      group.hidden = visible === 0 && !accountClosed;
+      const inside = accountClosed ? [...group.children].filter((o) => o.selected).length : 0;
+      group.label =
+        (filtering ? '' : ARROWS[accountClosed ? 'closed' : 'open']) +
+        group.dataset.name +
+        (inside ? ` · ${inside} selected inside` : '');
     }
+    count.textContent =
+      `${selectedIds.length} selected` +
+      (covered.size ? `, ${covered.size} more as subfolders` : '') +
+      (filtered ? `, ${filtered} hidden by the filter` : '') +
+      (folded ? `, ${folded} in collapsed folders` : '');
     // With no filter, "all matching" would be every folder in every account.
     selectMatching.disabled = !filtering;
   };
+
+  // A click on the arrow collapses or expands the folder instead of selecting
+  // it. The arrow is the first character after the indent, so the click lands
+  // on it when it falls within about one character of the padding edge.
+  // Every account and every folder with subfolders, for "Collapse all".
+  // "Expand all" clears the set, which also forgets folders that no longer exist.
+  $('.folder-collapse-all', node).addEventListener('click', () => {
+    const accounts = new Set(folders.map((f) => ACCOUNT_PREFIX + (f.accountId ?? '')));
+    for (const id of [...accounts, ...collapsedTree(folders).parents]) collapsedFolders.add(id);
+    saveCollapsed(collapsedFolders, COLLAPSED_FOLDERS_KEY);
+    refreshFolderPickers();
+  });
+  $('.folder-expand-all', node).addEventListener('click', () => {
+    collapsedFolders.clear();
+    saveCollapsed(collapsedFolders, COLLAPSED_FOLDERS_KEY);
+    refreshFolderPickers();
+  });
+
+  // A click anywhere on an account heading collapses or expands the account.
+  select.addEventListener('mousedown', (event) => {
+    if (filter.value.trim() !== '') return;
+    let id;
+    if (event.target instanceof HTMLOptGroupElement) {
+      id = ACCOUNT_PREFIX + event.target.dataset.accountId;
+    } else {
+      const opt = event.target.closest?.('option');
+      if (!opt?.dataset.arrow) return;
+      const style = getComputedStyle(opt);
+      const start = opt.getBoundingClientRect().left + parseFloat(style.paddingInlineStart);
+      const x = event.clientX - start;
+      if (x < -2 || x > parseFloat(style.fontSize) * 1.4) return;
+      id = opt.value;
+    }
+    event.preventDefault();
+    // If the list still changes the selection on this click, put it back.
+    const before = new Set([...select.selectedOptions].map((o) => o.value));
+    setTimeout(() => {
+      for (const o of select.options) o.selected = before.has(o.value);
+      applyFilter();
+    }, 0);
+    if (collapsedFolders.has(id)) collapsedFolders.delete(id);
+    else collapsedFolders.add(id);
+    saveCollapsed(collapsedFolders, COLLAPSED_FOLDERS_KEY);
+    refreshFolderPickers();
+  });
 
   filter.addEventListener('input', applyFilter);
   filter.addEventListener('keydown', (e) => {
@@ -494,7 +577,13 @@ function wireFolderPicker(node) {
   node.addEventListener('change', (e) => {
     if (e.target.closest?.('.actions')) applyFilter();
   });
+  node.refreshFolders = applyFilter;
   applyFilter();
+}
+
+/** Every rule shares the collapsed folders, so a change repaints each picker. */
+function refreshFolderPickers() {
+  for (const node of rulesEl.querySelectorAll('.rule')) node.refreshFolders?.();
 }
 
 /** A domain-list condition can watch several headers at once. */
@@ -633,6 +722,13 @@ function renderCondition(container, cond = {}) {
   };
 
   let mode = null; // 'list' | 'address' | 'plain': decides which fields are offered
+  // Operators the field rules out move under this heading at the end of the
+  // list. Thunderbird draws a disabled option in the normal text color in
+  // some menus, so the heading, not the color, sets them apart.
+  const opOrder = [...op.options];
+  const otherOps = document.createElement('optgroup');
+  otherOps.label = 'Works with other fields';
+  otherOps.disabled = true;
   const syncRow = () => {
     const isList = op.value === DOMAIN_IN_LIST;
     const isBook = op.value === IN_ADDRESS_BOOK;
@@ -651,7 +747,8 @@ function renderCondition(container, cond = {}) {
 
     // Age, the three states, tag, and priority each take their own operators
     // and nothing else. Every other field takes the rest. An operator that the
-    // field rules out stays in the list, greyed, with the reason on hover.
+    // field rules out stays in the list, greyed and under its own heading, with
+    // the reason on hover.
     const field = fieldSelect.value;
     const isAge = field === AGE_FIELD;
     const isState = STATE_FIELDS.includes(field);
@@ -685,6 +782,11 @@ function renderCondition(container, cond = {}) {
         option.textContent = option.dataset.label;
       }
     }
+    const chosen = op.value;
+    for (const option of opOrder) if (!option.disabled) op.append(option);
+    for (const option of opOrder) if (option.disabled) otherOps.append(option);
+    op.append(otherOps);
+    op.value = chosen;
     if (kindOf(op.value) !== kind) {
       op.value = {
         age: AGE_OPERATORS.olderThan,
@@ -1152,6 +1254,19 @@ async function save() {
     $('.rule-cron', badSchedule).focus();
     const name = $('.rule-name', badSchedule).value.trim() || 'Untitled rule';
     flash(`Not saved: the schedule of “${name}” is not a valid cron expression.`, true);
+    return;
+  }
+
+  // An enabled rule without folders scans nothing, yet the card looks active.
+  // A disabled one saves, so a draft can wait for its folders.
+  const noFolders = [...rulesEl.querySelectorAll('.rule')].find(
+    (node) => $('.rule-enabled', node).checked && $('.rule-folders', node).selectedOptions.length === 0,
+  );
+  if (noFolders) {
+    setCollapsed(noFolders, false);
+    $('.folder-filter', noFolders).focus();
+    const name = $('.rule-name', noFolders).value.trim() || 'Untitled rule';
+    flash(`Not saved: choose a folder for “${name}”, or turn the rule off.`, true);
     return;
   }
 

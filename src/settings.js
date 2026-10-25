@@ -52,7 +52,8 @@ const AUTH_PREFER_VALUES = Object.freeze(['own', 'provider']);
 
 /**
  * The trusted authentication servers as a list. They are host names, such as
- * `mta.yahoo.com`, typed into one box and separated by commas or spaces.
+ * `mta.yahoo.com`, typed one per line. Commas and spaces also separate them,
+ * so a value saved as a comma list still reads.
  */
 export function trustedServerList(text) {
   const names = String(text ?? '')
@@ -111,7 +112,7 @@ export function sanitizeAdvanced(raw) {
     showMenu: raw?.showMenu !== false,
     shortName: raw?.shortName === true,
     authOwnCheck: raw?.authOwnCheck !== false,
-    authTrustedServers: trustedServerList(raw?.authTrustedServers).join(', '),
+    authTrustedServers: trustedServerList(raw?.authTrustedServers).join('\n'),
   };
 
   // Two settings with a fixed list of values. Anything else falls back to the

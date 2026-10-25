@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
+import { collapsedTree, folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
 
 const f = (accountId, path, specialUse) => ({ id: `${accountId}:/${path}`, accountId, path: `/${path}`, specialUse });
 
@@ -109,4 +109,24 @@ test('treeGuides keeps accounts apart', () => {
   const g = treeGuides([f('a', 'INBOX'), f('a', 'INBOX/Work'), f('b', 'INBOX'), f('b', 'INBOX/Work')]);
   assert.equal(g.get('a:/INBOX/Work').last, true);
   assert.equal(g.get('b:/INBOX/Work').last, true);
+});
+
+test('collapsedTree marks parents and hides every folder under a collapsed one', () => {
+  const list = [
+    f('a', 'INBOX'),
+    f('a', 'INBOX/Family'),
+    f('a', 'INBOX/Family/School'),
+    f('a', 'INBOX/Projects'),
+    f('a', 'Archive'),
+    f('b', 'INBOX'),
+    f('b', 'INBOX/Family'),
+  ];
+  const open = collapsedTree(list);
+  assert.deepEqual([...open.parents].sort(), ['a:/INBOX', 'a:/INBOX/Family', 'b:/INBOX']);
+  assert.equal(open.hidden.size, 0);
+
+  const closed = collapsedTree(list, new Set(['a:/INBOX']));
+  assert.deepEqual([...closed.hidden].sort(), ['a:/INBOX/Family', 'a:/INBOX/Family/School', 'a:/INBOX/Projects']);
+  // The other account's INBOX has the same path but stays open.
+  assert.equal(closed.hidden.has('b:/INBOX/Family'), false);
 });

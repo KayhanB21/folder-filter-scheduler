@@ -125,3 +125,14 @@ test('with the own check blocked, nothing is asked of DNS', async () => {
   assert.deepEqual(result, { auth: { spf: 'unknown', dkim: 'unknown', dmarc: 'unknown' }, pending: false });
   assert.deepEqual(asked, []);
 });
+
+test('each method counts its results once per message', async () => {
+  const { reads } = setup();
+  await reads.read(header(1));
+  await reads.read(header(1));
+  assert.deepEqual(reads.counts.results, {
+    spf: { pass: 0, notPass: 0, unknown: 1 },
+    dkim: { pass: 1, notPass: 0, unknown: 0 },
+    dmarc: { pass: 1, notPass: 0, unknown: 0 },
+  });
+});

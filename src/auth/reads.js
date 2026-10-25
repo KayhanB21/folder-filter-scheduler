@@ -3,7 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 import { withTimeout } from '../runner.js';
-import { OWN_ON, UNKNOWN, checkMessage, combine } from './check.js';
+import { NOT_PASS, OWN_ON, PASS, UNKNOWN, checkMessage, combine } from './check.js';
 import {
   QUICK_DELAYS_MS,
   cacheKeyOf,
@@ -81,6 +81,16 @@ export function createAuthReads({
     unchecked: 0,
     /** Checks where the own result and the provider's header differ. */
     disagree: 0,
+    /** The result of each method, counted once per message however many rules read it. */
+    results: Object.fromEntries(
+      ['spf', 'dkim', 'dmarc'].map((m) => [m, { [PASS]: 0, [NOT_PASS]: 0, [UNKNOWN]: 0 }]),
+    ),
+  };
+  const tallied = new Set();
+  const tally = (id, auth) => {
+    if (tallied.has(id)) return;
+    tallied.add(id);
+    for (const [method, byResult] of Object.entries(counts.results)) byResult[auth[method]] += 1;
   };
 
   const unknown = { spf: UNKNOWN, dkim: UNKNOWN, dmarc: UNKNOWN };
@@ -125,6 +135,7 @@ export function createAuthReads({
         if (time - startedAt >= budgetMs) {
           counts.deferred += 1;
           retryAfter(QUICK_DELAYS_MS[0]);
+          tally(header.id, unknown);
           return { auth: { ...unknown }, pending: true };
         }
         const result = await check(header);
@@ -151,6 +162,7 @@ export function createAuthReads({
 
       const { disagree, ...auth } = combine(entry, { prefer, ownState });
       if (fresh) counts.disagree += disagree;
+      tally(header.id, auth);
       return { auth, pending };
     },
 

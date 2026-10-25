@@ -376,6 +376,10 @@ async function finishAuthReads(authReads, quiet) {
       `${c.failed} failed for now, ${c.deferred} left for the next run, ` +
       `${c.unchecked} unchecked after retries, ${c.disagree} disagreed with the provider`,
   );
+  // Counts only: the log never names a sender or a domain.
+  const tallies = Object.entries(c.results).map(([method, r]) =>
+    `${method} ${r.pass} pass, ${r.notPass} not pass, ${r.unknown} unknown`);
+  logUnless(quiet && c.checked === 0 && c.unchecked === 0, `auth results: ${tallies.join('; ')}`);
 }
 
 /**

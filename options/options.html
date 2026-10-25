@@ -201,12 +201,17 @@
 
       <label class="adv-row">
         Trusted authentication servers
-        <input id="adv-auth-trusted" type="text" placeholder="for example mta.yahoo.com" spellcheck="false" />
+        <textarea
+          id="adv-auth-trusted"
+          rows="3"
+          spellcheck="false"
+          placeholder="One server per line, for example&#10;mta.yahoo.com&#10;mx.google.com"
+        ></textarea>
       </label>
       <p class="adv-hint">
         Leave this empty to trust the topmost <code>Authentication-Results</code>
-        header, which your provider adds last. If you enter server names, separated
-        by commas, the add-on uses the topmost header from one of them. The name is
+        header, which your provider adds last. If you enter server names, one per
+        line, the add-on uses the topmost header from one of them. The name is
         the first word of the header, such as <code>mta.yahoo.com</code> or
         <code>mx.google.com</code>.
       </p>
@@ -263,7 +268,11 @@
 
         <div class="rule-body">
         <div class="row">
-          <span class="lbl">Folders</span>
+          <div class="lbl-col">
+            <span class="lbl">Folders</span>
+            <button class="folder-expand-all" type="button" title="Expand all: show every account and subfolder">Expand</button>
+            <button class="folder-collapse-all" type="button" title="Collapse all: show only the account names">Collapse</button>
+          </div>
           <div class="folder-picker">
             <div class="folder-tools">
               <input class="folder-filter" type="search" placeholder="Filter folders" aria-label="Filter folders" />
