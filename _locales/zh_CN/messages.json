@@ -6,5 +6,1103 @@
   "extensionDescription": {
     "message": "按计划在任意文件夹（不仅是收件箱）上运行过滤规则。按发件人、主题、通讯录或 SPF、DKIM、DMARC 匹配。",
     "description": "Short description shown in the add-ons manager."
+  },
+  "common_addSpamDomains": {
+    "message": "添加垃圾邮件域名"
+  },
+  "common_runAllRulesNow": {
+    "message": "立即运行所有规则"
+  },
+  "common_restoreDefaults": {
+    "message": "恢复默认值"
+  },
+  "common_allowTagAccess": {
+    "message": "允许访问标签…"
+  },
+  "common_noTag": {
+    "message": "（无标签）"
+  },
+  "common_untitledRule": {
+    "message": "未命名规则"
+  },
+  "common_quoted": {
+    "message": "“$1”"
+  },
+  "menu_runARule": {
+    "message": "运行单个规则"
+  },
+  "options_theme": {
+    "message": "主题"
+  },
+  "options_themeLight": {
+    "message": "浅色"
+  },
+  "options_themeDark": {
+    "message": "深色"
+  },
+  "options_themeSystem": {
+    "message": "系统"
+  },
+  "options_themeSystemTitle": {
+    "message": "系统：跟随 Thunderbird"
+  },
+  "options_tagline": {
+    "message": "按定时器在任意文件夹上运行规则，弥补 Thunderbird 自带功能只对收件箱生效的不足。"
+  },
+  "options_runEvery": {
+    "message": "每 $1 分钟运行一次"
+  },
+  "options_save": {
+    "message": "保存"
+  },
+  "options_collapseAll": {
+    "message": "全部折叠"
+  },
+  "options_expandAll": {
+    "message": "全部展开"
+  },
+  "options_export": {
+    "message": "导出…"
+  },
+  "options_import": {
+    "message": "导入…"
+  },
+  "options_addRule": {
+    "message": "+ 添加规则"
+  },
+  "allowlist_title": {
+    "message": "受保护的域名（永不屏蔽）"
+  },
+  "allowlist_hint": {
+    "message": "从邮件列表添加垃圾邮件域名时，会跳过此处的域名，以免误选而屏蔽大型邮件服务商。每行一个域名。"
+  },
+  "diag_title": {
+    "message": "诊断"
+  },
+  "diag_hint": {
+    "message": "如果某项功能未按预期工作，请随消息一起发送此报告。报告列出您的 Thunderbird 版本、每条规则的结构，以及最近几次运行的情况。除非勾选下方的复选框，否则报告不包含地址、域名、匹配模式和文件夹名称。此处显示的内容就是将要分享的全部内容。"
+  },
+  "diag_includeValues": {
+    "message": "包含规则的值（地址、域名、匹配模式、文件夹）"
+  },
+  "diag_copy": {
+    "message": "复制报告"
+  },
+  "diag_save": {
+    "message": "保存报告…"
+  },
+  "diag_refresh": {
+    "message": "刷新"
+  },
+  "diag_clear": {
+    "message": "清除日志"
+  },
+  "diag_buildFailed": {
+    "message": "无法生成报告：$1"
+  },
+  "adv_title": {
+    "message": "高级"
+  },
+  "adv_hint": {
+    "message": "扫描引擎的时间参数。默认值适合大多数用户；除非清楚原因，否则请勿更改。保存时，每个值都会被限制在安全范围内。"
+  },
+  "adv_logScheduleRuns": {
+    "message": "记录规则按自身计划进行的每次运行"
+  },
+  "adv_logScheduleRunsHint": {
+    "message": "如果不勾选，诊断日志只在此类运行更改了邮件或运行失败时才记录。否则，每分钟运行一次的规则会在几小时内把较早的条目挤出日志。选择<b>保存</b>以应用更改。"
+  },
+  "adv_runOnNewMail": {
+    "message": "收到新邮件时也运行"
+  },
+  "adv_runOnNewMailHint": {
+    "message": "如果不勾选，规则只按上方的定时器运行，新邮件最多要等待这么长时间。Thunderbird 会在每封邮件到达时立即报告。"
+  },
+  "adv_newMailDelay": {
+    "message": "最后一封邮件到达后等待 $1 秒再运行"
+  },
+  "adv_newMailDelayHint": {
+    "message": "一次邮件同步会报告许多邮件。等待可以把整批邮件合并为一次运行。上限为 15 秒，因为 Thunderbird 会暂停空闲的附加组件。"
+  },
+  "adv_catchUp": {
+    "message": "每 $1 分钟进行一次补漏扫描，覆盖最近 $2 天"
+  },
+  "adv_catchUpHint": {
+    "message": "常规运行只检查日期在上次运行之后的邮件。发件人可以把 Date 邮件头的日期提前，因此这项范围更大的扫描可以找回常规运行遗漏的邮件。调高任一数值都会增加每次扫描的工作量。"
+  },
+  "adv_overlap": {
+    "message": "每次常规扫描向前重叠 $1 分钟"
+  },
+  "adv_overlapHint": {
+    "message": "每次扫描从上次运行之前多久开始，以免遗漏扫描期间到达或日期稍早的邮件。"
+  },
+  "adv_showMenu": {
+    "message": "在右键菜单中显示文件夹过滤器调度器"
+  },
+  "adv_showMenuHint": {
+    "message": "该菜单可从邮件列表添加垃圾邮件域名并运行规则。不显示该菜单时，仍可通过工具栏按钮和此页面运行规则。选择<b>保存</b>以应用更改。"
+  },
+  "adv_shortName": {
+    "message": "在工具栏按钮和右键菜单中使用简称 FFS"
+  },
+  "adv_shortNameHint": {
+    "message": "简称占用的空间更少。工具栏按钮的提示文字仍显示全称。选择<b>保存</b>以应用更改。"
+  },
+  "adv_authHeading": {
+    "message": "身份验证条件"
+  },
+  "adv_authOwn": {
+    "message": "自行验证 DKIM"
+  },
+  "adv_authOwnHint": {
+    "message": "发件人可以添加伪造的 <code>Authentication-Results</code> 邮件头，因此本附加组件会自行验证 DKIM 签名，并根据结果推算 DMARC。它会下载身份验证条件所检查的每封完整邮件，并向下方的 DNS 服务器查询签名密钥。该服务器能看到被查询的域名。如果不勾选，本附加组件会从邮件服务商添加的邮件头中读取 DKIM 和 DMARC 结果。"
+  },
+  "adv_authServer": {
+    "message": "DNS 服务器 $1"
+  },
+  "adv_authServerHint": {
+    "message": "首次使用该服务器时，Thunderbird 会请您授权。"
+  },
+  "adv_authPrefer": {
+    "message": "当我的检查与服务商的邮件头不一致时，使用 $1"
+  },
+  "adv_authPreferOwn": {
+    "message": "我的检查结果"
+  },
+  "adv_authPreferProvider": {
+    "message": "服务商的邮件头"
+  },
+  "adv_authPreferHint": {
+    "message": "选择服务商的邮件头时，本附加组件只对邮件头未报告的检查项使用自己的结果。"
+  },
+  "adv_authTrusted": {
+    "message": "受信任的身份验证服务器 $1"
+  },
+  "adv_authTrustedPlaceholder": {
+    "message": "每行一个服务器，例如\nmta.yahoo.com\nmx.google.com"
+  },
+  "adv_authTrustedHint": {
+    "message": "留空则信任最上方的 <code>Authentication-Results</code> 邮件头，即邮件服务商最后添加的那个。如果输入服务器名称（每行一个），本附加组件会使用来自其中某个服务器的最上方邮件头。名称是该邮件头的第一个词，例如 <code>mta.yahoo.com</code> 或 <code>mx.google.com</code>。"
+  },
+  "help_title": {
+    "message": "常见问题"
+  },
+  "help_otherFolderTitle": {
+    "message": "规则漏掉了“已发送”或收件箱以外其他文件夹中的邮件"
+  },
+  "help_otherFolderCause": {
+    "message": "对于 IMAP 账户，Thunderbird 默认只检查收件箱中的新邮件。本附加组件只能处理 Thunderbird 已下载的邮件，因此其他程序通过您的账户发送的邮件，或服务器规则归入的邮件，要等您打开该文件夹后才会被处理。<b>立即运行所有规则</b>看似有效，是因为您先打开了该文件夹。"
+  },
+  "help_otherFolderFix": {
+    "message": "要解决此问题，请右键单击该文件夹并打开<b>属性</b>。在<b>基本信息</b>选项卡上，勾选<b>当获取此账户的新邮件时，一律查收此文件夹</b>。"
+  },
+  "help_closedTitle": {
+    "message": "邮件在 Thunderbird 关闭期间到达"
+  },
+  "help_closedBody": {
+    "message": "规则只在 Thunderbird 运行时运行。Thunderbird 启动后，第一次计划运行会检查最近 30 天（或<b>高级</b>中设置的天数）的邮件，并处理所有遗漏的邮件。"
+  },
+  "help_otherTitle": {
+    "message": "其他功能无法正常工作"
+  },
+  "help_otherBody": {
+    "message": "打开<b>诊断</b>，将报告附加到 <a>GitHub 议题</a>中。报告会显示最近每次运行扫描和匹配了哪些内容。"
+  },
+  "rule_collapseTitle": {
+    "message": "折叠或展开此规则"
+  },
+  "rule_namePlaceholder": {
+    "message": "规则名称"
+  },
+  "rule_newName": {
+    "message": "新规则"
+  },
+  "rule_enabled": {
+    "message": "启用"
+  },
+  "rule_run": {
+    "message": "运行"
+  },
+  "rule_runTitle": {
+    "message": "立即只运行此规则，处理其文件夹中的每封邮件"
+  },
+  "rule_delete": {
+    "message": "删除"
+  },
+  "rule_folders": {
+    "message": "文件夹"
+  },
+  "rule_foldersExpand": {
+    "message": "展开"
+  },
+  "rule_foldersExpandTitle": {
+    "message": "全部展开：显示每个账户和子文件夹"
+  },
+  "rule_foldersCollapse": {
+    "message": "折叠"
+  },
+  "rule_foldersCollapseTitle": {
+    "message": "全部折叠：只显示账户名称"
+  },
+  "rule_folderFilter": {
+    "message": "筛选文件夹"
+  },
+  "rule_selectMatching": {
+    "message": "选择所有匹配项"
+  },
+  "rule_includeSubfolders": {
+    "message": "包含子文件夹，以及以后创建的子文件夹"
+  },
+  "rule_match": {
+    "message": "匹配"
+  },
+  "rule_matchAny": {
+    "message": "任一条件（或）"
+  },
+  "rule_matchAll": {
+    "message": "所有条件（且）"
+  },
+  "rule_addCondition": {
+    "message": "+ 添加条件"
+  },
+  "rule_addAction": {
+    "message": "+ 添加操作"
+  },
+  "rule_schedule": {
+    "message": "计划"
+  },
+  "rule_scheduleOn": {
+    "message": "按此规则自己的计划运行"
+  },
+  "rule_cronLabel": {
+    "message": "Cron 表达式"
+  },
+  "rule_cronHelp": {
+    "message": "如何编写 cron 表达式"
+  },
+  "rule_scheduleHint": {
+    "message": "cron 表达式有五个字段：分钟、小时、日期、月份和星期，使用您电脑的本地时间。启用自己的计划后，规则只在这些时间运行。页面顶部的定时器和新邮件不再触发它。"
+  },
+  "schedule_error": {
+    "message": "$1。"
+  },
+  "schedule_next": {
+    "message": "$1。下次运行：$2。"
+  },
+  "schedule_never": {
+    "message": "$1。这个日期永远不会出现，因此规则永远不会运行。"
+  },
+  "cron_fieldMinute": {
+    "message": "分钟"
+  },
+  "cron_fieldHour": {
+    "message": "小时"
+  },
+  "cron_fieldDay": {
+    "message": "日期"
+  },
+  "cron_fieldMonth": {
+    "message": "月份"
+  },
+  "cron_fieldWeekday": {
+    "message": "星期"
+  },
+  "cron_errorEmpty": {
+    "message": "请输入 cron 表达式"
+  },
+  "cron_errorTooLong": {
+    "message": "表达式太长"
+  },
+  "cron_errorFieldCount": {
+    "message": "cron 表达式有 5 个字段：分钟、小时、日期、月份、星期。此表达式有 $1 个"
+  },
+  "cron_errorInvalid": {
+    "message": "“$1”不是有效的$2"
+  },
+  "cron_errorOutOfRange": {
+    "message": "$1必须介于 $2 到 $3 之间，实际为 $4"
+  },
+  "cron_errorStep": {
+    "message": "$2中的步长“$1”必须大于或等于 1"
+  },
+  "cron_errorRange": {
+    "message": "“$1”不是有效的$2范围"
+  },
+  "cron_errorBackwards": {
+    "message": "$2范围“$1”是倒序的"
+  },
+  "cron_range": {
+    "message": "$1至$2"
+  },
+  "cron_atTimes": {
+    "message": "$1"
+  },
+  "cron_everyMinute": {
+    "message": "每分钟"
+  },
+  "cron_everyMinutes_other": {
+    "message": "每 $1 分钟"
+  },
+  "cron_everyHourOnTheHour": {
+    "message": "每小时整点"
+  },
+  "cron_everyHourAtMinute": {
+    "message": "每小时的第 $1 分钟"
+  },
+  "cron_atMinutes_other": {
+    "message": "每小时的第 $1 分钟"
+  },
+  "cron_timeAndHours": {
+    "message": "$2，$1"
+  },
+  "cron_everyHours_other": {
+    "message": "每 $1 小时"
+  },
+  "cron_betweenHours": {
+    "message": "$1 至 $2 之间"
+  },
+  "cron_duringHours_other": {
+    "message": "在 $1 点期间"
+  },
+  "cron_everyDay": {
+    "message": "每天"
+  },
+  "cron_onDaysOfMonth_other": {
+    "message": "每月 $1 日"
+  },
+  "cron_onWeekdays": {
+    "message": "每$1"
+  },
+  "cron_inMonths": {
+    "message": "在$1"
+  },
+  "cron_withDays": {
+    "message": "$2 $1"
+  },
+  "cron_withMonths": {
+    "message": "$2，$1"
+  },
+  "folders_account": {
+    "message": "账户"
+  },
+  "folders_includedAsSubfolder": {
+    "message": "作为子文件夹包含"
+  },
+  "folders_selectedInside_other": {
+    "message": "内含 $1 个已选"
+  },
+  "folders_expanded": {
+    "message": "已展开"
+  },
+  "folders_collapsed": {
+    "message": "已折叠"
+  },
+  "folders_countSelected_other": {
+    "message": "已选择 $1 个"
+  },
+  "folders_countSubfolders_other": {
+    "message": "另有 $1 个作为子文件夹"
+  },
+  "folders_countFiltered_other": {
+    "message": "$1 个被筛选隐藏"
+  },
+  "folders_countFolded_other": {
+    "message": "$1 个位于已折叠的文件夹中"
+  },
+  "field_from": {
+    "message": "发件人"
+  },
+  "field_to": {
+    "message": "收件人"
+  },
+  "field_cc": {
+    "message": "抄送"
+  },
+  "field_subject": {
+    "message": "主题"
+  },
+  "field_reply_to": {
+    "message": "Reply-To"
+  },
+  "field_list_id": {
+    "message": "List-Id"
+  },
+  "field_sender": {
+    "message": "发送者"
+  },
+  "field_age": {
+    "message": "存在时长"
+  },
+  "field_read": {
+    "message": "阅读状态"
+  },
+  "field_star": {
+    "message": "星标"
+  },
+  "field_junk": {
+    "message": "垃圾邮件"
+  },
+  "field_tag": {
+    "message": "标签"
+  },
+  "field_priority": {
+    "message": "优先级"
+  },
+  "field_auth": {
+    "message": "身份验证"
+  },
+  "op_contains": {
+    "message": "包含"
+  },
+  "op_is": {
+    "message": "是"
+  },
+  "op_startsWith": {
+    "message": "开头是"
+  },
+  "op_endsWith": {
+    "message": "结尾是"
+  },
+  "op_matchesRegex": {
+    "message": "匹配正则表达式"
+  },
+  "op_domainInList": {
+    "message": "域名在列表中"
+  },
+  "op_inAddressBook": {
+    "message": "在通讯录中"
+  },
+  "op_nameShowsOtherAddress": {
+    "message": "名称显示其他地址"
+  },
+  "op_olderThan": {
+    "message": "超过"
+  },
+  "op_newerThan": {
+    "message": "少于"
+  },
+  "op_isOn": {
+    "message": "是"
+  },
+  "op_isOff": {
+    "message": "不是"
+  },
+  "op_hasTag": {
+    "message": "有标签"
+  },
+  "op_priorityIs": {
+    "message": "是"
+  },
+  "op_authPasses": {
+    "message": "通过"
+  },
+  "op_greyIsOn": {
+    "message": "已读、已加星标或是垃圾邮件"
+  },
+  "op_greyIsOff": {
+    "message": "未读、未加星标或不是垃圾邮件"
+  },
+  "op_greyPriorityIs": {
+    "message": "优先级是"
+  },
+  "op_ageOnly": {
+    "message": "$1（仅限存在时长字段）"
+  },
+  "op_ageOnlyReason": {
+    "message": "仅适用于存在时长字段。"
+  },
+  "op_stateOnlyReason": {
+    "message": "仅适用于阅读状态、星标和垃圾邮件字段。"
+  },
+  "op_tagOnly": {
+    "message": "$1（仅限标签字段）"
+  },
+  "op_tagOnlyReason": {
+    "message": "仅适用于标签字段。"
+  },
+  "op_priorityOnlyReason": {
+    "message": "仅适用于优先级字段。"
+  },
+  "op_authOnly": {
+    "message": "$1（仅限身份验证）"
+  },
+  "op_authOnlyReason": {
+    "message": "仅适用于身份验证字段。"
+  },
+  "op_headerOnly": {
+    "message": "$1（仅限邮件头字段）"
+  },
+  "op_headerOnlyReason": {
+    "message": "仅适用于邮件头字段，例如发件人或主题。"
+  },
+  "state_read_isOn": {
+    "message": "已读"
+  },
+  "state_read_isOff": {
+    "message": "未读"
+  },
+  "state_star_isOn": {
+    "message": "已加星标"
+  },
+  "state_star_isOff": {
+    "message": "未加星标"
+  },
+  "state_junk_isOn": {
+    "message": "是垃圾邮件"
+  },
+  "state_junk_isOff": {
+    "message": "不是垃圾邮件"
+  },
+  "priority_highest": {
+    "message": "最高"
+  },
+  "priority_high": {
+    "message": "高"
+  },
+  "priority_normal": {
+    "message": "普通"
+  },
+  "priority_low": {
+    "message": "低"
+  },
+  "priority_lowest": {
+    "message": "最低"
+  },
+  "cond_not": {
+    "message": "非"
+  },
+  "cond_valuePlaceholder": {
+    "message": "值"
+  },
+  "cond_daysUnit": {
+    "message": "天"
+  },
+  "cond_allowBookAccess": {
+    "message": "允许访问通讯录…"
+  },
+  "cond_allowDnsAccess": {
+    "message": "允许访问 DNS 服务器…"
+  },
+  "cond_allAddressBooks": {
+    "message": "所有通讯录"
+  },
+  "cond_missingAddressBook": {
+    "message": "（通讯录不存在）"
+  },
+  "cond_domainsPlaceholder": {
+    "message": "每行一个域名，例如 evil.com\n子域名会自动匹配。"
+  },
+  "cond_otherFields": {
+    "message": "适用于其他字段"
+  },
+  "cond_greyFieldList": {
+    "message": "不适用于“域名在列表中”。请先更改运算符。"
+  },
+  "cond_greyFieldAddress": {
+    "message": "此运算符读取地址，而此字段不含地址。请先更改运算符。"
+  },
+  "cond_domainListOnly": {
+    "message": "$1（仅限域名列表）"
+  },
+  "cond_greyDomainSet": {
+    "message": "仅适用于“域名在列表中”运算符。"
+  },
+  "cond_nameHint": {
+    "message": "当发件人名称中包含一个与真实地址域名不同的电子邮件地址时匹配。示例：名称为 <code>Lena <lena@yahoo.com></code>，而真实地址为 <code>someone@sina.com</code>。垃圾邮件以此冒充其他发件人。一些邮件列表也会这样做，因此在使用“已删除”之前，请先用“移动到文件夹”试用此规则。"
+  },
+  "cond_priorityHint": {
+    "message": "为了读取优先级，本附加组件会下载每封邮件的邮件头，因此这项检查比其他检查慢。没有优先级的邮件视为“普通”。"
+  },
+  "cond_authHint": {
+    "message": "检查发件人是否确为发件人地址所声称的身份。为进行检查，本附加组件会下载规则检查的每封完整邮件（仅一次），并保存结果。SPF 来自邮件服务商添加的 <code>Authentication-Results</code> 邮件头。本附加组件自行验证 DKIM，并根据两者推算 DMARC。如果某项检查无法完成（例如 DNS 服务器无响应），则条件不匹配。本附加组件会在 24 小时内重试。相关设置请参阅<b>高级</b>。"
+  },
+  "cond_stateHint": {
+    "message": "计划运行只在补漏扫描中检查较早的邮件，默认每 30 分钟一次（参见<b>高级</b>）。因此，在您为较早的邮件加星标、添加标签或阅读后，规则可能要等这么长时间才会处理它。<b>运行</b>会立即检查每封邮件。"
+  },
+  "action_then": {
+    "message": "则"
+  },
+  "action_choose": {
+    "message": "选择操作…"
+  },
+  "action_chooseHint": {
+    "message": "选择要对匹配邮件执行的操作。"
+  },
+  "action_trash": {
+    "message": "移到“已删除”（各邮件所属的账户）"
+  },
+  "action_trashHint": {
+    "message": "将每封匹配的邮件移到其所属账户的“已删除”文件夹，在跨多个账户的规则中也安全。"
+  },
+  "action_move": {
+    "message": "移动到文件夹…"
+  },
+  "action_moveHint": {
+    "message": "将所有匹配邮件移到所选文件夹，也可以是其他账户中的文件夹（Thunderbird 会先复制到目标账户，再删除源邮件）。"
+  },
+  "action_archive": {
+    "message": "归档"
+  },
+  "action_archiveHint": {
+    "message": "按 Thunderbird“归档”按钮的方式归档每封邮件，使用其所属账户的归档设置。关闭了归档功能的账户会将邮件保留在原处。"
+  },
+  "action_copy": {
+    "message": "复制到文件夹…"
+  },
+  "action_copyHint": {
+    "message": "保留原邮件，并将副本复制到所选文件夹（也支持跨账户）。"
+  },
+  "action_tag": {
+    "message": "添加标签…"
+  },
+  "action_tagHint": {
+    "message": "添加一个 Thunderbird 标签。邮件上已有的标签会保留，因此多条规则可以给同一封邮件添加标签。"
+  },
+  "action_markRead": {
+    "message": "标记为已读"
+  },
+  "action_markReadHint": {
+    "message": "将匹配邮件标记为已读，不移动邮件。"
+  },
+  "action_markUnread": {
+    "message": "标记为未读"
+  },
+  "action_markUnreadHint": {
+    "message": "将匹配邮件标记为未读，不移动邮件。"
+  },
+  "action_markFlagged": {
+    "message": "添加星标"
+  },
+  "action_markFlaggedHint": {
+    "message": "为匹配邮件添加星标，不移动邮件。"
+  },
+  "action_markUnflagged": {
+    "message": "移除星标"
+  },
+  "action_markUnflaggedHint": {
+    "message": "移除匹配邮件的星标，不移动邮件。"
+  },
+  "action_markJunk": {
+    "message": "标记为垃圾邮件"
+  },
+  "action_markJunkHint": {
+    "message": "将匹配邮件标记为垃圾邮件（不移动邮件，后续由 Thunderbird 的垃圾邮件处理决定）。"
+  },
+  "action_markNotJunk": {
+    "message": "标记为非垃圾邮件"
+  },
+  "action_markNotJunkHint": {
+    "message": "移除匹配邮件的垃圾邮件标记，不移动邮件。"
+  },
+  "action_deletePermanently": {
+    "message": "永久删除"
+  },
+  "action_deletePermanentlyHint": {
+    "message": "跳过“已删除”文件夹，立即删除匹配邮件。此操作无法撤销。"
+  },
+  "summary_not": {
+    "message": "不$1"
+  },
+  "summary_text": {
+    "message": "$1 $2 “$3”"
+  },
+  "summary_age_other": {
+    "message": "$1 $2 $3 天"
+  },
+  "summary_hasTag": {
+    "message": "有标签 $1"
+  },
+  "summary_notHasTag": {
+    "message": "没有标签 $1"
+  },
+  "summary_priorityIs": {
+    "message": "优先级是 $1"
+  },
+  "summary_priorityIsNot": {
+    "message": "优先级不是 $1"
+  },
+  "summary_authPasses": {
+    "message": "$1 通过"
+  },
+  "summary_authNotPasses": {
+    "message": "$1 未通过"
+  },
+  "summary_inBook": {
+    "message": "$1 在 $2 中"
+  },
+  "summary_notInBook": {
+    "message": "$1 不在 $2 中"
+  },
+  "summary_nameShows": {
+    "message": "$1 名称显示其他地址"
+  },
+  "summary_notNameShows": {
+    "message": "$1 名称未显示其他地址"
+  },
+  "summary_inList_other": {
+    "message": "$1 在 $2 个域名的列表中"
+  },
+  "summary_notInList_other": {
+    "message": "$1 不在 $2 个域名的列表中"
+  },
+  "summary_and": {
+    "message": "且"
+  },
+  "summary_or": {
+    "message": "或"
+  },
+  "summary_noConditions": {
+    "message": "无条件"
+  },
+  "summary_noAction": {
+    "message": "无操作"
+  },
+  "summary_tagAction": {
+    "message": "添加标签 $1"
+  },
+  "summary_folders_other": {
+    "message": "$1 个文件夹"
+  },
+  "summary_foldersAndSubfolders_other": {
+    "message": "$1 个文件夹及其子文件夹"
+  },
+  "reject_tagActionNoTag": {
+    "message": "规则“$1”：标签操作未选择标签"
+  },
+  "reject_secondTerminal": {
+    "message": "规则“$1”：只能有一个操作移动或删除邮件，已舍弃“$2”"
+  },
+  "reject_ageDays": {
+    "message": "存在时长条件需要整数天数（输入为“$1”）"
+  },
+  "reject_ageDaysEmpty": {
+    "message": "存在时长条件需要整数天数（未输入）"
+  },
+  "reject_tagConditionNoTag": {
+    "message": "某个标签条件未选择标签，因此不会匹配"
+  },
+  "setting_newMailDelaySeconds": {
+    "message": "收到新邮件后运行前的延迟（秒）"
+  },
+  "setting_scanOverlapMinutes": {
+    "message": "增量扫描重叠时间（分钟）"
+  },
+  "setting_catchUpEveryMinutes": {
+    "message": "补漏扫描间隔（分钟）"
+  },
+  "setting_catchUpLookbackDays": {
+    "message": "补漏扫描回溯范围（天）"
+  },
+  "setting_authPrefer": {
+    "message": "检查结果不一致时使用的结果"
+  },
+  "setting_authDohServer": {
+    "message": "DNS 服务器"
+  },
+  "setting_outOfRange": {
+    "message": "$1必须为 $2-$3，将使用 $4"
+  },
+  "setting_mustBeOneOf": {
+    "message": "$1必须是 $2 之一，将使用 $3"
+  },
+  "import_whereRule": {
+    "message": "规则 $1"
+  },
+  "import_whereNamedRule": {
+    "message": "规则 $1（“$2”）"
+  },
+  "import_whereCondition": {
+    "message": "$1 的条件 $2"
+  },
+  "import_noField": {
+    "message": "$1：没有可识别的邮件头字段"
+  },
+  "import_unknownOperator": {
+    "message": "$1：未知运算符“$2”"
+  },
+  "import_operatorMismatch": {
+    "message": "$1：“$2”不适用于“$3”"
+  },
+  "import_ageDays": {
+    "message": "$1：存在时长需要大于或等于 1 的整数天数"
+  },
+  "import_noTag": {
+    "message": "$1：未选择标签"
+  },
+  "import_priorityLevel": {
+    "message": "$1：优先级必须是 $2 之一"
+  },
+  "import_authMethod": {
+    "message": "$1：检查项必须是 $2 之一"
+  },
+  "import_bookFields": {
+    "message": "$1：通讯录检查只适用于 $2"
+  },
+  "import_noBook": {
+    "message": "$1：未选择通讯录"
+  },
+  "import_unknownBook": {
+    "message": "$1：通讯录不在此配置文件中，请在保存前选择一个"
+  },
+  "import_nameFields": {
+    "message": "$1：名称检查只适用于 $2"
+  },
+  "import_invalidDomains_other": {
+    "message": "$1：已舍弃 $2 个无效域名"
+  },
+  "import_emptyDomains": {
+    "message": "$1：域名列表为空"
+  },
+  "import_emptyValue": {
+    "message": "$1：值为空"
+  },
+  "import_noAction": {
+    "message": "$1：没有操作，已跳过规则"
+  },
+  "import_unknownAction": {
+    "message": "$1：未知操作“$2”，已舍弃"
+  },
+  "import_needsFolder": {
+    "message": "$1：“$2”需要目标文件夹，已舍弃"
+  },
+  "import_needsTag": {
+    "message": "$1：“$2”需要标签，已舍弃"
+  },
+  "import_secondTerminal": {
+    "message": "$1：已舍弃“$2”，一条规则只能以一个移动或删除操作结束（保留了“$3”）"
+  },
+  "import_noUsableAction": {
+    "message": "$1：没有可用的操作，已跳过规则"
+  },
+  "import_noConditions": {
+    "message": "$1：没有可用的条件，已跳过规则"
+  },
+  "import_unknownFolders_other": {
+    "message": "$1：$2 个文件夹不在此配置文件中，已移除"
+  },
+  "import_badSchedule": {
+    "message": "$1：计划不是有效的 cron 表达式，已关闭"
+  },
+  "import_defaultRuleName": {
+    "message": "导入的规则"
+  },
+  "import_anExistingRule": {
+    "message": "一条现有规则"
+  },
+  "import_notAnObject": {
+    "message": "不是有效的 JSON 对象"
+  },
+  "import_unexpectedFormat": {
+    "message": "意外的格式“$1”"
+  },
+  "import_noRules": {
+    "message": "未找到规则数组"
+  },
+  "import_invalidAllowlist_other": {
+    "message": "受保护的域名：已舍弃 $1 个无效域名"
+  },
+  "import_advanced": {
+    "message": "高级：$1"
+  },
+  "status_bookAccessAllowed": {
+    "message": "已允许访问通讯录。请选择一个通讯录，然后点击“保存”。"
+  },
+  "status_bookAccessDenied": {
+    "message": "未允许访问通讯录。在允许之前，通讯录条件不会匹配。"
+  },
+  "status_bookAccessFailed": {
+    "message": "无法请求通讯录访问权限：$1"
+  },
+  "status_dnsAccessAllowed": {
+    "message": "已允许访问 DNS 服务器。DKIM 和 DMARC 条件现在可以运行。"
+  },
+  "status_dnsAccessDenied": {
+    "message": "未允许访问 DNS 服务器。在允许之前，DKIM 和 DMARC 条件不会匹配。"
+  },
+  "status_dnsAccessFailed": {
+    "message": "无法请求 DNS 服务器访问权限：$1"
+  },
+  "status_tagAccessAllowed": {
+    "message": "已允许访问标签。请选择一个标签，然后点击“保存”。"
+  },
+  "status_tagAccessDenied": {
+    "message": "未允许访问标签，因此无法在此列出您的标签。"
+  },
+  "status_tagAccessFailed": {
+    "message": "无法请求标签访问权限：$1"
+  },
+  "status_needsAction": {
+    "message": "规则至少需要一个操作。"
+  },
+  "status_notSavedNoAction": {
+    "message": "未保存：请为 $1 选择操作。"
+  },
+  "status_notSavedBadSchedule": {
+    "message": "未保存：“$1”的计划不是有效的 cron 表达式。"
+  },
+  "status_notSavedNoFolder": {
+    "message": "未保存：请为“$1”选择文件夹，或关闭该规则。"
+  },
+  "status_saved": {
+    "message": "已保存。计划已更新。"
+  },
+  "status_savedWithCorrections_other": {
+    "message": "已保存，有 $1 处更正：$2。"
+  },
+  "status_noteBookAccess": {
+    "message": "在您允许访问通讯录之前，通讯录条件不会匹配。"
+  },
+  "status_noteBookMissing": {
+    "message": "某个通讯录条件指向的通讯录已不存在，因此不会匹配。"
+  },
+  "status_noteTagConditionMissing": {
+    "message": "某个标签条件指向的标签已不存在，因此不会匹配。"
+  },
+  "status_noteTagActionMissing": {
+    "message": "某个标签操作指向的标签已不存在。"
+  },
+  "status_diagCopied": {
+    "message": "已复制诊断信息。请将其粘贴到您的电子邮件或 GitHub 议题中。"
+  },
+  "status_diagSaved": {
+    "message": "已保存 $1。"
+  },
+  "status_diagSaveFailed": {
+    "message": "无法保存报告：$1"
+  },
+  "status_diagCleared": {
+    "message": "已清除诊断日志。"
+  },
+  "status_exported": {
+    "message": "已导出到 $1。此页面上未保存的修改也已包含在内。"
+  },
+  "status_exportFailed": {
+    "message": "导出失败：$1"
+  },
+  "status_importReadFailed": {
+    "message": "无法读取 $1：$2"
+  },
+  "status_importFailed": {
+    "message": "导入失败：$1"
+  },
+  "status_importNothingNew": {
+    "message": "没有可导入的新内容。"
+  },
+  "status_importBecause": {
+    "message": "$1。"
+  },
+  "status_importNoRules": {
+    "message": "文件中没有可用的规则"
+  },
+  "status_importDuplicates": {
+    "message": "已存在，已跳过：$1。"
+  },
+  "status_importDuplicate": {
+    "message": "“$1”（$2，与“$3”相同）"
+  },
+  "status_imported_other": {
+    "message": "已导入 $1 条规则。请检查，然后点击“保存”以保留。"
+  },
+  "status_importSkipped": {
+    "message": "已跳过：$1。"
+  },
+  "status_running": {
+    "message": "正在运行…"
+  },
+  "status_runningRule": {
+    "message": "正在运行“$1”…"
+  },
+  "status_runDone_other": {
+    "message": "完成，影响了 $1 封邮件。"
+  },
+  "status_ruleRunDone_other": {
+    "message": "完成。“$1”影响了 $2 封邮件。"
+  },
+  "status_runFailed": {
+    "message": "运行失败：$1"
+  },
+  "status_saveBeforeRun": {
+    "message": "运行“$1”之前，请先保存您的更改。"
+  },
+  "status_ruleTurnedOff": {
+    "message": "“$1”已关闭。请先开启并保存，再运行它。"
+  },
+  "status_allowlistRestored": {
+    "message": "受保护的域名已恢复为默认值。点击“保存”以保留。"
+  },
+  "status_advancedRestored": {
+    "message": "高级设置已恢复为默认值。点击“保存”以保留。"
+  },
+  "status_noFolders": {
+    "message": "未找到文件夹。请检查“accountsRead”权限，然后重新加载附加组件。"
+  },
+  "popup_runOneRule": {
+    "message": "运行单个规则"
+  },
+  "popup_noRules": {
+    "message": "没有已保存且已开启的规则。"
+  },
+  "popup_openSettings": {
+    "message": "打开设置"
+  },
+  "popup_runningAll": {
+    "message": "正在运行所有规则…"
+  },
+  "popup_runDone_other": {
+    "message": "完成。影响了 $1 封邮件。"
+  },
+  "popup_loadFailed": {
+    "message": "无法加载规则：$1"
+  },
+  "confirm_reading": {
+    "message": "正在读取所选邮件…"
+  },
+  "confirm_dontShowAgain": {
+    "message": "不再显示"
+  },
+  "confirm_cancel": {
+    "message": "取消"
+  },
+  "confirm_add": {
+    "message": "添加到过滤器"
+  },
+  "confirm_replyToTitle": {
+    "message": "Reply-To 域名"
+  },
+  "confirm_replyToNote": {
+    "message": "回复将发往的地址。在群发邮件中更难伪造。"
+  },
+  "confirm_fromTitle": {
+    "message": "发件人（From）域名"
+  },
+  "confirm_fromNote": {
+    "message": "可见的发件人，可被伪造以冒充品牌。添加前请检查这些域名。"
+  },
+  "confirm_domains_other": {
+    "message": "$1 个域名"
+  },
+  "confirm_selectedMessages_other": {
+    "message": "$1 封所选邮件"
+  },
+  "confirm_found": {
+    "message": "在 $2 中找到 $1。勾选的域名将添加到“$3”规则，该规则会按常规计划将匹配的邮件移到“已删除”。"
+  },
+  "confirm_noneNew": {
+    "message": "$1 中没有可添加的新域名。"
+  },
+  "confirm_skippedProviders_other": {
+    "message": "已跳过 $1 个知名邮件服务商域名（$2）。为保护正常邮件，这些域名永远不会被屏蔽。"
+  },
+  "confirm_unreadable_other": {
+    "message": "$1 封邮件无法读取。"
+  },
+  "confirm_expired": {
+    "message": "此确认已过期。请重新执行该操作。"
+  },
+  "confirm_updateFailed": {
+    "message": "无法更新过滤器：$1"
+  },
+  "confirm_readFailed": {
+    "message": "无法读取所选内容：$1"
   }
 }

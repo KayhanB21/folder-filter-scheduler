@@ -1,0 +1,46 @@
+Programador de filtros de carpeta ejecuta sus reglas de filtrado de mensajes en cualquier carpeta, automáticamente y con una programación. Thunderbird solo ejecuta filtros automáticamente en la Bandeja de entrada, así que el correo que un proveedor archiva en el servidor en Correo no deseado o en Bulk, o cualquier cosa que esté en otra carpeta, nunca se filtra. Este complemento cubre ese hueco.
+
+<strong>Qué hace</strong>
+<ul>
+<li>Ejecuta reglas en cualquier carpeta que elija, no solo en la Bandeja de entrada</li>
+<li>Se ejecuta con un temporizador, al llegar correo nuevo, con su propia programación cron o al instante con un clic</li>
+<li>Funciona con varias cuentas en una sola regla</li>
+<li>Puede incluir todas las subcarpetas de una carpeta, también las que cree más adelante</li>
+<li>Crea una lista de bloqueo de dominios de remitentes a partir del spam que ya tiene, con un clic derecho</li>
+<li>Comprueba SPF, DKIM y DMARC, y verifica las firmas DKIM por su cuenta</li>
+</ul>
+
+<strong>Bloquear dominios de spam</strong>
+Seleccione spam en cualquier parte de la lista de mensajes, haga clic derecho y elija Programador de filtros de carpeta y luego Añadir dominios de spam. Los dominios de los remitentes se leen tanto de Reply-To como de From, se le muestran en grupos separados para que los revise y se añaden a una regla que mueve el correo coincidente a la Papelera con su programación normal. Los subdominios se incluyen automáticamente, así que bloquear evil.com también bloquea bounce.evil.com. Los proveedores conocidos como Gmail, Yahoo, Outlook e iCloud nunca se bloquean, y usted puede editar esa lista de dominios protegidos.
+
+<strong>Comprobar SPF, DKIM y DMARC</strong>
+Filtre el correo según supere o no SPF, DKIM o DMARC, con reglas como «mover a Correo no deseado el correo que no supera DMARC». El complemento lee la cabecera Authentication-Results que añade su proveedor. Un remitente puede falsificar esa cabecera, así que el complemento también verifica las firmas DKIM por su cuenta y deduce DMARC de ambos resultados. Cada mensaje se comprueba una vez y el resultado se guarda hasta 90 días. Los ajustes de Avanzado eligen el servidor DNS, qué resultado prevalece cuando los dos no coinciden y en las cabeceras de qué servidores confía. El código DKIM procede de <a href="https://github.com/lieser/dkim_verifier">DKIM Verifier</a>, de Philippe Lieser.
+
+<strong>Condiciones</strong>
+Filtre por De, Para, Cc, Asunto, Responder a, List-Id o Remitente, con contiene, es, empieza por, termina en o coincide con regex. Filtre por la antigüedad del mensaje con más de o menos de N días, con reglas como «mover las alertas a Archivos después de 30 días». Compruebe si el remitente, o cualquier destinatario en Para o Cc, está en una de sus libretas de direcciones, o en ninguna. Detecte un nombre de remitente que muestra una dirección de un dominio distinto al real, un truco habitual del spam. Compruebe si un mensaje está leído, destacado o marcado como no deseado, si tiene una de sus etiquetas, cuál es su prioridad y si supera SPF, DKIM o DMARC. Cada condición puede negarse y combinarse con Y u O. Una sola condición también puede contener toda una lista de dominios, que es lo que rellena la acción del menú contextual.
+
+<strong>Acciones</strong>
+<ul>
+<li>Mover a la Papelera, en la cuenta de cada mensaje</li>
+<li>Archivar, con la configuración de archivado de cada cuenta, igual que el botón Archivar de Thunderbird</li>
+<li>Mover o copiar a cualquier carpeta, incluida una carpeta de otra cuenta</li>
+<li>Etiquetar con una de sus etiquetas de Thunderbird, conservando las etiquetas que ya tenga el mensaje</li>
+<li>Marcar como leído o no leído, destacar o quitar el destacado, marcar como no deseado o deseado</li>
+<li>Eliminar definitivamente</li>
+</ul>
+Una regla puede tener varias acciones, así que «etiquetar como Amigos y mover a la carpeta Amigos» es una sola regla. Sea cual sea el orden en que las ponga, la acción que mueve o elimina se ejecuta la última, así que las demás siguen viendo el mensaje.
+
+<strong>Copias de seguridad y cambio de perfil</strong>
+Las reglas se exportan a un archivo JSON y se vuelven a importar. Una regla que ya tiene se reconoce y se omite en lugar de duplicarse, así que importar un archivo compartido es seguro.
+
+<strong>Cuándo se ejecutan las reglas</strong>
+Las reglas se ejecutan con un temporizador que usted define y también a los pocos segundos de llegar correo nuevo a una carpeta vigilada. Las llegadas se agrupan, así que una sincronización de correo provoca una sola ejecución, y solo se comprueban las reglas que vigilan la carpeta que recibió correo. Una regla también puede tener su propia programación, escrita como una expresión cron, por ejemplo 0 21 * * * para las 21:00 todos los días. Esa regla entonces solo se ejecuta en esos momentos, y una ejecución perdida mientras Thunderbird estaba cerrado se realiza en el siguiente inicio. Para ejecutar reglas a mano, use el botón de la barra de herramientas, el menú contextual o el botón Ejecutar de una regla. La sección Avanzado de la página de ajustes le permite desactivar la ejecución con correo nuevo y ajustar los tiempos de análisis.
+
+<strong>Velocidad, y sobre Reply-To</strong>
+Las condiciones sobre De, Para, Cc y Asunto usan datos indexados y no descargan nada. Las condiciones sobre Responder a, u otras cabeceras no indexadas, necesitan el propio mensaje, que se descarga bajo demanda en una carpeta IMAP en línea. Para ganar velocidad y trabajar sin conexión, active el almacenamiento sin conexión para esa carpeta. Las ejecuciones programadas solo miran el correo llegado desde la ejecución anterior, más una pasada de recuperación más amplia cada 30 minutos para el correo cuya cabecera Date va por detrás de su llegada real, así que una carpeta grande sigue siendo ligera. «Ejecutar todas las reglas» siempre lo analiza todo.
+
+<strong>Privacidad</strong>
+No se recopila ni se vende ningún dato, y el complemento no tiene analíticas ni telemetría. Las reglas se ejecutan localmente dentro de Thunderbird y el contenido de los mensajes nunca sale de su dispositivo. Aparte de su propio servidor de correo, el único servidor con el que contacta el complemento es un servidor DNS para la comprobación DKIM opcional, que solo se ejecuta en reglas con una condición SPF, DKIM o DMARC. Envía consultas DNS de nombres de dominio como selector._domainkey.example.com y _dmarc.example.com a Cloudflare o Google, el que usted elija, y solo después de que lo permita. El acceso a las libretas de direcciones y a la lista de etiquetas es opcional, y el complemento solo lo pide cuando usa una condición o acción que lo necesita. El informe de diagnóstico solo lo comparte usted, y oculta direcciones, dominios, patrones y nombres de carpeta salvo que decida incluirlos.
+
+<strong>Código abierto</strong>
+Con licencia MPL-2.0. Código fuente, incidencias y contribuciones en <a href="https://github.com/KayhanB21/folder-filter-scheduler">github.com/KayhanB21/folder-filter-scheduler</a>

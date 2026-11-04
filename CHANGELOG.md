@@ -12,6 +12,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   comes from `_locales/<lang>/messages.json`. A language without a file, or a
   message a file leaves out, shows English. The diagnostics log and report
   stay English. `docs/TRANSLATING.md` explains how to add a language.
+- **The interface in 7 more languages:** German, Spanish, French, Italian,
+  Japanese, Korean, and Simplified Chinese. Thunderbird picks the language of
+  its own interface. Thunderbird's own labels, such as the folder
+  **Properties** checkbox in **Common problems**, use Thunderbird's wording
+  for each language.
 
 ## [0.4.1]
 

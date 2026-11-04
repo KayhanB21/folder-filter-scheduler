@@ -1,0 +1,46 @@
+Ordnerfilter-Planer wendet Ihre Filterregeln auf jeden Ordner an, automatisch und nach Zeitplan. Thunderbird führt Filter nur im Posteingang automatisch aus. Nachrichten, die ein Anbieter auf dem Server in Junk oder Bulk einsortiert, oder alles in einem anderen Ordner, werden daher nie gefiltert. Dieses Add-on schließt diese Lücke.
+
+<strong>Was es tut</strong>
+<ul>
+<li>Führt Regeln auf jedem gewählten Ordner aus, nicht nur im Posteingang</li>
+<li>Läuft nach Zeitplan, bei neuen Nachrichten, nach einem eigenen Cron-Zeitplan oder sofort per Klick</li>
+<li>Arbeitet in einer einzigen Regel über mehrere Konten hinweg</li>
+<li>Kann alle Unterordner eines Ordners einschließen, auch später erstellte</li>
+<li>Erstellt mit einem Rechtsklick eine Sperrliste von Absender-Domains aus vorhandenem Spam</li>
+<li>Prüft SPF, DKIM und DMARC und verifiziert DKIM-Signaturen selbst</li>
+</ul>
+
+<strong>Spam-Domains blockieren</strong>
+Wählen Sie Spam an beliebiger Stelle in der Nachrichtenliste aus, klicken Sie mit der rechten Maustaste und wählen Sie Ordnerfilter-Planer und dann Spam-Domains hinzufügen. Die Absender-Domains werden aus Antwort an und Von gelesen, Ihnen in getrennten Gruppen zur Prüfung angezeigt und zu einer Regel hinzugefügt, die passende Nachrichten nach Ihrem normalen Zeitplan in den Papierkorb verschiebt. Subdomains werden automatisch erfasst, sodass das Blockieren von evil.com auch bounce.evil.com erfasst. Bekannte Anbieter wie Gmail, Yahoo, Outlook und iCloud werden nie blockiert, und diese geschützte Liste können Sie selbst bearbeiten.
+
+<strong>SPF, DKIM und DMARC prüfen</strong>
+Filtern Sie Nachrichten danach, ob sie SPF, DKIM oder DMARC bestehen oder nicht, für Regeln wie „Nachrichten, die DMARC nicht bestehen, nach Junk verschieben“. Das Add-on liest den Authentication-Results-Header, den Ihr Anbieter hinzufügt. Ein Absender kann diesen Header fälschen, daher verifiziert das Add-on DKIM-Signaturen auch selbst und ermittelt DMARC aus beiden Ergebnissen. Jede Nachricht wird einmal geprüft, und das Ergebnis wird bis zu 90 Tage gespeichert. Einstellungen unter Erweitert legen den DNS-Server fest, welches Ergebnis gilt, wenn beide abweichen, und welchen Servern Sie bei den Headern vertrauen. Der DKIM-Code stammt aus <a href="https://github.com/lieser/dkim_verifier">DKIM Verifier</a> von Philippe Lieser.
+
+<strong>Bedingungen</strong>
+Filtern Sie nach Von, An, Kopie (CC), Betreff, Antwort an, List-Id oder Sender, mit enthält, ist, beginnt mit, endet mit oder entspricht Regex. Filtern Sie nach dem Alter der Nachricht mit älter als oder neuer als N Tage, für Regeln wie „Warnungen nach 30 Tagen archivieren“. Prüfen Sie, ob der Absender oder ein Empfänger in An oder Kopie (CC) in einem Ihrer Adressbücher steht oder in keinem. Erkennen Sie einen Absendernamen, der eine Adresse einer anderen Domain als der echten zeigt, ein häufiger Spam-Trick. Prüfen Sie, ob eine Nachricht gelesen, mit Stern oder als Junk markiert ist, ob sie eines Ihrer Schlagwörter hat, welche Priorität sie hat und ob sie SPF, DKIM oder DMARC besteht. Jede Bedingung lässt sich umkehren und mit UND oder ODER verknüpfen. Eine einzelne Bedingung kann auch eine ganze Liste von Domains enthalten, die die Rechtsklick-Aktion befüllt.
+
+<strong>Aktionen</strong>
+<ul>
+<li>In den Papierkorb verschieben, jeweils in das eigene Konto der Nachricht</li>
+<li>Archivieren mit den Archiveinstellungen des jeweiligen Kontos, genau wie die Schaltfläche Archivieren in Thunderbird</li>
+<li>In einen beliebigen Ordner verschieben oder kopieren, auch in einen Ordner eines anderen Kontos</li>
+<li>Mit einem Ihrer Thunderbird-Schlagwörter versehen, wobei vorhandene Schlagwörter der Nachricht erhalten bleiben</li>
+<li>Als gelesen oder ungelesen markieren, Stern hinzufügen oder entfernen, als Junk oder Kein Junk markieren</li>
+<li>Dauerhaft löschen</li>
+</ul>
+Eine Regel kann mehrere Aktionen enthalten, daher ist „Schlagwort Freunde zuweisen und in den Ordner Freunde verschieben“ eine einzige Regel. Egal in welcher Reihenfolge Sie sie anordnen, die verschiebende oder löschende Aktion läuft zuletzt, damit die anderen die Nachricht noch sehen.
+
+<strong>Sicherungen und Wechsel zwischen Profilen</strong>
+Regeln lassen sich in eine JSON-Datei exportieren und wieder importieren. Eine bereits vorhandene Regel wird erkannt und übersprungen statt dupliziert, daher ist der Import einer geteilten Datei sicher.
+
+<strong>Wann Regeln laufen</strong>
+Regeln laufen nach einem von Ihnen festgelegten Zeitplan und zusätzlich wenige Sekunden nachdem neue Nachrichten in einem überwachten Ordner eingehen. Eingänge werden gebündelt, sodass ein Abruf einen Durchlauf auslöst und nur die Regeln geprüft werden, die den Ordner mit neuen Nachrichten überwachen. Eine Regel kann auch einen eigenen Zeitplan haben, geschrieben als Cron-Ausdruck wie 0 21 * * * für täglich 21:00 Uhr. Diese Regel läuft dann nur zu diesen Zeiten, und ein Durchlauf, der verpasst wurde, während Thunderbird geschlossen war, wird beim nächsten Start nachgeholt. Um Regeln manuell auszuführen, verwenden Sie die Symbolleisten-Schaltfläche, das Kontextmenü oder die Schaltfläche Ausführen an einer Regel. Im Abschnitt Erweitert der Einstellungsseite können Sie das Ausführen bei neuen Nachrichten abschalten und die Zeiten der Suche anpassen.
+
+<strong>Geschwindigkeit und Antwort an</strong>
+Bedingungen auf Von, An, Kopie (CC) und Betreff nutzen indizierte Daten und laden nichts herunter. Bedingungen auf Antwort an oder andere nicht indizierte Header brauchen die Nachricht selbst, die bei einem IMAP-Ordner im Online-Betrieb bei Bedarf abgerufen wird. Für Geschwindigkeit und Offline-Nutzung aktivieren Sie den Offline-Speicher für diesen Ordner. Geplante Durchläufe betrachten nur Nachrichten, die seit dem vorigen Durchlauf eingegangen sind, plus eine breitere Nachholsuche alle 30 Minuten für Nachrichten, deren Date-Header hinter dem echten Eingang zurückliegt. So bleibt auch ein großer Ordner günstig. „Alle Regeln jetzt ausführen“ durchsucht immer alles.
+
+<strong>Datenschutz</strong>
+Es werden keine Daten gesammelt oder verkauft, und das Add-on hat keine Analyse oder Telemetrie. Regeln laufen lokal in Thunderbird, und Nachrichteninhalte verlassen nie Ihr Gerät. Außer Ihrem eigenen Mailserver kontaktiert das Add-on nur einen DNS-Server für die optionale DKIM-Prüfung, die nur für Regeln mit einer SPF-, DKIM- oder DMARC-Bedingung läuft. Es sendet DNS-Abfragen für Domainnamen wie selector._domainkey.example.com und _dmarc.example.com an Cloudflare oder Google, je nach Ihrer Wahl, und erst nachdem Sie es erlaubt haben. Der Zugriff auf Adressbücher und die Schlagwortliste ist optional, und das Add-on fragt erst danach, wenn Sie eine Bedingung oder Aktion verwenden, die ihn braucht. Den Diagnosebericht teilen nur Sie selbst, und er verbirgt Adressen, Domains, Muster und Ordnernamen, außer Sie entscheiden sich, sie einzuschließen.
+
+<strong>Open Source</strong>
+Lizenziert unter MPL-2.0. Quellcode, Issues und Beiträge sind willkommen unter <a href="https://github.com/KayhanB21/folder-filter-scheduler">github.com/KayhanB21/folder-filter-scheduler</a>

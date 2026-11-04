@@ -7,7 +7,6 @@
     "message": "Run filter rules on any folder on a schedule, not just the Inbox. Match by sender, subject, address book, or SPF, DKIM, and DMARC.",
     "description": "Short description shown in the add-ons manager."
   },
-
   "common_addSpamDomains": {
     "message": "Add spam domains",
     "description": "Right-click menu item and title of the window that adds the sender domains of the selected messages to a spam rule."
@@ -36,12 +35,10 @@
     "message": "“$1”",
     "description": "A rule name in quotation marks, inside a longer message. Use the quotation marks of your language. $1 is the name."
   },
-
   "menu_runARule": {
     "message": "Run a rule",
     "description": "Right-click submenu that lists the rules; choosing one runs it."
   },
-
   "options_theme": {
     "message": "Theme",
     "description": "Label for the light, dark, and system theme switch. Read by screen readers only."
@@ -94,7 +91,6 @@
     "message": "+ Add rule",
     "description": "Button that adds an empty rule card."
   },
-
   "allowlist_title": {
     "message": "Protected domains (never blocked)",
     "description": "Heading of the section with the domains that Add spam domains never adds."
@@ -103,7 +99,6 @@
     "message": "Domains here are skipped when adding spam domains from the message list, so a mistaken selection cannot block a major provider. One domain per line.",
     "description": "Explanation of the protected domains list."
   },
-
   "diag_title": {
     "message": "Diagnostics",
     "description": "Heading of the section with the diagnostics report."
@@ -136,7 +131,6 @@
     "message": "Could not build the report: $1",
     "description": "Shown in the report box when the report fails. $1 is the error message, in English."
   },
-
   "adv_title": {
     "message": "Advanced",
     "description": "Heading of the Advanced settings section. Other messages refer to it in <b>…</b>; use the same word there."
@@ -249,7 +243,6 @@
     "message": "Leave this empty to trust the topmost <code>Authentication-Results</code> header, which your provider adds last. If you enter server names, one per line, the add-on uses the topmost header from one of them. The name is the first word of the header, such as <code>mta.yahoo.com</code> or <code>mx.google.com</code>.",
     "description": "Explanation of the trusted servers. Keep the text inside <code>…</code> as is."
   },
-
   "help_title": {
     "message": "Common problems",
     "description": "Heading of the help section."
@@ -282,7 +275,6 @@
     "message": "Open <b>Diagnostics</b> and attach the report to a <a>GitHub issue</a>. The report shows what each recent run scanned and matched.",
     "description": "Help answer. <b>Diagnostics</b> is the section heading diag_title. The text inside <a>…</a> becomes the link to the issue tracker; keep the tags."
   },
-
   "rule_collapseTitle": {
     "message": "Collapse or expand this rule",
     "description": "Tooltip of the arrow button on a rule card."
@@ -383,7 +375,6 @@
     "message": "A cron expression has five fields: minute, hour, day of month, month, and day of week, in your computer's local time. With its own schedule, the rule runs only at these times. The timer at the top of the page and new mail no longer start it.",
     "description": "Explanation under the cron box."
   },
-
   "schedule_error": {
     "message": "$1.",
     "description": "Shown under the cron box when the expression is wrong. $1 is the reason (a cron_error message). Change only the final punctuation if your language needs it."
@@ -396,7 +387,6 @@
     "message": "$1. This date never comes, so the rule never runs.",
     "description": "Shown under the cron box for a date that does not exist, such as February 30. $1 is the expression in words."
   },
-
   "cron_fieldMinute": {
     "message": "minute",
     "description": "Name of the 1st field of a cron expression, used in the cron_error messages."
@@ -537,7 +527,6 @@
     "message": "$1 $2",
     "description": "Adds the months part to a schedule description: \"At 09:00\" + \"in January\". Swap $1 and $2 if your language puts the months first."
   },
-
   "folders_account": {
     "message": "Account",
     "description": "Heading in the folder list for an account that has no name."
@@ -594,7 +583,6 @@
     "message": "$1 in collapsed folders",
     "description": "Added to the folder count: selected folders inside a collapsed folder or account. $1 is the number."
   },
-
   "field_from": {
     "message": "from",
     "description": "Condition field: the From header of a message. Lower case in English because it reads as part of a phrase: \"from contains …\"."
@@ -651,7 +639,6 @@
     "message": "authentication",
     "description": "Condition field: the SPF, DKIM, and DMARC checks of the sender."
   },
-
   "op_contains": {
     "message": "contains",
     "description": "Condition operator, after a field: \"subject contains …\"."
@@ -764,7 +751,6 @@
     "message": "Works only with a header field, such as from or subject.",
     "description": "Tooltip of a grayed-out operator."
   },
-
   "state_read_isOn": {
     "message": "is read",
     "description": "Operator text for the read field, and the summary of the condition."
@@ -789,7 +775,6 @@
     "message": "is not junk",
     "description": "Operator text for the junk field, and the summary of the condition."
   },
-
   "priority_highest": {
     "message": "Highest",
     "description": "Message priority. Use the word Thunderbird uses in your language."
@@ -810,7 +795,6 @@
     "message": "Lowest",
     "description": "Message priority. Use the word Thunderbird uses in your language."
   },
-
   "cond_not": {
     "message": "not",
     "description": "Checkbox on a condition row that turns the condition around."
@@ -879,7 +863,6 @@
     "message": "A scheduled run checks older mail only in the catch-up scan, by default every 30 minutes (see <b>Advanced</b>). So after you star, tag, or read an older message, the rule can take that long to act on it. <b>Run</b> checks every message at once.",
     "description": "Explanation under a read, star, junk, or tag condition. <b>Advanced</b> is the section heading adv_title; <b>Run</b> is the button rule_run."
   },
-
   "action_then": {
     "message": "Then",
     "description": "Label in front of an action of a rule. The label column is narrow; keep it short."
@@ -988,7 +971,6 @@
     "message": "Skips the Trash and deletes matches immediately. This cannot be undone.",
     "description": "Hint under the Delete permanently action, shown in red."
   },
-
   "summary_not": {
     "message": "not $1",
     "description": "A turned-around operator in the one-line summary of a folded rule: \"from not contains “x”\". $1 is the operator."
@@ -1042,7 +1024,7 @@
     "description": "A condition in the summary of a folded rule. $1 is the field."
   },
   "summary_notNameShows": {
-    "message": "$1 not name shows a different address",
+    "message": "$1 name doesn’t show a different address",
     "description": "A turned-around condition in the summary of a folded rule. $1 is the field."
   },
   "summary_inList_one": {
@@ -1097,7 +1079,6 @@
     "message": "$1 folders and subfolders",
     "description": "Number of folders in the summary of a folded rule that includes subfolders. $1 is the number."
   },
-
   "reject_tagActionNoTag": {
     "message": "rule “$1”: tag action with no tag chosen",
     "description": "A correction listed after Saved. $1 is the rule name."
@@ -1118,7 +1099,6 @@
     "message": "a tag condition has no tag chosen, so it will not match",
     "description": "A correction listed after Saved."
   },
-
   "setting_newMailDelaySeconds": {
     "message": "delay before running on new mail (seconds)",
     "description": "Name of a setting in setting_outOfRange."
@@ -1151,7 +1131,6 @@
     "message": "$1 must be one of $2, using $3",
     "description": "A correction after Saved or Imported. $1 is a setting name, $2 the allowed values (code words, not translated), $3 the value used instead."
   },
-
   "import_whereRule": {
     "message": "Rule $1",
     "description": "Start of an import problem: which rule of the file. $1 is its number."
@@ -1296,7 +1275,6 @@
     "message": "Advanced: $1",
     "description": "Import problem about the Advanced settings. $1 is setting_outOfRange or setting_mustBeOneOf."
   },
-
   "status_bookAccessAllowed": {
     "message": "Address book access allowed. Pick a book and press Save.",
     "description": "Status after the user allows address book access."
@@ -1489,7 +1467,6 @@
     "message": "No folders found — check the “accountsRead” permission and reload the add-on.",
     "description": "Status when the add-on finds no folder. Keep accountsRead: it is the name of a permission."
   },
-
   "popup_runOneRule": {
     "message": "Run one rule",
     "description": "Heading over the list of rules in the toolbar popup."
@@ -1518,7 +1495,6 @@
     "message": "Could not load the rules: $1",
     "description": "Status in the toolbar popup. $1 is the error message, in English."
   },
-
   "confirm_reading": {
     "message": "Reading the selected messages…",
     "description": "Shown while the Add spam domains window reads the selected messages."
