@@ -3,21 +3,21 @@ Folder Filter Scheduler runs your message-filter rules on any folder, automatica
 <strong>What it does</strong>
 <ul>
 <li>Runs rules on any folder you choose, not just the Inbox</li>
-<li>Runs on a timer (every N minutes) or instantly with one click</li>
+<li>Runs on a timer, on new mail, on a cron schedule of its own, or instantly with one click</li>
 <li>Works across multiple accounts in a single rule</li>
-<li>Watches a folder and all of its subfolders, including ones you create later</li>
+<li>Can include all of a folder's subfolders, including ones you create later</li>
 <li>Builds a sender-domain blocklist from spam you already have, with one right-click</li>
 <li>Checks SPF, DKIM, and DMARC, and verifies DKIM signatures itself</li>
 </ul>
 
 <strong>Blocking spam domains</strong>
-Select spam anywhere in the message list, right-click, and choose "Add spam domains to Folder Filter Scheduler". The sender domains are read from both Reply-To and From, shown to you in separate groups for review, and added to a rule that moves matching mail to Trash on your normal schedule. Subdomains are covered automatically, so blocking evil.com also catches bounce.evil.com. Well-known providers such as Gmail, Yahoo, Outlook and iCloud are never blocked, and that protected list is yours to edit.
+Select spam anywhere in the message list, right-click, and choose Folder Filter Scheduler, then Add spam domains. The sender domains are read from both Reply-To and From, shown to you in separate groups for review, and added to a rule that moves matching mail to Trash on your normal schedule. Subdomains are covered automatically, so blocking evil.com also catches bounce.evil.com. Well-known providers such as Gmail, Yahoo, Outlook and iCloud are never blocked, and that protected list is yours to edit.
 
 <strong>Checking SPF, DKIM, and DMARC</strong>
 Match mail on whether it passes or fails SPF, DKIM, or DMARC, for rules such as "move mail that fails DMARC to Junk". The add-on reads the Authentication-Results header your provider adds. A sender can forge that header, so the add-on also verifies DKIM signatures itself and works out DMARC from both results. Each message is checked once, and the result is kept for up to 90 days. Settings under Advanced choose the DNS server, which result wins when the two disagree, and which servers' headers you trust. The DKIM code comes from <a href="https://github.com/lieser/dkim_verifier">DKIM Verifier</a> by Philippe Lieser.
 
 <strong>Conditions</strong>
-Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is, starts with, ends with, or matches regex. Match on message age with older than or newer than N days, for rules such as "move alerts to Archive after 30 days". Check whether the sender, or any recipient in To or Cc, is in one of your address books, or in none of them. Check whether a message is read, starred, or marked as junk, whether it has one of your tags, what its priority is, and whether it passes SPF, DKIM, or DMARC. Each condition can be negated and combined with AND or OR. A single condition can also hold a whole list of domains, which is what the right-click action fills in.
+Match on From, To, Cc, Subject, Reply-To, List-Id, or Sender, using contains, is, starts with, ends with, or matches regex. Match on message age with older than or newer than N days, for rules such as "move alerts to Archive after 30 days". Check whether the sender, or any recipient in To or Cc, is in one of your address books, or in none of them. Catch a sender name that shows an address from a different domain than the real one, a common spam trick. Check whether a message is read, starred, or marked as junk, whether it has one of your tags, what its priority is, and whether it passes SPF, DKIM, or DMARC. Each condition can be negated and combined with AND or OR. A single condition can also hold a whole list of domains, which is what the right-click action fills in.
 
 <strong>Actions</strong>
 <ul>
@@ -34,13 +34,13 @@ A rule can carry several actions, so "tag as Friends and move to the Friends fol
 Rules export to a JSON file and import back. A rule you already have is recognised and skipped rather than duplicated, so importing a shared file is safe.
 
 <strong>When rules run</strong>
-Rules run on a timer you set, and also within seconds of new mail arriving in a watched folder. Arrivals are grouped, so one mail sync causes one run, and only the rules watching the folder that received mail are checked. An Advanced section at the bottom of the options page lets you turn the new-mail trigger off and adjust the scan timings.
+Rules run on a timer you set, and also within seconds of new mail arriving in a watched folder. Arrivals are grouped, so one mail sync causes one run, and only the rules watching the folder that received mail are checked. A rule can also have a schedule of its own, written as a cron expression such as 0 21 * * * for 21:00 every day. That rule then runs only at those times, and a run missed while Thunderbird was closed happens at the next start. To run rules by hand, use the toolbar button, the right-click menu, or the Run button on a rule. The Advanced section of the options page lets you turn the new-mail trigger off and adjust the scan timings.
 
 <strong>Speed, and about Reply-To</strong>
 Conditions on From, To, Cc, and Subject use indexed data and download nothing. Conditions on Reply-To, or other non-indexed headers, need the message itself, which is fetched on demand on an online IMAP folder. For speed and offline use, enable offline storage for that folder. Scheduled runs look only at mail that arrived since the previous run, plus a wider catch-up pass every 30 minutes for mail whose Date header lags its real arrival, so a large folder stays cheap. "Run all rules now" always scans everything.
 
 <strong>Privacy</strong>
-No data is collected or sold, and the add-on has no analytics or telemetry. Rules run locally inside Thunderbird, and message content never leaves your device. The only network traffic is the optional DKIM check, which runs only for rules with an SPF, DKIM, or DMARC condition. It sends DNS lookups for domain names such as selector._domainkey.example.com and _dmarc.example.com to Cloudflare or Google, whichever you choose, and only after you allow it. Address book access is optional and only requested if you use an address-book condition. The diagnostics report is only ever shared by you, and hides addresses, domains, patterns and folder names unless you choose to include them.
+No data is collected or sold, and the add-on has no analytics or telemetry. Rules run locally inside Thunderbird, and message content never leaves your device. Apart from your own mail server, the only server the add-on contacts is a DNS server for the optional DKIM check, which runs only for rules with an SPF, DKIM, or DMARC condition. It sends DNS lookups for domain names such as selector._domainkey.example.com and _dmarc.example.com to Cloudflare or Google, whichever you choose, and only after you allow it. Address book and tag list access are optional, and the add-on asks for them only when you use a condition or action that needs them. The diagnostics report is only ever shared by you, and hides addresses, domains, patterns and folder names unless you choose to include them.
 
 <strong>Open source</strong>
 Licensed under MPL-2.0. Source, issues, and contributions welcome at <a href="https://github.com/KayhanB21/folder-filter-scheduler">github.com/KayhanB21/folder-filter-scheduler</a>

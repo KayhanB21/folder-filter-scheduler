@@ -9,11 +9,12 @@ own device. The one exception is the DKIM check described under
 ## What it accesses, and why
 
 To evaluate the rules you create, the add-on reads message data (such as the
-`From`, `Subject`, and `Reply-To` headers, and — only when a rule needs it — the
-full message) from the folders **you** select. It uses this access solely to:
+`From`, `Subject`, and `Reply-To` headers, and the full message only when a rule
+needs it) from the folders **you** select. It uses this access solely to:
 
 - decide whether a message matches one of your rules, and
-- perform the action you configured (move, copy, mark, or delete that message).
+- perform the action you configured (move, copy, archive, tag, star, mark, or
+  delete that message).
 
 ## What leaves your device
 
@@ -37,8 +38,11 @@ server. Rules without an authentication condition never contact it.
 
 ## What is stored
 
-Your rule configuration (folders, conditions, actions, and the schedule interval)
-is saved with Thunderbird's local extension storage on your device. The results
+Your rule configuration (folders, conditions, actions, schedules, the protected
+domain list, and the Advanced settings) is saved with Thunderbird's local
+extension storage on your device. So are the times each rule last scanned, and
+a diagnostics log of up to 1000 recent entries, which records counts and rule
+names but no addresses. The results
 of authentication checks are kept there too, for up to 90 days, keyed by a hash
 of each message's Message-ID, sender, date, and size. Nothing is uploaded
 anywhere, and everything is removed if you uninstall the add-on.
