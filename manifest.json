@@ -32,7 +32,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Folder Filter Scheduler",
+    "default_title": "__MSG_extensionName__",
     "default_icon": "icons/icon.svg",
     "default_popup": "popup/popup.html"
   },

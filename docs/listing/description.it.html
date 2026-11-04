@@ -1,0 +1,46 @@
+Pianificatore di filtri per cartelle esegue le tue regole di filtro dei messaggi su qualsiasi cartella, in automatico e secondo una pianificazione. Thunderbird esegue i filtri in automatico solo su Posta in arrivo, quindi la posta che un provider archivia lato server in Indesiderata o Bulk, o qualunque messaggio si trovi in un'altra cartella, non viene mai filtrata. Questo componente aggiuntivo colma questa lacuna.
+
+<strong>Cosa fa</strong>
+<ul>
+<li>Esegue le regole su qualsiasi cartella tu scelga, non solo su Posta in arrivo</li>
+<li>Esegue le regole con un timer, all'arrivo di nuova posta, con una propria pianificazione cron o subito con un clic</li>
+<li>Funziona su più account in un'unica regola</li>
+<li>Può includere tutte le sottocartelle di una cartella, anche quelle che crei in seguito</li>
+<li>Crea un elenco di domini mittenti bloccati a partire dallo spam che hai già, con un clic destro</li>
+<li>Controlla SPF, DKIM e DMARC, e verifica da sé le firme DKIM</li>
+</ul>
+
+<strong>Bloccare i domini spam</strong>
+Seleziona lo spam in un punto qualsiasi dell'elenco dei messaggi, fai clic destro e scegli Pianificatore di filtri per cartelle, poi Aggiungi domini spam. I domini mittenti vengono letti sia da Reply-To sia da From, mostrati in gruppi separati per la revisione e aggiunti a una regola che sposta la posta corrispondente nel Cestino con la normale pianificazione. I sottodomini sono inclusi automaticamente, quindi bloccare evil.com blocca anche bounce.evil.com. I provider noti come Gmail, Yahoo, Outlook e iCloud non vengono mai bloccati, e puoi modificare questo elenco di domini protetti.
+
+<strong>Controllo di SPF, DKIM e DMARC</strong>
+Filtra la posta in base al superamento o al mancato superamento di SPF, DKIM o DMARC, per regole come "sposta in Indesiderata la posta che non supera DMARC". Il componente aggiuntivo legge l'intestazione Authentication-Results aggiunta dal tuo provider. Un mittente può falsificare questa intestazione, quindi il componente aggiuntivo verifica anche da sé le firme DKIM e ricava DMARC da entrambi i risultati. Ogni messaggio viene controllato una sola volta e il risultato viene conservato per un massimo di 90 giorni. Le impostazioni in Avanzate scelgono il server DNS, quale risultato prevale quando i due non concordano e di quali server considerare attendibili le intestazioni. Il codice DKIM proviene da <a href="https://github.com/lieser/dkim_verifier">DKIM Verifier</a> di Philippe Lieser.
+
+<strong>Condizioni</strong>
+Filtra in base a From, To, Cc, Subject, Reply-To, List-Id o Sender, con contiene, è, inizia con, finisce con o corrisponde alla regex. Filtra in base all'età del messaggio con maggiore di o minore di N giorni, per regole come "sposta gli avvisi in Archivio dopo 30 giorni". Controlla se il mittente, o un destinatario in To o Cc, è in una delle tue rubriche, o in nessuna di esse. Individua un nome del mittente che mostra un indirizzo di un dominio diverso da quello reale, un trucco comune dello spam. Controlla se un messaggio è letto, speciale o segnato come indesiderato, se ha una delle tue etichette, qual è la sua priorità e se supera SPF, DKIM o DMARC. Ogni condizione può essere negata e combinata con AND o OR. Una singola condizione può anche contenere un intero elenco di domini, ed è quella che l'azione del clic destro compila.
+
+<strong>Azioni</strong>
+<ul>
+<li>Sposta nel Cestino, nell'account di ogni messaggio</li>
+<li>Archivia, con le impostazioni di archiviazione di ogni account, come il pulsante Archivia di Thunderbird</li>
+<li>Sposta o copia in qualsiasi cartella, anche in una cartella di un altro account</li>
+<li>Etichetta con una delle tue etichette di Thunderbird, mantenendo le etichette già presenti sul messaggio</li>
+<li>Segna come letto o non letto, segna come speciale o rimuovi da speciali, segna come indesiderata o non indesiderata</li>
+<li>Elimina definitivamente</li>
+</ul>
+Una regola può contenere più azioni, quindi "etichetta come Amici e sposta nella cartella Amici" è una sola regola. In qualunque ordine le metti, l'azione che sposta o elimina viene eseguita per ultima, così le altre vedono ancora il messaggio.
+
+<strong>Backup e spostamento tra profili</strong>
+Le regole si esportano in un file JSON e si reimportano. Una regola che hai già viene riconosciuta e ignorata invece di essere duplicata, quindi importare un file condiviso è sicuro.
+
+<strong>Quando vengono eseguite le regole</strong>
+Le regole vengono eseguite con un timer che imposti tu, e anche entro pochi secondi dall'arrivo di nuova posta in una cartella monitorata. Gli arrivi vengono raggruppati, quindi una sincronizzazione della posta causa una sola esecuzione, e vengono controllate solo le regole che monitorano la cartella che ha ricevuto la posta. Una regola può anche avere una propria pianificazione, scritta come espressione cron, ad esempio 0 21 * * * per le 21:00 ogni giorno. Quella regola viene quindi eseguita solo in quei momenti, e un'esecuzione saltata mentre Thunderbird era chiuso avviene all'avvio successivo. Per eseguire le regole manualmente, usa il pulsante della barra degli strumenti, il menu contestuale o il pulsante Esegui di una regola. La sezione Avanzate della pagina delle opzioni ti permette di disattivare l'esecuzione all'arrivo di nuova posta e di regolare i tempi di scansione.
+
+<strong>Velocità, e una nota su Reply-To</strong>
+Le condizioni su From, To, Cc e Subject usano dati indicizzati e non scaricano nulla. Le condizioni su Reply-To, o su altre intestazioni non indicizzate, richiedono il messaggio stesso, che viene scaricato su richiesta in una cartella IMAP online. Per velocità e uso offline, attiva l'archiviazione offline per quella cartella. Le esecuzioni pianificate esaminano solo la posta arrivata dopo l'esecuzione precedente, più un passaggio di recupero più ampio ogni 30 minuti per la posta la cui intestazione Date è in ritardo rispetto all'arrivo reale, quindi anche una cartella grande resta leggera da elaborare. "Esegui ora tutte le regole" analizza sempre tutto.
+
+<strong>Privacy</strong>
+Nessun dato viene raccolto o venduto, e il componente aggiuntivo non ha analisi né telemetria. Le regole vengono eseguite in locale all'interno di Thunderbird, e il contenuto dei messaggi non lascia mai il tuo dispositivo. A parte il tuo server di posta, l'unico server che il componente aggiuntivo contatta è un server DNS per la verifica DKIM facoltativa, che avviene solo per le regole con una condizione SPF, DKIM o DMARC. Invia ricerche DNS per nomi di dominio come selector._domainkey.example.com e _dmarc.example.com a Cloudflare o Google, quello che scegli tu, e solo dopo che lo hai consentito. L'accesso alla rubrica e all'elenco delle etichette è facoltativo, e il componente aggiuntivo lo chiede solo quando usi una condizione o un'azione che ne ha bisogno. Il rapporto di diagnostica viene condiviso solo da te, e nasconde indirizzi, domini, pattern e nomi delle cartelle, a meno che tu non scelga di includerli.
+
+<strong>Open source</strong>
+Distribuito con licenza MPL-2.0. Codice sorgente, segnalazioni e contributi sono benvenuti su <a href="https://github.com/KayhanB21/folder-filter-scheduler">github.com/KayhanB21/folder-filter-scheduler</a>

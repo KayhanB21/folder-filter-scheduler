@@ -6,5 +6,1103 @@
   "extensionDescription": {
     "message": "받은편지함뿐 아니라 모든 폴더에서 필터 규칙을 예약 실행합니다. 보낸 사람, 제목, 주소록 또는 SPF, DKIM, DMARC로 판별합니다.",
     "description": "Short description shown in the add-ons manager."
+  },
+  "common_addSpamDomains": {
+    "message": "스팸 도메인 추가"
+  },
+  "common_runAllRulesNow": {
+    "message": "지금 모든 규칙 실행"
+  },
+  "common_restoreDefaults": {
+    "message": "기본값 복원"
+  },
+  "common_allowTagAccess": {
+    "message": "태그 접근 허용…"
+  },
+  "common_noTag": {
+    "message": "(태그 없음)"
+  },
+  "common_untitledRule": {
+    "message": "이름 없는 규칙"
+  },
+  "common_quoted": {
+    "message": "“$1”"
+  },
+  "menu_runARule": {
+    "message": "규칙 실행"
+  },
+  "options_theme": {
+    "message": "테마"
+  },
+  "options_themeLight": {
+    "message": "밝게"
+  },
+  "options_themeDark": {
+    "message": "어둡게"
+  },
+  "options_themeSystem": {
+    "message": "시스템"
+  },
+  "options_themeSystemTitle": {
+    "message": "시스템: Thunderbird 테마 따르기"
+  },
+  "options_tagline": {
+    "message": "Thunderbird가 기본적으로 받은 편지함에서만 하는 일을 모든 폴더에서 타이머로 실행합니다."
+  },
+  "options_runEvery": {
+    "message": "$1분마다 실행"
+  },
+  "options_save": {
+    "message": "저장"
+  },
+  "options_collapseAll": {
+    "message": "모두 접기"
+  },
+  "options_expandAll": {
+    "message": "모두 펼치기"
+  },
+  "options_export": {
+    "message": "내보내기…"
+  },
+  "options_import": {
+    "message": "가져오기…"
+  },
+  "options_addRule": {
+    "message": "+ 규칙 추가"
+  },
+  "allowlist_title": {
+    "message": "보호된 도메인 (차단하지 않음)"
+  },
+  "allowlist_hint": {
+    "message": "메시지 목록에서 스팸 도메인을 추가할 때 여기 있는 도메인은 건너뜁니다. 그래서 잘못 선택해도 주요 메일 서비스가 차단되지 않습니다. 한 줄에 도메인 하나씩 입력합니다."
+  },
+  "diag_title": {
+    "message": "진단"
+  },
+  "diag_hint": {
+    "message": "기대와 다르게 동작하면 메시지와 함께 이 보고서를 보내 주세요. 보고서에는 Thunderbird 버전, 각 규칙의 구조, 최근 실행 내용이 들어 있습니다. 아래 상자를 선택하지 않으면 주소, 도메인, 패턴, 폴더 이름은 빠집니다. 여기 보이는 내용이 공유되는 내용 그대로입니다."
+  },
+  "diag_includeValues": {
+    "message": "규칙 값 포함 (주소, 도메인, 패턴, 폴더)"
+  },
+  "diag_copy": {
+    "message": "보고서 복사"
+  },
+  "diag_save": {
+    "message": "보고서 저장…"
+  },
+  "diag_refresh": {
+    "message": "새로 고침"
+  },
+  "diag_clear": {
+    "message": "로그 지우기"
+  },
+  "diag_buildFailed": {
+    "message": "보고서를 만들 수 없습니다: $1"
+  },
+  "adv_title": {
+    "message": "고급"
+  },
+  "adv_hint": {
+    "message": "검사 엔진의 시간 설정입니다. 대부분은 기본값이 적당하니, 이유를 알 때만 바꾸세요. 저장할 때 모든 값은 안전한 범위로 조정됩니다."
+  },
+  "adv_logScheduleRuns": {
+    "message": "규칙 자체 일정에 따른 실행을 모두 기록"
+  },
+  "adv_logScheduleRunsHint": {
+    "message": "이 옵션을 끄면 진단 로그는 이런 실행을 메일을 바꾸거나 실패했을 때만 기록합니다. 끄지 않으면 매분 실행되는 규칙이 몇 시간 안에 오래된 항목을 로그에서 밀어냅니다. 변경 사항을 적용하려면 <b>저장</b>을 선택하세요."
+  },
+  "adv_runOnNewMail": {
+    "message": "새 메일이 도착할 때도 실행"
+  },
+  "adv_runOnNewMailHint": {
+    "message": "이 옵션을 끄면 규칙은 위의 타이머로만 실행되므로, 새 메일은 최대 그 시간만큼 기다립니다. Thunderbird는 메일이 도착할 때마다 알립니다."
+  },
+  "adv_newMailDelay": {
+    "message": "마지막 메일 도착 후 $1초 기다린 뒤 실행"
+  },
+  "adv_newMailDelayHint": {
+    "message": "메일 동기화 한 번에 여러 메시지가 알려집니다. 기다리면 전체 묶음을 한 번의 실행으로 처리합니다. Thunderbird가 유휴 부가 기능을 일시 중지하므로 최대 15초입니다."
+  },
+  "adv_catchUp": {
+    "message": "$1분마다 최근 $2일을 다시 보는 보충 검사"
+  },
+  "adv_catchUpHint": {
+    "message": "일반 실행은 이전 실행 이후 날짜의 메일만 봅니다. 보낸 사람이 Date 헤더를 과거 날짜로 바꿀 수 있으므로, 이 넓은 검사가 일반 실행에서 놓친 메일을 잡아냅니다. 두 숫자 중 하나를 늘리면 검사마다 작업이 늘어납니다."
+  },
+  "adv_overlap": {
+    "message": "일반 검사마다 $1분 겹치게 시작"
+  },
+  "adv_overlapHint": {
+    "message": "각 검사가 이전 실행보다 얼마나 앞에서 시작할지 정합니다. 검사 중에 도착하거나 날짜가 조금 이른 메일을 놓치지 않기 위한 설정입니다."
+  },
+  "adv_showMenu": {
+    "message": "오른쪽 클릭 메뉴에 폴더 필터 스케줄러 표시"
+  },
+  "adv_showMenuHint": {
+    "message": "이 메뉴로 메시지 목록에서 스팸 도메인을 추가하고 규칙을 실행합니다. 메뉴가 없어도 도구 모음 단추와 이 페이지에서 규칙을 실행할 수 있습니다. 변경 사항을 적용하려면 <b>저장</b>을 선택하세요."
+  },
+  "adv_shortName": {
+    "message": "도구 모음 단추와 오른쪽 클릭 메뉴에 짧은 이름 FFS 사용"
+  },
+  "adv_shortNameHint": {
+    "message": "짧은 이름은 공간을 덜 차지합니다. 도구 모음 단추의 도구 설명에는 전체 이름이 그대로 표시됩니다. 변경 사항을 적용하려면 <b>저장</b>을 선택하세요."
+  },
+  "adv_authHeading": {
+    "message": "인증 조건"
+  },
+  "adv_authOwn": {
+    "message": "DKIM 직접 검증"
+  },
+  "adv_authOwnHint": {
+    "message": "보낸 사람이 가짜 <code>Authentication-Results</code> 헤더를 넣을 수 있으므로, 부가 기능이 DKIM 서명을 직접 검증하고 그 결과로 DMARC를 판단합니다. 인증 조건이 확인하는 메시지는 전체를 내려받고, 아래 DNS 서버에 서명 키를 요청합니다. 서버는 요청받은 도메인 이름을 알 수 있습니다. 이 옵션을 끄면 메일 서비스 제공업체가 추가한 헤더에서 DKIM과 DMARC 결과를 읽습니다."
+  },
+  "adv_authServer": {
+    "message": "DNS 서버 $1"
+  },
+  "adv_authServerHint": {
+    "message": "서버를 처음 사용할 때 Thunderbird가 허용할지 묻습니다."
+  },
+  "adv_authPrefer": {
+    "message": "내 검사와 제공업체 헤더의 결과가 다르면 다음을 사용: $1"
+  },
+  "adv_authPreferOwn": {
+    "message": "내 검사"
+  },
+  "adv_authPreferProvider": {
+    "message": "제공업체 헤더"
+  },
+  "adv_authPreferHint": {
+    "message": "제공업체 헤더를 고르면, 헤더에 없는 검사에만 부가 기능 자체 결과를 사용합니다."
+  },
+  "adv_authTrusted": {
+    "message": "신뢰할 인증 서버 $1"
+  },
+  "adv_authTrustedPlaceholder": {
+    "message": "한 줄에 서버 하나씩, 예:\nmta.yahoo.com\nmx.google.com"
+  },
+  "adv_authTrustedHint": {
+    "message": "비워 두면 제공업체가 마지막에 추가하는 맨 위의 <code>Authentication-Results</code> 헤더를 신뢰합니다. 서버 이름을 한 줄에 하나씩 입력하면, 그중 한 서버가 추가한 맨 위 헤더를 사용합니다. 서버 이름은 헤더의 첫 단어이며, 예를 들어 <code>mta.yahoo.com</code> 또는 <code>mx.google.com</code>입니다."
+  },
+  "help_title": {
+    "message": "자주 발생하는 문제"
+  },
+  "help_otherFolderTitle": {
+    "message": "규칙이 보낸 편지함 등 받은 편지함이 아닌 폴더의 메일을 놓침"
+  },
+  "help_otherFolderCause": {
+    "message": "IMAP 계정에서 Thunderbird는 기본적으로 받은 편지함에서만 새 메일을 확인합니다. 부가 기능은 Thunderbird가 내려받은 메시지만 처리할 수 있습니다. 그래서 다른 프로그램이 계정으로 보낸 메일이나 서버 규칙이 분류한 메일은 폴더를 열 때까지 기다립니다. <b>지금 모든 규칙 실행</b>이 동작하는 것처럼 보이는 이유는 먼저 폴더를 열었기 때문입니다."
+  },
+  "help_otherFolderFix": {
+    "message": "해결하려면 폴더를 오른쪽 클릭하고 <b>속성</b>을 엽니다. <b>일반 정보</b> 탭에서 <b>폴더에 새 메시지 도착 여부 확인</b>을 켭니다."
+  },
+  "help_closedTitle": {
+    "message": "Thunderbird가 닫혀 있는 동안 메일이 도착함"
+  },
+  "help_closedBody": {
+    "message": "규칙은 Thunderbird가 실행 중일 때만 실행됩니다. Thunderbird가 시작되면 첫 예약 실행이 최근 30일 또는 <b>고급</b>에서 설정한 일수를 확인하고, 놓친 메일을 처리합니다."
+  },
+  "help_otherTitle": {
+    "message": "그 밖의 문제"
+  },
+  "help_otherBody": {
+    "message": "<b>진단</b>을 열고 보고서를 <a>GitHub 이슈</a>에 첨부하세요. 보고서에는 최근 실행마다 무엇을 검사하고 일치시켰는지 나옵니다."
+  },
+  "rule_collapseTitle": {
+    "message": "이 규칙 접기 또는 펼치기"
+  },
+  "rule_namePlaceholder": {
+    "message": "규칙 이름"
+  },
+  "rule_newName": {
+    "message": "새 규칙"
+  },
+  "rule_enabled": {
+    "message": "사용"
+  },
+  "rule_run": {
+    "message": "실행"
+  },
+  "rule_runTitle": {
+    "message": "지금 이 규칙만 폴더의 모든 메시지에 실행"
+  },
+  "rule_delete": {
+    "message": "삭제"
+  },
+  "rule_folders": {
+    "message": "폴더"
+  },
+  "rule_foldersExpand": {
+    "message": "펼치기"
+  },
+  "rule_foldersExpandTitle": {
+    "message": "모두 펼치기: 모든 계정과 하위 폴더 표시"
+  },
+  "rule_foldersCollapse": {
+    "message": "접기"
+  },
+  "rule_foldersCollapseTitle": {
+    "message": "모두 접기: 계정 이름만 표시"
+  },
+  "rule_folderFilter": {
+    "message": "폴더 찾기"
+  },
+  "rule_selectMatching": {
+    "message": "일치하는 항목 모두 선택"
+  },
+  "rule_includeSubfolders": {
+    "message": "하위 폴더 포함 (나중에 만드는 폴더 포함)"
+  },
+  "rule_match": {
+    "message": "일치"
+  },
+  "rule_matchAny": {
+    "message": "조건 중 하나 이상 (OR)"
+  },
+  "rule_matchAll": {
+    "message": "모든 조건 (AND)"
+  },
+  "rule_addCondition": {
+    "message": "+ 조건 추가"
+  },
+  "rule_addAction": {
+    "message": "+ 동작 추가"
+  },
+  "rule_schedule": {
+    "message": "일정"
+  },
+  "rule_scheduleOn": {
+    "message": "이 규칙을 자체 일정으로 실행"
+  },
+  "rule_cronLabel": {
+    "message": "Cron 표현식"
+  },
+  "rule_cronHelp": {
+    "message": "Cron 표현식 작성 방법"
+  },
+  "rule_scheduleHint": {
+    "message": "Cron 표현식에는 분, 시, 일, 월, 요일의 다섯 필드가 있으며, 컴퓨터의 현지 시간을 따릅니다. 자체 일정이 있는 규칙은 이 시각에만 실행됩니다. 페이지 맨 위의 타이머와 새 메일로는 더 이상 시작되지 않습니다."
+  },
+  "schedule_error": {
+    "message": "$1."
+  },
+  "schedule_next": {
+    "message": "$1. 다음 실행: $2."
+  },
+  "schedule_never": {
+    "message": "$1. 이 날짜는 오지 않으므로 규칙이 실행되지 않습니다."
+  },
+  "cron_fieldMinute": {
+    "message": "분"
+  },
+  "cron_fieldHour": {
+    "message": "시"
+  },
+  "cron_fieldDay": {
+    "message": "일"
+  },
+  "cron_fieldMonth": {
+    "message": "월"
+  },
+  "cron_fieldWeekday": {
+    "message": "요일"
+  },
+  "cron_errorEmpty": {
+    "message": "Cron 표현식을 입력하세요"
+  },
+  "cron_errorTooLong": {
+    "message": "표현식이 너무 깁니다"
+  },
+  "cron_errorFieldCount": {
+    "message": "Cron 표현식에는 분, 시, 일, 월, 요일의 5개 필드가 있습니다. 입력한 필드 수: $1"
+  },
+  "cron_errorInvalid": {
+    "message": "\"$1\"은(는) 올바른 $2 값이 아닙니다"
+  },
+  "cron_errorOutOfRange": {
+    "message": "$1 값은 $2부터 $3까지여야 합니다. 입력한 값: $4"
+  },
+  "cron_errorStep": {
+    "message": "$2 필드의 간격 \"$1\"은(는) 1 이상이어야 합니다"
+  },
+  "cron_errorRange": {
+    "message": "\"$1\"은(는) 올바른 $2 범위가 아닙니다"
+  },
+  "cron_errorBackwards": {
+    "message": "$2 범위 \"$1\"의 순서가 거꾸로입니다"
+  },
+  "cron_range": {
+    "message": "$1~$2"
+  },
+  "cron_atTimes": {
+    "message": "$1에"
+  },
+  "cron_everyMinute": {
+    "message": "매분"
+  },
+  "cron_everyMinutes_other": {
+    "message": "$1분마다"
+  },
+  "cron_everyHourOnTheHour": {
+    "message": "매시 정각"
+  },
+  "cron_everyHourAtMinute": {
+    "message": "매시 $1분"
+  },
+  "cron_atMinutes_other": {
+    "message": "매시 $1분"
+  },
+  "cron_timeAndHours": {
+    "message": "$2 $1"
+  },
+  "cron_everyHours_other": {
+    "message": "$1시간마다"
+  },
+  "cron_betweenHours": {
+    "message": "$1~$2 사이"
+  },
+  "cron_duringHours_other": {
+    "message": "$1시대"
+  },
+  "cron_everyDay": {
+    "message": "매일"
+  },
+  "cron_onDaysOfMonth_other": {
+    "message": "매월 $1일"
+  },
+  "cron_onWeekdays": {
+    "message": "$1"
+  },
+  "cron_inMonths": {
+    "message": "$1"
+  },
+  "cron_withDays": {
+    "message": "$2 $1"
+  },
+  "cron_withMonths": {
+    "message": "$2 $1"
+  },
+  "folders_account": {
+    "message": "계정"
+  },
+  "folders_includedAsSubfolder": {
+    "message": "하위 폴더로 포함됨"
+  },
+  "folders_selectedInside_other": {
+    "message": "안에서 $1개 선택됨"
+  },
+  "folders_expanded": {
+    "message": "펼쳐짐"
+  },
+  "folders_collapsed": {
+    "message": "접힘"
+  },
+  "folders_countSelected_other": {
+    "message": "$1개 선택됨"
+  },
+  "folders_countSubfolders_other": {
+    "message": "하위 폴더로 $1개 더"
+  },
+  "folders_countFiltered_other": {
+    "message": "필터로 $1개 숨겨짐"
+  },
+  "folders_countFolded_other": {
+    "message": "접힌 폴더 안에 $1개"
+  },
+  "field_from": {
+    "message": "보낸 사람"
+  },
+  "field_to": {
+    "message": "받는 사람"
+  },
+  "field_cc": {
+    "message": "참조"
+  },
+  "field_subject": {
+    "message": "제목"
+  },
+  "field_reply_to": {
+    "message": "Reply-To"
+  },
+  "field_list_id": {
+    "message": "List-Id"
+  },
+  "field_sender": {
+    "message": "Sender"
+  },
+  "field_age": {
+    "message": "경과 기간"
+  },
+  "field_read": {
+    "message": "읽음"
+  },
+  "field_star": {
+    "message": "별표"
+  },
+  "field_junk": {
+    "message": "스팸"
+  },
+  "field_tag": {
+    "message": "태그"
+  },
+  "field_priority": {
+    "message": "우선 순위"
+  },
+  "field_auth": {
+    "message": "인증"
+  },
+  "op_contains": {
+    "message": "포함"
+  },
+  "op_is": {
+    "message": "일치"
+  },
+  "op_startsWith": {
+    "message": "시작 문자열"
+  },
+  "op_endsWith": {
+    "message": "끝 문자열"
+  },
+  "op_matchesRegex": {
+    "message": "정규식 일치"
+  },
+  "op_domainInList": {
+    "message": "도메인이 목록에 있음"
+  },
+  "op_inAddressBook": {
+    "message": "주소록에 있음"
+  },
+  "op_nameShowsOtherAddress": {
+    "message": "이름에 다른 주소 표시"
+  },
+  "op_olderThan": {
+    "message": "초과"
+  },
+  "op_newerThan": {
+    "message": "미만"
+  },
+  "op_isOn": {
+    "message": "해당함"
+  },
+  "op_isOff": {
+    "message": "해당하지 않음"
+  },
+  "op_hasTag": {
+    "message": "태그 있음"
+  },
+  "op_priorityIs": {
+    "message": "같음"
+  },
+  "op_authPasses": {
+    "message": "통과"
+  },
+  "op_greyIsOn": {
+    "message": "읽음, 별표 있음 또는 스팸임"
+  },
+  "op_greyIsOff": {
+    "message": "읽지 않음, 별표 없음 또는 스팸 아님"
+  },
+  "op_greyPriorityIs": {
+    "message": "우선 순위 같음"
+  },
+  "op_ageOnly": {
+    "message": "$1 (경과 기간 필드 전용)"
+  },
+  "op_ageOnlyReason": {
+    "message": "경과 기간 필드에서만 동작합니다."
+  },
+  "op_stateOnlyReason": {
+    "message": "읽음, 별표, 스팸 필드에서만 동작합니다."
+  },
+  "op_tagOnly": {
+    "message": "$1 (태그 필드 전용)"
+  },
+  "op_tagOnlyReason": {
+    "message": "태그 필드에서만 동작합니다."
+  },
+  "op_priorityOnlyReason": {
+    "message": "우선 순위 필드에서만 동작합니다."
+  },
+  "op_authOnly": {
+    "message": "$1 (인증 전용)"
+  },
+  "op_authOnlyReason": {
+    "message": "인증 필드에서만 동작합니다."
+  },
+  "op_headerOnly": {
+    "message": "$1 (헤더 필드 전용)"
+  },
+  "op_headerOnlyReason": {
+    "message": "보낸 사람이나 제목 같은 헤더 필드에서만 동작합니다."
+  },
+  "state_read_isOn": {
+    "message": "읽음"
+  },
+  "state_read_isOff": {
+    "message": "읽지 않음"
+  },
+  "state_star_isOn": {
+    "message": "별표 있음"
+  },
+  "state_star_isOff": {
+    "message": "별표 없음"
+  },
+  "state_junk_isOn": {
+    "message": "스팸임"
+  },
+  "state_junk_isOff": {
+    "message": "스팸 아님"
+  },
+  "priority_highest": {
+    "message": "가장 높음"
+  },
+  "priority_high": {
+    "message": "높음"
+  },
+  "priority_normal": {
+    "message": "보통"
+  },
+  "priority_low": {
+    "message": "낮음"
+  },
+  "priority_lowest": {
+    "message": "가장 낮음"
+  },
+  "cond_not": {
+    "message": "부정"
+  },
+  "cond_valuePlaceholder": {
+    "message": "값"
+  },
+  "cond_daysUnit": {
+    "message": "일"
+  },
+  "cond_allowBookAccess": {
+    "message": "주소록 접근 허용…"
+  },
+  "cond_allowDnsAccess": {
+    "message": "DNS 서버 접근 허용…"
+  },
+  "cond_allAddressBooks": {
+    "message": "모든 주소록"
+  },
+  "cond_missingAddressBook": {
+    "message": "(없는 주소록)"
+  },
+  "cond_domainsPlaceholder": {
+    "message": "한 줄에 도메인 하나씩, 예: evil.com\n하위 도메인은 자동으로 일치합니다."
+  },
+  "cond_otherFields": {
+    "message": "다른 필드에서 동작"
+  },
+  "cond_greyFieldList": {
+    "message": "“도메인이 목록에 있음”과 함께 쓸 수 없습니다. 먼저 연산자를 바꾸세요."
+  },
+  "cond_greyFieldAddress": {
+    "message": "이 연산자는 주소를 읽는데, 이 필드에는 주소가 없습니다. 먼저 연산자를 바꾸세요."
+  },
+  "cond_domainListOnly": {
+    "message": "$1 (도메인 목록 전용)"
+  },
+  "cond_greyDomainSet": {
+    "message": "“도메인이 목록에 있음” 연산자에서만 동작합니다."
+  },
+  "cond_nameHint": {
+    "message": "보낸 사람 이름에 실제 주소와 다른 도메인의 이메일 주소가 들어 있으면 일치합니다. 예: 이름이 <code>Lena <lena@yahoo.com></code>이고 실제 주소가 <code>someone@sina.com</code>인 경우입니다. 스팸은 다른 사람처럼 보이려고 이렇게 합니다. 일부 메일링 리스트도 이렇게 하므로, 휴지통을 쓰기 전에 폴더로 이동하는 동작으로 규칙을 먼저 시험해 보세요."
+  },
+  "cond_priorityHint": {
+    "message": "우선 순위를 읽으려면 부가 기능이 메시지마다 헤더를 내려받으므로, 이 검사는 다른 검사보다 느립니다. 우선 순위가 없는 메시지는 보통으로 간주합니다."
+  },
+  "cond_authHint": {
+    "message": "보낸 사람이 보낸 사람 주소가 주장하는 사람이 맞는지 확인합니다. 확인을 위해 부가 기능은 규칙이 보는 메시지마다 전체를 한 번 내려받고 결과를 보관합니다. SPF 결과는 메일 서비스 제공업체가 추가하는 <code>Authentication-Results</code> 헤더에서 가져옵니다. 부가 기능은 DKIM을 직접 검증하고 두 결과로 DMARC를 판단합니다. DNS 서버가 응답하지 않는 등의 이유로 확인을 끝내지 못하면 조건은 일치하지 않습니다. 부가 기능은 24시간 동안 다시 시도합니다. 설정은 <b>고급</b>을 참고하세요."
+  },
+  "cond_stateHint": {
+    "message": "예약 실행은 오래된 메일을 보충 검사에서만 확인하며, 보충 검사는 기본적으로 30분마다 실행됩니다(<b>고급</b> 참고). 그래서 오래된 메시지에 별표나 태그를 달거나 읽은 뒤, 규칙이 반영하기까지 그만큼 걸릴 수 있습니다. <b>실행</b>은 모든 메시지를 바로 확인합니다."
+  },
+  "action_then": {
+    "message": "동작"
+  },
+  "action_choose": {
+    "message": "동작 선택…"
+  },
+  "action_chooseHint": {
+    "message": "일치하는 메시지에 할 동작을 고르세요."
+  },
+  "action_trash": {
+    "message": "휴지통으로 이동 (각 메시지의 계정)"
+  },
+  "action_trashHint": {
+    "message": "일치한 메시지를 각각 자기 계정의 휴지통으로 보냅니다. 여러 계정에 걸친 규칙에서도 안전합니다."
+  },
+  "action_move": {
+    "message": "폴더로 이동…"
+  },
+  "action_moveHint": {
+    "message": "일치한 메시지를 모두 선택한 폴더로 보냅니다. 다른 계정의 폴더도 됩니다(Thunderbird가 대상 계정에 복사한 다음 원본을 삭제합니다)."
+  },
+  "action_archive": {
+    "message": "보관"
+  },
+  "action_archiveHint": {
+    "message": "Thunderbird의 보관 단추와 같은 방식으로 각 메시지를 해당 계정의 보관 설정에 따라 보관합니다. 보관을 끈 계정의 메일은 그대로 둡니다."
+  },
+  "action_copy": {
+    "message": "폴더로 복사…"
+  },
+  "action_copyHint": {
+    "message": "원본은 그대로 두고 선택한 폴더에 사본을 복사합니다(다른 계정에도 가능)."
+  },
+  "action_tag": {
+    "message": "태그 지정…"
+  },
+  "action_tagHint": {
+    "message": "Thunderbird 태그 하나를 추가합니다. 메시지에 이미 있는 태그는 유지되므로 여러 규칙이 같은 메일에 태그를 달 수 있습니다."
+  },
+  "action_markRead": {
+    "message": "읽음으로 표시"
+  },
+  "action_markReadHint": {
+    "message": "일치한 메시지를 이동하지 않고 읽음으로 표시합니다."
+  },
+  "action_markUnread": {
+    "message": "읽지 않음으로 표시"
+  },
+  "action_markUnreadHint": {
+    "message": "일치한 메시지를 이동하지 않고 읽지 않음으로 표시합니다."
+  },
+  "action_markFlagged": {
+    "message": "별표 추가"
+  },
+  "action_markFlaggedHint": {
+    "message": "일치한 메시지를 이동하지 않고 별표를 추가합니다."
+  },
+  "action_markUnflagged": {
+    "message": "별표 제거"
+  },
+  "action_markUnflaggedHint": {
+    "message": "일치한 메시지를 이동하지 않고 별표를 제거합니다."
+  },
+  "action_markJunk": {
+    "message": "스팸으로 표시"
+  },
+  "action_markJunkHint": {
+    "message": "일치한 메시지를 스팸으로 표시합니다(이동하지 않으며, 나머지는 Thunderbird의 스팸 처리가 결정합니다)."
+  },
+  "action_markNotJunk": {
+    "message": "스팸 아님으로 표시"
+  },
+  "action_markNotJunkHint": {
+    "message": "일치한 메시지를 이동하지 않고 스팸 표시를 해제합니다."
+  },
+  "action_deletePermanently": {
+    "message": "영구 삭제"
+  },
+  "action_deletePermanentlyHint": {
+    "message": "휴지통을 거치지 않고 일치한 메시지를 즉시 삭제합니다. 되돌릴 수 없습니다."
+  },
+  "summary_not": {
+    "message": "$1 아님"
+  },
+  "summary_text": {
+    "message": "$1: “$3” $2"
+  },
+  "summary_age_other": {
+    "message": "$1 $3일 $2"
+  },
+  "summary_hasTag": {
+    "message": "태그 $1 있음"
+  },
+  "summary_notHasTag": {
+    "message": "태그 $1 없음"
+  },
+  "summary_priorityIs": {
+    "message": "우선 순위 $1"
+  },
+  "summary_priorityIsNot": {
+    "message": "우선 순위 $1 아님"
+  },
+  "summary_authPasses": {
+    "message": "$1 통과"
+  },
+  "summary_authNotPasses": {
+    "message": "$1 통과 못 함"
+  },
+  "summary_inBook": {
+    "message": "$1: $2에 있음"
+  },
+  "summary_notInBook": {
+    "message": "$1: $2에 없음"
+  },
+  "summary_nameShows": {
+    "message": "$1: 이름에 다른 주소 표시"
+  },
+  "summary_notNameShows": {
+    "message": "$1: 이름에 다른 주소 표시 안 함"
+  },
+  "summary_inList_other": {
+    "message": "$1: 도메인 $2개 목록에 있음"
+  },
+  "summary_notInList_other": {
+    "message": "$1: 도메인 $2개 목록에 없음"
+  },
+  "summary_and": {
+    "message": "AND"
+  },
+  "summary_or": {
+    "message": "OR"
+  },
+  "summary_noConditions": {
+    "message": "조건 없음"
+  },
+  "summary_noAction": {
+    "message": "동작 없음"
+  },
+  "summary_tagAction": {
+    "message": "태그 지정: $1"
+  },
+  "summary_folders_other": {
+    "message": "폴더 $1개"
+  },
+  "summary_foldersAndSubfolders_other": {
+    "message": "폴더 $1개와 하위 폴더"
+  },
+  "reject_tagActionNoTag": {
+    "message": "“$1” 규칙: 태그 동작에 태그가 선택되지 않음"
+  },
+  "reject_secondTerminal": {
+    "message": "“$1” 규칙: 이동하거나 삭제하는 동작은 하나만 가능하므로 “$2” 동작을 뺌"
+  },
+  "reject_ageDays": {
+    "message": "경과 기간 조건에는 정수 일수가 필요함 (입력: \"$1\")"
+  },
+  "reject_ageDaysEmpty": {
+    "message": "경과 기간 조건에는 정수 일수가 필요함 (입력 없음)"
+  },
+  "reject_tagConditionNoTag": {
+    "message": "태그 조건에 태그가 선택되지 않아 일치하지 않음"
+  },
+  "setting_newMailDelaySeconds": {
+    "message": "새 메일 도착 후 실행 전 대기 시간(초)"
+  },
+  "setting_scanOverlapMinutes": {
+    "message": "증분 검사 겹침 시간(분)"
+  },
+  "setting_catchUpEveryMinutes": {
+    "message": "보충 검사 간격(분)"
+  },
+  "setting_catchUpLookbackDays": {
+    "message": "보충 검사 확인 기간(일)"
+  },
+  "setting_authPrefer": {
+    "message": "검사 결과가 다를 때 사용할 결과"
+  },
+  "setting_authDohServer": {
+    "message": "DNS 서버"
+  },
+  "setting_outOfRange": {
+    "message": "$1 값은 $2-$3 범위여야 하므로 $4 값을 사용함"
+  },
+  "setting_mustBeOneOf": {
+    "message": "$1 값은 $2 중 하나여야 하므로 $3 값을 사용함"
+  },
+  "import_whereRule": {
+    "message": "규칙 $1"
+  },
+  "import_whereNamedRule": {
+    "message": "규칙 $1 (“$2”)"
+  },
+  "import_whereCondition": {
+    "message": "$1 조건 $2"
+  },
+  "import_noField": {
+    "message": "$1: 인식할 수 있는 헤더 필드가 없음"
+  },
+  "import_unknownOperator": {
+    "message": "$1: 알 수 없는 연산자 \"$2\""
+  },
+  "import_operatorMismatch": {
+    "message": "$1: \"$2\"은(는) \"$3\"에 적용되지 않음"
+  },
+  "import_ageDays": {
+    "message": "$1: 경과 기간에는 1 이상의 정수 일수가 필요함"
+  },
+  "import_noTag": {
+    "message": "$1: 선택된 태그가 없음"
+  },
+  "import_priorityLevel": {
+    "message": "$1: 우선 순위는 $2 중 하나여야 함"
+  },
+  "import_authMethod": {
+    "message": "$1: 검사는 $2 중 하나여야 함"
+  },
+  "import_bookFields": {
+    "message": "$1: 주소록 확인은 $2에만 적용됨"
+  },
+  "import_noBook": {
+    "message": "$1: 선택된 주소록이 없음"
+  },
+  "import_unknownBook": {
+    "message": "$1: 이 프로필에 없는 주소록이므로 저장 전에 주소록을 선택하세요"
+  },
+  "import_nameFields": {
+    "message": "$1: 이름 확인은 $2에만 적용됨"
+  },
+  "import_invalidDomains_other": {
+    "message": "$1: 잘못된 도메인 $2개를 뺌"
+  },
+  "import_emptyDomains": {
+    "message": "$1: 도메인 목록이 비어 있음"
+  },
+  "import_emptyValue": {
+    "message": "$1: 값이 비어 있음"
+  },
+  "import_noAction": {
+    "message": "$1: 동작이 없어 규칙을 건너뜀"
+  },
+  "import_unknownAction": {
+    "message": "$1: 알 수 없는 동작 \"$2\"을(를) 뺌"
+  },
+  "import_needsFolder": {
+    "message": "$1: \"$2\"에는 대상 폴더가 필요하므로 뺌"
+  },
+  "import_needsTag": {
+    "message": "$1: \"$2\"에는 태그가 필요하므로 뺌"
+  },
+  "import_secondTerminal": {
+    "message": "$1: 규칙은 이동하거나 삭제하는 동작 하나로만 끝날 수 있으므로 \"$2\"을(를) 뺌 (\"$3\" 유지)"
+  },
+  "import_noUsableAction": {
+    "message": "$1: 사용할 수 있는 동작이 없어 규칙을 건너뜀"
+  },
+  "import_noConditions": {
+    "message": "$1: 사용할 수 있는 조건이 없어 규칙을 건너뜀"
+  },
+  "import_unknownFolders_other": {
+    "message": "$1: 이 프로필에 없는 폴더 $2개를 제거함"
+  },
+  "import_badSchedule": {
+    "message": "$1: 일정이 올바른 Cron 표현식이 아니어서 껐음"
+  },
+  "import_defaultRuleName": {
+    "message": "가져온 규칙"
+  },
+  "import_anExistingRule": {
+    "message": "기존 규칙"
+  },
+  "import_notAnObject": {
+    "message": "올바른 JSON 객체가 아님"
+  },
+  "import_unexpectedFormat": {
+    "message": "예상하지 못한 형식 \"$1\""
+  },
+  "import_noRules": {
+    "message": "규칙 배열이 없음"
+  },
+  "import_invalidAllowlist_other": {
+    "message": "보호된 도메인: 잘못된 도메인 $1개를 뺌"
+  },
+  "import_advanced": {
+    "message": "고급: $1"
+  },
+  "status_bookAccessAllowed": {
+    "message": "주소록 접근을 허용했습니다. 주소록을 고르고 저장을 누르세요."
+  },
+  "status_bookAccessDenied": {
+    "message": "주소록 접근을 허용하지 않았습니다. 허용할 때까지 주소록 조건은 일치하지 않습니다."
+  },
+  "status_bookAccessFailed": {
+    "message": "주소록 접근을 요청할 수 없습니다: $1"
+  },
+  "status_dnsAccessAllowed": {
+    "message": "DNS 서버 접근을 허용했습니다. 이제 DKIM 및 DMARC 조건을 실행할 수 있습니다."
+  },
+  "status_dnsAccessDenied": {
+    "message": "DNS 서버 접근을 허용하지 않았습니다. 허용할 때까지 DKIM 및 DMARC 조건은 일치하지 않습니다."
+  },
+  "status_dnsAccessFailed": {
+    "message": "DNS 서버 접근을 요청할 수 없습니다: $1"
+  },
+  "status_tagAccessAllowed": {
+    "message": "태그 접근을 허용했습니다. 태그를 고르고 저장을 누르세요."
+  },
+  "status_tagAccessDenied": {
+    "message": "태그 접근을 허용하지 않아 여기에 태그 목록을 표시할 수 없습니다."
+  },
+  "status_tagAccessFailed": {
+    "message": "태그 접근을 요청할 수 없습니다: $1"
+  },
+  "status_needsAction": {
+    "message": "규칙에는 동작이 하나 이상 있어야 합니다."
+  },
+  "status_notSavedNoAction": {
+    "message": "저장하지 않음: $1 규칙의 동작을 선택하세요."
+  },
+  "status_notSavedBadSchedule": {
+    "message": "저장하지 않음: “$1” 규칙의 일정이 올바른 Cron 표현식이 아닙니다."
+  },
+  "status_notSavedNoFolder": {
+    "message": "저장하지 않음: “$1” 규칙의 폴더를 선택하거나 규칙을 끄세요."
+  },
+  "status_saved": {
+    "message": "저장했습니다. 일정을 업데이트했습니다."
+  },
+  "status_savedWithCorrections_other": {
+    "message": "저장했습니다. 수정 사항 $1개: $2."
+  },
+  "status_noteBookAccess": {
+    "message": "주소록 접근을 허용할 때까지 주소록 조건은 일치하지 않습니다."
+  },
+  "status_noteBookMissing": {
+    "message": "주소록 조건이 더 이상 없는 주소록을 가리키므로 일치하지 않습니다."
+  },
+  "status_noteTagConditionMissing": {
+    "message": "태그 조건이 더 이상 없는 태그를 가리키므로 일치하지 않습니다."
+  },
+  "status_noteTagActionMissing": {
+    "message": "태그 동작이 더 이상 없는 태그를 가리킵니다."
+  },
+  "status_diagCopied": {
+    "message": "진단 내용을 복사했습니다. 이메일이나 GitHub 이슈에 붙여 넣으세요."
+  },
+  "status_diagSaved": {
+    "message": "$1 파일을 저장했습니다."
+  },
+  "status_diagSaveFailed": {
+    "message": "보고서를 저장할 수 없습니다: $1"
+  },
+  "status_diagCleared": {
+    "message": "진단 로그를 지웠습니다."
+  },
+  "status_exported": {
+    "message": "$1 파일로 내보냈습니다. 이 페이지에서 저장하지 않은 변경 사항도 포함됩니다."
+  },
+  "status_exportFailed": {
+    "message": "내보내기 실패: $1"
+  },
+  "status_importReadFailed": {
+    "message": "$1 파일을 읽을 수 없습니다: $2"
+  },
+  "status_importFailed": {
+    "message": "가져오기 실패: $1"
+  },
+  "status_importNothingNew": {
+    "message": "새로 가져올 항목이 없습니다."
+  },
+  "status_importBecause": {
+    "message": "$1."
+  },
+  "status_importNoRules": {
+    "message": "파일에 사용할 수 있는 규칙이 없음"
+  },
+  "status_importDuplicates": {
+    "message": "이미 있어서 건너뜀: $1."
+  },
+  "status_importDuplicate": {
+    "message": "“$1” ($2, “$3”과(와) 같음)"
+  },
+  "status_imported_other": {
+    "message": "규칙 $1개를 가져왔습니다. 확인한 다음 저장을 눌러 유지하세요."
+  },
+  "status_importSkipped": {
+    "message": "건너뜀: $1."
+  },
+  "status_running": {
+    "message": "실행 중…"
+  },
+  "status_runningRule": {
+    "message": "“$1” 실행 중…"
+  },
+  "status_runDone_other": {
+    "message": "완료. 메시지 $1개가 처리되었습니다."
+  },
+  "status_ruleRunDone_other": {
+    "message": "완료. “$1” 규칙이 메시지 $2개를 처리했습니다."
+  },
+  "status_runFailed": {
+    "message": "실행 실패: $1"
+  },
+  "status_saveBeforeRun": {
+    "message": "“$1” 규칙을 실행하기 전에 변경 사항을 저장하세요."
+  },
+  "status_ruleTurnedOff": {
+    "message": "“$1” 규칙이 꺼져 있습니다. 실행하려면 규칙을 켜고 저장하세요."
+  },
+  "status_allowlistRestored": {
+    "message": "보호된 도메인을 기본값으로 복원했습니다. 유지하려면 저장을 누르세요."
+  },
+  "status_advancedRestored": {
+    "message": "고급 설정을 기본값으로 복원했습니다. 유지하려면 저장을 누르세요."
+  },
+  "status_noFolders": {
+    "message": "폴더를 찾을 수 없습니다. “accountsRead” 권한을 확인하고 부가 기능을 다시 불러오세요."
+  },
+  "popup_runOneRule": {
+    "message": "규칙 하나 실행"
+  },
+  "popup_noRules": {
+    "message": "켜져 있는 저장된 규칙이 없습니다."
+  },
+  "popup_openSettings": {
+    "message": "설정 열기"
+  },
+  "popup_runningAll": {
+    "message": "모든 규칙 실행 중…"
+  },
+  "popup_runDone_other": {
+    "message": "완료. 메시지 $1개가 처리되었습니다."
+  },
+  "popup_loadFailed": {
+    "message": "규칙을 불러올 수 없습니다: $1"
+  },
+  "confirm_reading": {
+    "message": "선택한 메시지를 읽는 중…"
+  },
+  "confirm_dontShowAgain": {
+    "message": "다시 표시하지 않음"
+  },
+  "confirm_cancel": {
+    "message": "취소"
+  },
+  "confirm_add": {
+    "message": "필터에 추가"
+  },
+  "confirm_replyToTitle": {
+    "message": "Reply-To 도메인"
+  },
+  "confirm_replyToNote": {
+    "message": "답장이 전달될 곳입니다. 대량 메일에서는 위조하기 더 어렵습니다."
+  },
+  "confirm_fromTitle": {
+    "message": "From 도메인"
+  },
+  "confirm_fromNote": {
+    "message": "눈에 보이는 보낸 사람으로, 브랜드를 사칭하려고 위조될 수 있습니다. 추가하기 전에 확인하세요."
+  },
+  "confirm_domains_other": {
+    "message": "도메인 $1개"
+  },
+  "confirm_selectedMessages_other": {
+    "message": "선택한 메시지 $1개"
+  },
+  "confirm_found": {
+    "message": "$2에서 $1를 찾았습니다. 선택한 도메인은 “$3” 규칙에 추가됩니다. 이 규칙은 일반 일정에 따라 일치하는 메일을 휴지통으로 옮깁니다."
+  },
+  "confirm_noneNew": {
+    "message": "$1에서 추가할 새 도메인이 없습니다."
+  },
+  "confirm_skippedProviders_other": {
+    "message": "잘 알려진 메일 서비스 도메인 $1개($2)를 건너뛰었습니다. 정상 메일을 보호하기 위해 이 도메인은 차단하지 않습니다."
+  },
+  "confirm_unreadable_other": {
+    "message": "메시지 $1개를 읽을 수 없습니다."
+  },
+  "confirm_expired": {
+    "message": "이 확인 창이 만료되었습니다. 동작을 다시 실행하세요."
+  },
+  "confirm_updateFailed": {
+    "message": "필터를 업데이트할 수 없습니다: $1"
+  },
+  "confirm_readFailed": {
+    "message": "선택 항목을 읽을 수 없습니다: $1"
   }
 }

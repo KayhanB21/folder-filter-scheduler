@@ -6,5 +6,1469 @@
   "extensionDescription": {
     "message": "受信トレイだけでなく、任意のフォルダーでフィルタールールをスケジュール実行。差出人、件名、アドレス帳、SPF・DKIM・DMARC で判定します。",
     "description": "Short description shown in the add-ons manager."
+  },
+  "common_addSpamDomains": {
+    "message": "迷惑メールのドメインを追加",
+    "description": "Right-click menu item and title of the window that adds the sender domains of the selected messages to a spam rule."
+  },
+  "common_runAllRulesNow": {
+    "message": "すべてのルールを今すぐ実行",
+    "description": "Button on the settings page and in the toolbar popup, and a right-click menu item. Runs every rule once, right away."
+  },
+  "common_restoreDefaults": {
+    "message": "初期設定に戻す",
+    "description": "Button that puts the settings of a section back to their default values."
+  },
+  "common_allowTagAccess": {
+    "message": "タグへのアクセスを許可...",
+    "description": "Button that asks Thunderbird for permission to list the user's message tags."
+  },
+  "common_noTag": {
+    "message": "(タグなし)",
+    "description": "Shown in place of a tag name when no tag is chosen."
+  },
+  "common_untitledRule": {
+    "message": "名前のないルール",
+    "description": "Name used for a rule whose name is empty."
+  },
+  "common_quoted": {
+    "message": "「$1」",
+    "description": "A rule name in quotation marks, inside a longer message. Use the quotation marks of your language. $1 is the name."
+  },
+  "menu_runARule": {
+    "message": "ルールを実行",
+    "description": "Right-click submenu that lists the rules; choosing one runs it."
+  },
+  "options_theme": {
+    "message": "テーマ",
+    "description": "Label for the light, dark, and system theme switch. Read by screen readers only."
+  },
+  "options_themeLight": {
+    "message": "ライト",
+    "description": "Theme switch: light colors."
+  },
+  "options_themeDark": {
+    "message": "ダーク",
+    "description": "Theme switch: dark colors."
+  },
+  "options_themeSystem": {
+    "message": "システム",
+    "description": "Theme switch: follow the Thunderbird theme. Read by screen readers only."
+  },
+  "options_themeSystemTitle": {
+    "message": "システム: Thunderbird に合わせる",
+    "description": "Tooltip of the theme switch button that follows the Thunderbird theme."
+  },
+  "options_tagline": {
+    "message": "任意のフォルダーでルールをタイマー実行します。標準の Thunderbird では受信トレイでしか自動実行されない部分を補います。",
+    "description": "One-line explanation under the page title."
+  },
+  "options_runEvery": {
+    "message": "$1 分ごとに実行",
+    "description": "Label around the number box for the default timer. $1 is the number box; keep it."
+  },
+  "options_save": {
+    "message": "保存",
+    "description": "Button that saves every rule and setting on the page."
+  },
+  "options_collapseAll": {
+    "message": "すべて折りたたむ",
+    "description": "Button that folds every rule card to a one-line summary."
+  },
+  "options_expandAll": {
+    "message": "すべて展開",
+    "description": "Button that opens every folded rule card."
+  },
+  "options_export": {
+    "message": "エクスポート...",
+    "description": "Button that saves the rules to a JSON file."
+  },
+  "options_import": {
+    "message": "インポート...",
+    "description": "Button that loads rules from a JSON file."
+  },
+  "options_addRule": {
+    "message": "+ ルールを追加",
+    "description": "Button that adds an empty rule card."
+  },
+  "allowlist_title": {
+    "message": "保護するドメイン (ブロックしない)",
+    "description": "Heading of the section with the domains that Add spam domains never adds."
+  },
+  "allowlist_hint": {
+    "message": "メッセージ一覧から迷惑メールのドメインを追加するとき、ここにあるドメインは除外されます。誤って選択しても大手プロバイダーをブロックしないためのものです。1 行に 1 ドメインを入力します。",
+    "description": "Explanation of the protected domains list."
+  },
+  "diag_title": {
+    "message": "診断",
+    "description": "Heading of the section with the diagnostics report."
+  },
+  "diag_hint": {
+    "message": "期待どおりに動作しない場合は、このレポートをメッセージに添えて送ってください。レポートには Thunderbird のバージョン、各ルールの構成、最近の実行内容が含まれます。下のチェックボックスをオンにしない限り、アドレス、ドメイン、パターン、フォルダー名は含まれません。ここに表示されている内容がそのまま共有されます。",
+    "description": "Explanation of the diagnostics report. The report itself stays in English."
+  },
+  "diag_includeValues": {
+    "message": "ルールの値 (アドレス、ドメイン、パターン、フォルダー) を含める",
+    "description": "Checkbox that adds the values of each rule to the diagnostics report."
+  },
+  "diag_copy": {
+    "message": "レポートをコピー",
+    "description": "Button that copies the diagnostics report to the clipboard."
+  },
+  "diag_save": {
+    "message": "レポートを保存...",
+    "description": "Button that saves the diagnostics report to a text file."
+  },
+  "diag_refresh": {
+    "message": "更新",
+    "description": "Button that rebuilds the diagnostics report."
+  },
+  "diag_clear": {
+    "message": "ログを消去",
+    "description": "Button that deletes the diagnostics log."
+  },
+  "diag_buildFailed": {
+    "message": "レポートを作成できませんでした: $1",
+    "description": "Shown in the report box when the report fails. $1 is the error message, in English."
+  },
+  "adv_title": {
+    "message": "詳細設定",
+    "description": "Heading of the Advanced settings section. Other messages refer to it in <b>…</b>; use the same word there."
+  },
+  "adv_hint": {
+    "message": "スキャン処理のタイミングです。ほとんどの場合は初期設定のままで問題ありません。理由がある場合だけ変更してください。保存時に、各値は安全な範囲に収められます。",
+    "description": "Explanation at the top of the Advanced section."
+  },
+  "adv_logScheduleRuns": {
+    "message": "ルール独自のスケジュールによる実行をすべて記録する",
+    "description": "Checkbox in the Diagnostics section."
+  },
+  "adv_logScheduleRunsHint": {
+    "message": "オフにすると、診断ログにはメールを変更した実行と失敗した実行だけが記録されます。1 分ごとに実行するルールがあると、古い記録が数時間でログから押し出されてしまうためです。変更を反映するには <b>保存</b> を選択します。",
+    "description": "Explanation of the checkbox that logs every scheduled run. Keep <b>…</b> around the name of the Save button."
+  },
+  "adv_runOnNewMail": {
+    "message": "新着メールの受信時にも実行する",
+    "description": "Checkbox in the Advanced section."
+  },
+  "adv_runOnNewMailHint": {
+    "message": "オフにすると、ルールは上のタイマーでのみ実行されるため、新着メールは最長でその間隔だけ待つことになります。Thunderbird はメールが届くたびにそれを通知します。",
+    "description": "Explanation of the checkbox that runs rules on new mail."
+  },
+  "adv_newMailDelay": {
+    "message": "最後の受信から $1 秒待ってから実行",
+    "description": "Label around a number box. $1 is the number box; keep it."
+  },
+  "adv_newMailDelayHint": {
+    "message": "1 回のメール同期で多数のメッセージが通知されます。待つことで、それらをまとめて 1 回の実行で処理します。Thunderbird はアイドル状態のアドオンを停止するため、上限は 15 秒です。",
+    "description": "Explanation of the delay before a run on new mail."
+  },
+  "adv_catchUp": {
+    "message": "$1 分ごとに、過去 $2 日分を対象に補完スキャンを実行",
+    "description": "Label around two number boxes. $1 is the box for the minutes and $2 the box for the days; keep both."
+  },
+  "adv_catchUpHint": {
+    "message": "通常の実行では、前回の実行以降の日付のメールだけを確認します。送信者は Date ヘッダーの日付をさかのぼって設定できるため、この広い範囲のスキャンで通常の実行が見逃したメールを拾います。どちらかの数値を大きくすると、1 回あたりの処理が増えます。",
+    "description": "Explanation of the catch-up scan. Date is the name of a mail header; keep it."
+  },
+  "adv_overlap": {
+    "message": "通常のスキャンを $1 分重ねる",
+    "description": "Label around a number box. $1 is the number box; keep it."
+  },
+  "adv_overlapHint": {
+    "message": "各スキャンを前回の実行より何分前から始めるかを指定します。スキャン中に届いたメールや、日付が少し早いメールを見逃さないためのものです。",
+    "description": "Explanation of the scan overlap."
+  },
+  "adv_showMenu": {
+    "message": "右クリックメニューに Folder Filter Scheduler を表示する",
+    "description": "Checkbox in the Advanced section. Folder Filter Scheduler is the name of the extension."
+  },
+  "adv_showMenuHint": {
+    "message": "このメニューから、メッセージ一覧で迷惑メールのドメインを追加したり、ルールを実行したりできます。オフにしても、ツールバーボタンとこのページからルールを実行できます。変更を反映するには <b>保存</b> を選択します。",
+    "description": "Explanation of the right-click menu checkbox. Keep <b>…</b> around the name of the Save button."
+  },
+  "adv_shortName": {
+    "message": "ツールバーボタンと右クリックメニューで短い名前 FFS を使う",
+    "description": "Checkbox in the Advanced section. FFS is the short name of the extension; keep it."
+  },
+  "adv_shortNameHint": {
+    "message": "短い名前は場所を取りません。ツールバーボタンのツールチップには正式名称が表示されます。変更を反映するには <b>保存</b> を選択します。",
+    "description": "Explanation of the short name checkbox. Keep <b>…</b> around the name of the Save button."
+  },
+  "adv_authHeading": {
+    "message": "認証の条件",
+    "description": "Subheading in the Advanced section for the SPF, DKIM, and DMARC settings."
+  },
+  "adv_authOwn": {
+    "message": "DKIM を自分で検証する",
+    "description": "Checkbox: the add-on checks DKIM signatures itself instead of trusting the mail provider. DKIM is a technical name; keep it."
+  },
+  "adv_authOwnHint": {
+    "message": "送信者は偽の <code>Authentication-Results</code> ヘッダーを追加できるため、アドオンが DKIM 署名を自分で検証し、その結果から DMARC を判定します。認証の条件が確認する各メッセージを全文ダウンロードし、署名の鍵を下の DNS サーバーに問い合わせます。DNS サーバーには、問い合わせたドメイン名が伝わります。オフにすると、メールプロバイダーが追加したヘッダーから DKIM と DMARC の結果を読み取ります。",
+    "description": "Explanation of the own DKIM check. Keep <code>Authentication-Results</code> as is: it is the name of a mail header."
+  },
+  "adv_authServer": {
+    "message": "DNS サーバー $1",
+    "description": "Label in front of the list of DNS servers. $1 is the list; keep it."
+  },
+  "adv_authServerHint": {
+    "message": "初めて使うときに、Thunderbird がサーバーへのアクセスを許可するか確認します。",
+    "description": "Explanation under the DNS server list."
+  },
+  "adv_authPrefer": {
+    "message": "自分の検証とプロバイダーのヘッダーが一致しないときは $1 を使う",
+    "description": "Label around a list with two choices: adv_authPreferOwn and adv_authPreferProvider. $1 is the list; keep it."
+  },
+  "adv_authPreferOwn": {
+    "message": "自分の検証",
+    "description": "Choice in the list after \"When my check and the provider's header disagree, use\"."
+  },
+  "adv_authPreferProvider": {
+    "message": "プロバイダーのヘッダー",
+    "description": "Choice in the list after \"When my check and the provider's header disagree, use\"."
+  },
+  "adv_authPreferHint": {
+    "message": "プロバイダーのヘッダーを選んだ場合、アドオン自身の結果は、ヘッダーに含まれない検証にだけ使います。",
+    "description": "Explanation of the choice between the own check and the provider's header."
+  },
+  "adv_authTrusted": {
+    "message": "信頼する認証サーバー $1",
+    "description": "Label in front of a text box. $1 is the text box; keep it."
+  },
+  "adv_authTrustedPlaceholder": {
+    "message": "1 行に 1 サーバー。例:\nmta.yahoo.com\nmx.google.com",
+    "description": "Gray example text in the empty box of trusted servers. Keep the line breaks (\\n) and the server names."
+  },
+  "adv_authTrustedHint": {
+    "message": "空欄にすると、プロバイダーが最後に追加した一番上の <code>Authentication-Results</code> ヘッダーを信頼します。サーバー名を 1 行に 1 つずつ入力すると、そのいずれかによる一番上のヘッダーを使います。サーバー名はヘッダーの最初の単語で、<code>mta.yahoo.com</code> や <code>mx.google.com</code> のようなものです。",
+    "description": "Explanation of the trusted servers. Keep the text inside <code>…</code> as is."
+  },
+  "help_title": {
+    "message": "よくある問題",
+    "description": "Heading of the help section."
+  },
+  "help_otherFolderTitle": {
+    "message": "送信済みトレイなど、受信トレイ以外のフォルダーでルールがメールを処理しない",
+    "description": "Help question. Use the names Thunderbird shows for the Sent and Inbox folders in your language."
+  },
+  "help_otherFolderCause": {
+    "message": "IMAP アカウントでは、Thunderbird は初期設定で受信トレイだけの新着メールを確認します。アドオンが処理できるのは Thunderbird がダウンロードしたメッセージだけです。そのため、他のプログラムがあなたのアカウントから送信したメールや、サーバーのルールが振り分けたメールは、そのフォルダーを開くまで処理されません。<b>すべてのルールを今すぐ実行</b> で処理できるように見えるのは、先にフォルダーを開いているためです。",
+    "description": "Help answer, part 1. The text inside <b>…</b> is the name of a button (common_runAllRulesNow); use the same translation."
+  },
+  "help_otherFolderFix": {
+    "message": "解決するには、フォルダーを右クリックして <b>プロパティ</b> を開きます。<b>一般情報</b> タブで <b>このフォルダーに新着メッセージがないか確認する</b> をオンにします。",
+    "description": "Help answer, part 2. The text inside each <b>…</b> names a part of Thunderbird; copy the words Thunderbird uses in your language."
+  },
+  "help_closedTitle": {
+    "message": "Thunderbird を閉じている間にメールが届いた",
+    "description": "Help question."
+  },
+  "help_closedBody": {
+    "message": "ルールは Thunderbird の起動中にだけ実行されます。Thunderbird の起動後、最初のスケジュール実行で過去 30 日分 (または <b>詳細設定</b> で指定した日数分) を確認し、見逃したメールを処理します。",
+    "description": "Help answer. <b>Advanced</b> is the section heading adv_title; use the same word."
+  },
+  "help_otherTitle": {
+    "message": "その他の問題",
+    "description": "Help question."
+  },
+  "help_otherBody": {
+    "message": "<b>診断</b> を開き、レポートを <a>GitHub issue</a> に添付してください。レポートには、最近の各実行でスキャンした内容と一致した内容が表示されます。",
+    "description": "Help answer. <b>Diagnostics</b> is the section heading diag_title. The text inside <a>…</a> becomes the link to the issue tracker; keep the tags."
+  },
+  "rule_collapseTitle": {
+    "message": "このルールを折りたたむ/展開する",
+    "description": "Tooltip of the arrow button on a rule card."
+  },
+  "rule_namePlaceholder": {
+    "message": "ルール名",
+    "description": "Gray text in the empty name box of a rule."
+  },
+  "rule_newName": {
+    "message": "新しいルール",
+    "description": "Name of a rule the user just added."
+  },
+  "rule_enabled": {
+    "message": "有効",
+    "description": "Checkbox on a rule card: the rule runs when this is on."
+  },
+  "rule_run": {
+    "message": "実行",
+    "description": "Button on a rule card that runs only this rule. Keep it short."
+  },
+  "rule_runTitle": {
+    "message": "このルールだけを今すぐ、対象フォルダーのすべてのメッセージに実行します",
+    "description": "Tooltip of the Run button on a rule card."
+  },
+  "rule_delete": {
+    "message": "削除",
+    "description": "Button that deletes a rule card."
+  },
+  "rule_folders": {
+    "message": "フォルダー",
+    "description": "Label of the folder list of a rule. The label column is narrow; keep it short."
+  },
+  "rule_foldersExpand": {
+    "message": "展開",
+    "description": "Small button under the Folders label that opens every account and folder in the list. One short word if you can."
+  },
+  "rule_foldersExpandTitle": {
+    "message": "すべて展開: すべてのアカウントとサブフォルダーを表示",
+    "description": "Tooltip of the Expand button of the folder list."
+  },
+  "rule_foldersCollapse": {
+    "message": "折りたたむ",
+    "description": "Small button under the Folders label that closes every account in the list. One short word if you can."
+  },
+  "rule_foldersCollapseTitle": {
+    "message": "すべて折りたたむ: アカウント名だけを表示",
+    "description": "Tooltip of the Collapse button of the folder list."
+  },
+  "rule_folderFilter": {
+    "message": "フォルダーを絞り込む",
+    "description": "Gray text and screen reader label of the search box above the folder list."
+  },
+  "rule_selectMatching": {
+    "message": "一致するものをすべて選択",
+    "description": "Button that selects every folder the search box shows."
+  },
+  "rule_includeSubfolders": {
+    "message": "サブフォルダー (今後作成するものも含む) を含める",
+    "description": "Checkbox under the folder list."
+  },
+  "rule_match": {
+    "message": "一致条件",
+    "description": "Label of the list that chooses between any and all conditions. The label column is narrow; keep it short."
+  },
+  "rule_matchAny": {
+    "message": "いずれかの条件に一致 (OR)",
+    "description": "Choice after the Match label."
+  },
+  "rule_matchAll": {
+    "message": "すべての条件に一致 (AND)",
+    "description": "Choice after the Match label."
+  },
+  "rule_addCondition": {
+    "message": "+ 条件を追加",
+    "description": "Button that adds a condition row to a rule."
+  },
+  "rule_addAction": {
+    "message": "+ アクションを追加",
+    "description": "Button that adds an action row to a rule."
+  },
+  "rule_schedule": {
+    "message": "スケジュール",
+    "description": "Label of the schedule part of a rule. The label column is narrow; keep it short."
+  },
+  "rule_scheduleOn": {
+    "message": "このルールを独自のスケジュールで実行する",
+    "description": "Checkbox that gives a rule its own cron schedule."
+  },
+  "rule_cronLabel": {
+    "message": "cron 式",
+    "description": "Screen reader label of the box for the cron expression. Cron is a technical name."
+  },
+  "rule_cronHelp": {
+    "message": "cron 式の書き方",
+    "description": "Link to crontab.guru, an English site that explains cron expressions."
+  },
+  "rule_scheduleHint": {
+    "message": "cron 式は、分、時、日、月、曜日の 5 つのフィールドで構成され、コンピューターのローカル時刻で解釈されます。独自のスケジュールを設定したルールは、指定した時刻にだけ実行されます。ページ上部のタイマーや新着メールでは実行されなくなります。",
+    "description": "Explanation under the cron box."
+  },
+  "schedule_error": {
+    "message": "$1。",
+    "description": "Shown under the cron box when the expression is wrong. $1 is the reason (a cron_error message). Change only the final punctuation if your language needs it."
+  },
+  "schedule_next": {
+    "message": "$1。次回の実行: $2。",
+    "description": "Shown under the cron box. $1 is the expression in words (for example \"At 21:00 every day\"); $2 is the date and time of the next run."
+  },
+  "schedule_never": {
+    "message": "$1。この日付は存在しないため、ルールは実行されません。",
+    "description": "Shown under the cron box for a date that does not exist, such as February 30. $1 is the expression in words."
+  },
+  "cron_fieldMinute": {
+    "message": "分",
+    "description": "Name of the 1st field of a cron expression, used in the cron_error messages."
+  },
+  "cron_fieldHour": {
+    "message": "時",
+    "description": "Name of the 2nd field of a cron expression, used in the cron_error messages."
+  },
+  "cron_fieldDay": {
+    "message": "日",
+    "description": "Name of the 3rd field of a cron expression, used in the cron_error messages."
+  },
+  "cron_fieldMonth": {
+    "message": "月",
+    "description": "Name of the 4th field of a cron expression, used in the cron_error messages."
+  },
+  "cron_fieldWeekday": {
+    "message": "曜日",
+    "description": "Name of the 5th field of a cron expression, used in the cron_error messages."
+  },
+  "cron_errorEmpty": {
+    "message": "cron 式を入力してください",
+    "description": "Error under the empty cron box. No final period: schedule_error adds it."
+  },
+  "cron_errorTooLong": {
+    "message": "式が長すぎます",
+    "description": "Error under the cron box. No final period."
+  },
+  "cron_errorFieldCount": {
+    "message": "cron 式は分、時、日、月、曜日の 5 つのフィールドで構成されます。入力された式のフィールド数は $1 です",
+    "description": "Error under the cron box. $1 is the number of fields typed. No final period."
+  },
+  "cron_errorInvalid": {
+    "message": "「$1」は$2の値として無効です",
+    "description": "Error under the cron box. $1 is the text typed, $2 a field name (cron_field...). No final period. The first letter is made upper case."
+  },
+  "cron_errorOutOfRange": {
+    "message": "$2～$3 の範囲で$1を指定してください (入力値: $4)",
+    "description": "Error under the cron box. $1 is a field name (cron_field...), $2 and $3 the smallest and largest value, $4 the value typed. The first letter is made upper case. No final period."
+  },
+  "cron_errorStep": {
+    "message": "$2の間隔「$1」は 1 以上にしてください",
+    "description": "Error under the cron box, for a step such as */0. $1 is the step typed, $2 a field name (cron_field...). The first letter is made upper case. No final period."
+  },
+  "cron_errorRange": {
+    "message": "「$1」は$2の範囲として無効です",
+    "description": "Error under the cron box. $1 is the range typed, such as 1-2-3; $2 a field name (cron_field...). No final period."
+  },
+  "cron_errorBackwards": {
+    "message": "$2の範囲「$1」が逆順になっています",
+    "description": "Error under the cron box, for a range such as 5-1. $1 is the range typed, $2 a field name (cron_field...). The first letter is made upper case. No final period."
+  },
+  "cron_range": {
+    "message": "$1～$2",
+    "description": "Three or more values in a row in a schedule description, such as \"Monday through Friday\" or \"1 through 5\". $1 is the first value and $2 the last."
+  },
+  "cron_atTimes": {
+    "message": "$1",
+    "description": "Start of a schedule description. $1 is a list of clock times, such as \"08:30 and 20:30\"."
+  },
+  "cron_everyMinute": {
+    "message": "毎分",
+    "description": "Start of a schedule description."
+  },
+  "cron_everyMinutes_other": {
+    "message": "$1 分ごと",
+    "description": "Start of a schedule description. $1 is the number of minutes."
+  },
+  "cron_everyHourOnTheHour": {
+    "message": "毎時 0 分",
+    "description": "A complete schedule description: at minute 0 of every hour."
+  },
+  "cron_everyHourAtMinute": {
+    "message": "毎時 $1 分",
+    "description": "Start of a schedule description. $1 is a minute of the hour, such as 15."
+  },
+  "cron_atMinutes_other": {
+    "message": "毎時 $1 分",
+    "description": "Start of a schedule description. $1 is a list of minutes, such as \"0 and 30\". The plural form follows the number of minutes in the list."
+  },
+  "cron_timeAndHours": {
+    "message": "$2、$1",
+    "description": "Joins the minutes part and the hours part of a schedule description: \"Every 10 minutes, between 09:00 and 17:59\". $1 is the minutes part, $2 the hours part."
+  },
+  "cron_everyHours_other": {
+    "message": "$1 時間ごと",
+    "description": "Hours part of a schedule description. $1 is the number of hours."
+  },
+  "cron_betweenHours": {
+    "message": "$1～$2 の間",
+    "description": "Hours part of a schedule description. $1 and $2 are clock times, such as 09:00 and 17:59."
+  },
+  "cron_duringHours_other": {
+    "message": "$1 時台",
+    "description": "Hours part of a schedule description. $1 is a list of hours, such as \"9 and 12\". The plural form follows the number of hours in the list."
+  },
+  "cron_everyDay": {
+    "message": "毎日",
+    "description": "Days part of a schedule description: \"At 21:00 every day\"."
+  },
+  "cron_onDaysOfMonth_other": {
+    "message": "毎月 $1 日",
+    "description": "Days part of a schedule description. $1 is a list of days, such as \"1 and 15\". The plural form follows the number of days in the list."
+  },
+  "cron_onWeekdays": {
+    "message": "$1",
+    "description": "Days part of a schedule description. $1 is one or more weekday names, such as \"Monday through Friday\"."
+  },
+  "cron_inMonths": {
+    "message": "$1",
+    "description": "Months part of a schedule description. $1 is one or more month names, such as \"January and July\"."
+  },
+  "cron_withDays": {
+    "message": "$2 $1",
+    "description": "Joins the time part and the days part of a schedule description: \"At 09:00\" + \"on Monday\". Swap $1 and $2 if your language puts the days first."
+  },
+  "cron_withMonths": {
+    "message": "$2 $1",
+    "description": "Adds the months part to a schedule description: \"At 09:00\" + \"in January\". Swap $1 and $2 if your language puts the months first."
+  },
+  "folders_account": {
+    "message": "アカウント",
+    "description": "Heading in the folder list for an account that has no name."
+  },
+  "folders_includedAsSubfolder": {
+    "message": "サブフォルダーとして対象",
+    "description": "Note after a folder name in the folder list: the rule scans this folder because its parent is selected."
+  },
+  "folders_selectedInside_other": {
+    "message": "内部で $1 個選択",
+    "description": "Note after a collapsed folder or account in the folder list. $1 is the number of selected folders it hides."
+  },
+  "folders_expanded": {
+    "message": "展開",
+    "description": "Read by screen readers after the name of a folder whose subfolders are shown."
+  },
+  "folders_collapsed": {
+    "message": "折りたたみ",
+    "description": "Read by screen readers after the name of a folder whose subfolders are hidden."
+  },
+  "folders_countSelected_other": {
+    "message": "$1 個選択",
+    "description": "Count of selected folders, next to the folder search box. $1 is the number."
+  },
+  "folders_countSubfolders_other": {
+    "message": "サブフォルダーとしてさらに $1 個",
+    "description": "Added to the folder count: folders the rule also scans because a parent is selected. $1 is the number."
+  },
+  "folders_countFiltered_other": {
+    "message": "$1 個は絞り込みで非表示",
+    "description": "Added to the folder count: selected folders the search box hides. $1 is the number."
+  },
+  "folders_countFolded_other": {
+    "message": "$1 個は折りたたまれたフォルダー内",
+    "description": "Added to the folder count: selected folders inside a collapsed folder or account. $1 is the number."
+  },
+  "field_from": {
+    "message": "差出人",
+    "description": "Condition field: the From header of a message. Lower case in English because it reads as part of a phrase: \"from contains …\"."
+  },
+  "field_to": {
+    "message": "宛先",
+    "description": "Condition field: the To header."
+  },
+  "field_cc": {
+    "message": "Cc",
+    "description": "Condition field: the Cc header."
+  },
+  "field_subject": {
+    "message": "件名",
+    "description": "Condition field: the Subject header."
+  },
+  "field_reply_to": {
+    "message": "Reply-To",
+    "description": "Condition field: the Reply-To header. You can keep the header name."
+  },
+  "field_list_id": {
+    "message": "List-Id",
+    "description": "Condition field: the List-Id header of a mailing list. You can keep the header name."
+  },
+  "field_sender": {
+    "message": "Sender",
+    "description": "Condition field: the Sender header."
+  },
+  "field_age": {
+    "message": "経過日数",
+    "description": "Condition field: how many days old the message is."
+  },
+  "field_read": {
+    "message": "既読状態",
+    "description": "Condition field: whether the message is read."
+  },
+  "field_star": {
+    "message": "スター",
+    "description": "Condition field: whether the message has a star."
+  },
+  "field_junk": {
+    "message": "迷惑マーク",
+    "description": "Condition field: whether the message is marked as junk."
+  },
+  "field_tag": {
+    "message": "タグ",
+    "description": "Condition field: the Thunderbird tags of the message."
+  },
+  "field_priority": {
+    "message": "重要度",
+    "description": "Condition field: the priority of the message."
+  },
+  "field_auth": {
+    "message": "認証",
+    "description": "Condition field: the SPF, DKIM, and DMARC checks of the sender."
+  },
+  "op_contains": {
+    "message": "に次を含む",
+    "description": "Condition operator, after a field: \"subject contains …\"."
+  },
+  "op_is": {
+    "message": "が次と一致する",
+    "description": "Condition operator, after a field: \"from is …\"."
+  },
+  "op_startsWith": {
+    "message": "が次で始まる",
+    "description": "Condition operator, after a field."
+  },
+  "op_endsWith": {
+    "message": "が次で終わる",
+    "description": "Condition operator, after a field."
+  },
+  "op_matchesRegex": {
+    "message": "が次の正規表現にマッチする",
+    "description": "Condition operator: the field matches a regular expression."
+  },
+  "op_domainInList": {
+    "message": "のドメインが次のリストにある",
+    "description": "Condition operator: the domain of the address is in a list of domains."
+  },
+  "op_inAddressBook": {
+    "message": "がアドレス帳にある",
+    "description": "Condition operator: the address is in an address book."
+  },
+  "op_nameShowsOtherAddress": {
+    "message": "の名前に別のアドレスが表示されている",
+    "description": "Condition operator: the sender name contains an email address from another domain than the real address."
+  },
+  "op_olderThan": {
+    "message": "が次の値を超える",
+    "description": "Condition operator for the age field: \"age older than 30 days\"."
+  },
+  "op_newerThan": {
+    "message": "が次の値未満",
+    "description": "Condition operator for the age field."
+  },
+  "op_isOn": {
+    "message": "が次である",
+    "description": "Condition operator for the read, star, and junk fields. The page replaces it with a state message, such as \"is read\"."
+  },
+  "op_isOff": {
+    "message": "が次でない",
+    "description": "Condition operator for the read, star, and junk fields. The page replaces it with a state message, such as \"is unread\"."
+  },
+  "op_hasTag": {
+    "message": "が次を含む",
+    "description": "Condition operator for the tag field."
+  },
+  "op_priorityIs": {
+    "message": "が次である",
+    "description": "Condition operator for the priority field: \"priority is High\"."
+  },
+  "op_authPasses": {
+    "message": "で次に成功する",
+    "description": "Condition operator for the authentication field: \"authentication passes DKIM\"."
+  },
+  "op_greyIsOn": {
+    "message": "既読、スター付き、迷惑マークあり",
+    "description": "Grayed-out operator for a field it does not work with."
+  },
+  "op_greyIsOff": {
+    "message": "未読、スターなし、迷惑マークなし",
+    "description": "Grayed-out operator for a field it does not work with."
+  },
+  "op_greyPriorityIs": {
+    "message": "重要度が次である",
+    "description": "Grayed-out operator for a field it does not work with."
+  },
+  "op_ageOnly": {
+    "message": "$1 (経過日数のみ)",
+    "description": "Grayed-out operator. $1 is the operator, such as \"older than\"."
+  },
+  "op_ageOnlyReason": {
+    "message": "経過日数の項目でのみ使用できます。",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_stateOnlyReason": {
+    "message": "既読状態、スター、迷惑マークの項目でのみ使用できます。",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_tagOnly": {
+    "message": "$1 (タグのみ)",
+    "description": "Grayed-out operator. $1 is the operator, \"has tag\"."
+  },
+  "op_tagOnlyReason": {
+    "message": "タグの項目でのみ使用できます。",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_priorityOnlyReason": {
+    "message": "重要度の項目でのみ使用できます。",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_authOnly": {
+    "message": "$1 (認証のみ)",
+    "description": "Grayed-out operator. $1 is the operator, \"passes\"."
+  },
+  "op_authOnlyReason": {
+    "message": "認証の項目でのみ使用できます。",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_headerOnly": {
+    "message": "$1 (ヘッダー項目のみ)",
+    "description": "Grayed-out operator. $1 is the operator, such as \"contains\"."
+  },
+  "op_headerOnlyReason": {
+    "message": "差出人や件名などのヘッダー項目でのみ使用できます。",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "state_read_isOn": {
+    "message": "既読",
+    "description": "Operator text for the read field, and the summary of the condition."
+  },
+  "state_read_isOff": {
+    "message": "未読",
+    "description": "Operator text for the read field, and the summary of the condition."
+  },
+  "state_star_isOn": {
+    "message": "スター付き",
+    "description": "Operator text for the star field, and the summary of the condition."
+  },
+  "state_star_isOff": {
+    "message": "スターなし",
+    "description": "Operator text for the star field, and the summary of the condition."
+  },
+  "state_junk_isOn": {
+    "message": "迷惑マークあり",
+    "description": "Operator text for the junk field, and the summary of the condition."
+  },
+  "state_junk_isOff": {
+    "message": "迷惑マークなし",
+    "description": "Operator text for the junk field, and the summary of the condition."
+  },
+  "priority_highest": {
+    "message": "最高",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "priority_high": {
+    "message": "高",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "priority_normal": {
+    "message": "標準",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "priority_low": {
+    "message": "低",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "priority_lowest": {
+    "message": "最低",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "cond_not": {
+    "message": "否定",
+    "description": "Checkbox on a condition row that turns the condition around."
+  },
+  "cond_valuePlaceholder": {
+    "message": "値",
+    "description": "Gray text in the empty value box of a condition."
+  },
+  "cond_daysUnit": {
+    "message": "日",
+    "description": "Unit after the number box of an age condition."
+  },
+  "cond_allowBookAccess": {
+    "message": "アドレス帳へのアクセスを許可...",
+    "description": "Button that asks Thunderbird for permission to read the address books."
+  },
+  "cond_allowDnsAccess": {
+    "message": "DNS サーバーへのアクセスを許可...",
+    "description": "Button that asks Thunderbird for permission to contact the DNS server."
+  },
+  "cond_allAddressBooks": {
+    "message": "すべてのアドレス帳",
+    "description": "Choice in the address book list of a condition."
+  },
+  "cond_missingAddressBook": {
+    "message": "(存在しないアドレス帳)",
+    "description": "Shown for an address book that a rule names but that no longer exists."
+  },
+  "cond_domainsPlaceholder": {
+    "message": "1 行に 1 ドメイン。例: evil.com\nサブドメインも自動的に一致します。",
+    "description": "Gray text in the empty domain list of a condition. Keep the line break (\\n) and evil.com."
+  },
+  "cond_otherFields": {
+    "message": "他の項目で使用できます",
+    "description": "Heading in the operator list over the grayed-out operators."
+  },
+  "cond_greyFieldList": {
+    "message": "「のドメインが次のリストにある」では使用できません。先に条件の種類を変更してください。",
+    "description": "Tooltip of a grayed-out field. \"domain is in list\" is the operator op_domainInList; use the same translation."
+  },
+  "cond_greyFieldAddress": {
+    "message": "この条件の種類はアドレスを読み取りますが、この項目にはアドレスがありません。先に条件の種類を変更してください。",
+    "description": "Tooltip of a grayed-out field."
+  },
+  "cond_domainListOnly": {
+    "message": "$1 (ドメインリストのみ)",
+    "description": "Grayed-out field. $1 is a field set, such as \"reply-to or from\"."
+  },
+  "cond_greyDomainSet": {
+    "message": "「のドメインが次のリストにある」でのみ使用できます。",
+    "description": "Tooltip of a grayed-out field set. \"domain is in list\" is the operator op_domainInList; use the same translation."
+  },
+  "cond_nameHint": {
+    "message": "送信者名に、実際のアドレスとは別のドメインのメールアドレスが含まれている場合に一致します。例: 名前が <code>Lena <lena@yahoo.com></code> で、実際のアドレスが <code>someone@sina.com</code> の場合です。迷惑メールは別の送信者に見せかけるためにこの手口を使います。メーリングリストでも同じ形になることがあるため、ごみ箱を使う前に、まずフォルダーへの移動でルールを試してください。",
+    "description": "Explanation under the \"name shows a different address\" condition. Keep the text inside <code>…</code> as is."
+  },
+  "cond_priorityHint": {
+    "message": "重要度を読み取るため、アドオンは各メッセージのヘッダーをダウンロードします。そのため、この条件は他の条件より時間がかかります。重要度のないメッセージは「標準」として扱います。",
+    "description": "Explanation under a priority condition. Normal is the priority priority_normal."
+  },
+  "cond_authHint": {
+    "message": "送信者が From アドレスのとおりの人物かどうかを確認します。確認のため、アドオンはルールが対象とする各メッセージを 1 回だけ全文ダウンロードし、結果を保存します。SPF は、メールプロバイダーが追加する <code>Authentication-Results</code> ヘッダーから読み取ります。DKIM はアドオンが自分で検証し、DMARC は両方の結果から判定します。DNS サーバーが応答しないなどの理由で確認を完了できない場合、条件は一致しません。アドオンは 24 時間再試行します。設定は <b>詳細設定</b> を参照してください。",
+    "description": "Explanation under an authentication condition. Keep <code>Authentication-Results</code>. <b>Advanced</b> is the section heading adv_title."
+  },
+  "cond_stateHint": {
+    "message": "スケジュール実行では、古いメールは補完スキャンでだけ確認されます。初期設定では 30 分ごとです (<b>詳細設定</b> を参照)。そのため、古いメッセージにスターを付けたり、タグを付けたり、既読にしたりしてから、ルールが処理するまでにその程度の時間がかかることがあります。<b>実行</b> を使うと、すべてのメッセージをすぐに確認します。",
+    "description": "Explanation under a read, star, junk, or tag condition. <b>Advanced</b> is the section heading adv_title; <b>Run</b> is the button rule_run."
+  },
+  "action_then": {
+    "message": "実行",
+    "description": "Label in front of an action of a rule. The label column is narrow; keep it short."
+  },
+  "action_choose": {
+    "message": "アクションを選択...",
+    "description": "First entry of the action list, before the user picks one."
+  },
+  "action_chooseHint": {
+    "message": "一致したメッセージに対して行う処理を選択してください。",
+    "description": "Hint under an action row that has no action yet."
+  },
+  "action_trash": {
+    "message": "ごみ箱へ移動 (各メッセージのアカウント)",
+    "description": "Action in the list."
+  },
+  "action_trashHint": {
+    "message": "一致した各メッセージを、そのメッセージのアカウントのごみ箱へ移動します。複数のアカウントにまたがるルールでも安全です。",
+    "description": "Hint under the Move to Trash action."
+  },
+  "action_move": {
+    "message": "フォルダーへ移動...",
+    "description": "Action in the list. The ellipsis means a folder list follows."
+  },
+  "action_moveHint": {
+    "message": "一致したすべてのメッセージを、選択したフォルダーへ移動します。別のアカウントのフォルダーも指定できます (Thunderbird は移動先のアカウントにコピーしてから、元のメッセージを削除します)。",
+    "description": "Hint under the Move to folder action."
+  },
+  "action_archive": {
+    "message": "アーカイブ",
+    "description": "Action in the list."
+  },
+  "action_archiveHint": {
+    "message": "Thunderbird の [アーカイブ] ボタンと同じように、各メッセージのアカウントのアーカイブ設定を使ってアーカイブします。アーカイブを無効にしたアカウントでは、メールはそのまま残ります。",
+    "description": "Hint under the Archive action."
+  },
+  "action_copy": {
+    "message": "フォルダーへコピー...",
+    "description": "Action in the list. The ellipsis means a folder list follows."
+  },
+  "action_copyHint": {
+    "message": "元のメッセージを残したまま、選択したフォルダーに複製をコピーします (アカウントをまたいでも使えます)。",
+    "description": "Hint under the Copy to folder action."
+  },
+  "action_tag": {
+    "message": "タグを付ける...",
+    "description": "Action in the list. The ellipsis means a tag list follows."
+  },
+  "action_tagHint": {
+    "message": "Thunderbird のタグを 1 つ付けます。メッセージに付いているタグはそのまま残るため、複数のルールで同じメールにタグを付けられます。",
+    "description": "Hint under the Tag action."
+  },
+  "action_markRead": {
+    "message": "既読にする",
+    "description": "Action in the list."
+  },
+  "action_markReadHint": {
+    "message": "一致したメッセージを移動せずに既読にします。",
+    "description": "Hint under the Mark as read action."
+  },
+  "action_markUnread": {
+    "message": "未読にする",
+    "description": "Action in the list."
+  },
+  "action_markUnreadHint": {
+    "message": "一致したメッセージを移動せずに未読にします。",
+    "description": "Hint under the Mark as unread action."
+  },
+  "action_markFlagged": {
+    "message": "スターを付ける",
+    "description": "Action in the list."
+  },
+  "action_markFlaggedHint": {
+    "message": "一致したメッセージを移動せずにスターを付けます。",
+    "description": "Hint under the Add star action."
+  },
+  "action_markUnflagged": {
+    "message": "スターを外す",
+    "description": "Action in the list."
+  },
+  "action_markUnflaggedHint": {
+    "message": "一致したメッセージを移動せずにスターを外します。",
+    "description": "Hint under the Remove star action."
+  },
+  "action_markJunk": {
+    "message": "迷惑マークを付ける",
+    "description": "Action in the list."
+  },
+  "action_markJunkHint": {
+    "message": "一致したメッセージに迷惑マークを付けます (移動はしません。その後の処理は Thunderbird の迷惑メール処理によります)。",
+    "description": "Hint under the Mark as junk action."
+  },
+  "action_markNotJunk": {
+    "message": "迷惑マークを外す",
+    "description": "Action in the list."
+  },
+  "action_markNotJunkHint": {
+    "message": "一致したメッセージを移動せずに迷惑マークを外します。",
+    "description": "Hint under the Mark as not junk action."
+  },
+  "action_deletePermanently": {
+    "message": "完全に削除",
+    "description": "Action in the list."
+  },
+  "action_deletePermanentlyHint": {
+    "message": "ごみ箱を経由せず、一致したメッセージをすぐに削除します。この操作は元に戻せません。",
+    "description": "Hint under the Delete permanently action, shown in red."
+  },
+  "summary_not": {
+    "message": "$1 (否定)",
+    "description": "A turned-around operator in the one-line summary of a folded rule: \"from not contains “x”\". $1 is the operator."
+  },
+  "summary_text": {
+    "message": "$1$2「$3」",
+    "description": "A condition in the summary of a folded rule. $1 is the field, $2 the operator, $3 the value typed. Use the quotation marks of your language."
+  },
+  "summary_age_other": {
+    "message": "$1$2 $3 日",
+    "description": "An age condition in the summary of a folded rule: \"age older than 30 days\". $1 is the field, $2 the operator, $3 the number of days."
+  },
+  "summary_hasTag": {
+    "message": "タグ $1 あり",
+    "description": "A tag condition in the summary of a folded rule. $1 is the tag name."
+  },
+  "summary_notHasTag": {
+    "message": "タグ $1 なし",
+    "description": "A turned-around tag condition in the summary of a folded rule. $1 is the tag name."
+  },
+  "summary_priorityIs": {
+    "message": "重要度が $1",
+    "description": "A priority condition in the summary of a folded rule. $1 is a priority, such as High."
+  },
+  "summary_priorityIsNot": {
+    "message": "重要度が $1 以外",
+    "description": "A turned-around priority condition in the summary of a folded rule. $1 is a priority."
+  },
+  "summary_authPasses": {
+    "message": "$1 認証に成功",
+    "description": "An authentication condition in the summary of a folded rule. $1 is SPF, DKIM, or DMARC."
+  },
+  "summary_authNotPasses": {
+    "message": "$1 認証に成功しない",
+    "description": "A turned-around authentication condition in the summary of a folded rule. $1 is SPF, DKIM, or DMARC."
+  },
+  "summary_inBook": {
+    "message": "$1が $2 にある",
+    "description": "An address book condition in the summary of a folded rule: \"from in Personal Address Book\". $1 is the field, $2 the address book."
+  },
+  "summary_notInBook": {
+    "message": "$1が $2 にない",
+    "description": "A turned-around address book condition in the summary of a folded rule. $1 is the field, $2 the address book."
+  },
+  "summary_nameShows": {
+    "message": "$1の名前に別のアドレスあり",
+    "description": "A condition in the summary of a folded rule. $1 is the field."
+  },
+  "summary_notNameShows": {
+    "message": "$1の名前に別のアドレスなし",
+    "description": "A turned-around condition in the summary of a folded rule. $1 is the field."
+  },
+  "summary_inList_other": {
+    "message": "$1が $2 ドメインのリストにある",
+    "description": "A domain list condition in the summary of a folded rule. $1 is the field, $2 the number of domains."
+  },
+  "summary_notInList_other": {
+    "message": "$1が $2 ドメインのリストにない",
+    "description": "A turned-around domain list condition in the summary of a folded rule. $1 is the field, $2 the number of domains."
+  },
+  "summary_and": {
+    "message": "AND",
+    "description": "Joins the conditions of an all-conditions rule in its summary."
+  },
+  "summary_or": {
+    "message": "OR",
+    "description": "Joins the conditions of an any-condition rule in its summary."
+  },
+  "summary_noConditions": {
+    "message": "条件なし",
+    "description": "Summary of a folded rule with no condition."
+  },
+  "summary_noAction": {
+    "message": "アクションなし",
+    "description": "Summary of an action row with no action chosen."
+  },
+  "summary_tagAction": {
+    "message": "タグ $1 を付ける",
+    "description": "The tag action in the summary of a folded rule. $1 is the tag name."
+  },
+  "summary_folders_other": {
+    "message": "$1 フォルダー",
+    "description": "Number of folders in the summary of a folded rule. $1 is the number."
+  },
+  "summary_foldersAndSubfolders_other": {
+    "message": "$1 フォルダーとサブフォルダー",
+    "description": "Number of folders in the summary of a folded rule that includes subfolders. $1 is the number."
+  },
+  "reject_tagActionNoTag": {
+    "message": "ルール「$1」: タグを付けるアクションでタグが選択されていません",
+    "description": "A correction listed after Saved. $1 is the rule name."
+  },
+  "reject_secondTerminal": {
+    "message": "ルール「$1」: 移動または削除するアクションは 1 つだけです。「$2」を削除しました",
+    "description": "A correction listed after Saved. $1 is the rule name, $2 the action that was dropped."
+  },
+  "reject_ageDays": {
+    "message": "経過日数の条件には日数を整数で指定してください (入力値: 「$1」)",
+    "description": "A correction listed after Saved. $1 is the text typed in the days box."
+  },
+  "reject_ageDaysEmpty": {
+    "message": "経過日数の条件には日数を整数で指定してください (未入力)",
+    "description": "A correction listed after Saved, for an empty days box."
+  },
+  "reject_tagConditionNoTag": {
+    "message": "タグの条件でタグが選択されていないため、一致しません",
+    "description": "A correction listed after Saved."
+  },
+  "setting_newMailDelaySeconds": {
+    "message": "新着メール受信後の実行までの待ち時間 (秒)",
+    "description": "Name of a setting in setting_outOfRange."
+  },
+  "setting_scanOverlapMinutes": {
+    "message": "差分スキャンの重複時間 (分)",
+    "description": "Name of a setting in setting_outOfRange."
+  },
+  "setting_catchUpEveryMinutes": {
+    "message": "補完スキャンの間隔 (分)",
+    "description": "Name of a setting in setting_outOfRange."
+  },
+  "setting_catchUpLookbackDays": {
+    "message": "補完スキャンの対象期間 (日)",
+    "description": "Name of a setting in setting_outOfRange."
+  },
+  "setting_authPrefer": {
+    "message": "検証結果が一致しないときに使う結果",
+    "description": "Name of a setting in setting_mustBeOneOf."
+  },
+  "setting_authDohServer": {
+    "message": "DNS サーバー",
+    "description": "Name of a setting in setting_mustBeOneOf."
+  },
+  "setting_outOfRange": {
+    "message": "$1は $2～$3 の範囲で指定してください。$4 を使用します",
+    "description": "A correction after Saved or Imported. $1 is a setting name, $2 and $3 the smallest and largest value, $4 the value the add-on uses instead."
+  },
+  "setting_mustBeOneOf": {
+    "message": "$1は $2 のいずれかを指定してください。$3 を使用します",
+    "description": "A correction after Saved or Imported. $1 is a setting name, $2 the allowed values (code words, not translated), $3 the value used instead."
+  },
+  "import_whereRule": {
+    "message": "ルール $1",
+    "description": "Start of an import problem: which rule of the file. $1 is its number."
+  },
+  "import_whereNamedRule": {
+    "message": "ルール $1 (「$2」)",
+    "description": "Start of an import problem: which rule of the file. $1 is its number, $2 its name."
+  },
+  "import_whereCondition": {
+    "message": "$1 の条件 $2",
+    "description": "Start of an import problem about a condition. $1 is import_whereRule or import_whereNamedRule, $2 the number of the condition."
+  },
+  "import_noField": {
+    "message": "$1: 認識できるヘッダー項目がありません",
+    "description": "Import problem. $1 says which rule or condition."
+  },
+  "import_unknownOperator": {
+    "message": "$1: 不明な条件の種類 \"$2\"",
+    "description": "Import problem. $1 says which condition, $2 is the operator from the file."
+  },
+  "import_operatorMismatch": {
+    "message": "$1: \"$2\" は \"$3\" に使用できません",
+    "description": "Import problem. $1 says which condition, $2 is an operator and $3 a field, both as code words from the file."
+  },
+  "import_ageDays": {
+    "message": "$1: 経過日数には 1 以上の整数が必要です",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_noTag": {
+    "message": "$1: タグが選択されていません",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_priorityLevel": {
+    "message": "$1: 重要度は $2 のいずれかでなければなりません",
+    "description": "Import problem. $1 says which condition, $2 lists the allowed code words."
+  },
+  "import_authMethod": {
+    "message": "$1: 検証の種類は $2 のいずれかでなければなりません",
+    "description": "Import problem. $1 says which condition, $2 lists spf, dkim, and dmarc."
+  },
+  "import_bookFields": {
+    "message": "$1: アドレス帳の条件は $2 にのみ使用できます",
+    "description": "Import problem. $1 says which condition, $2 lists the allowed header names."
+  },
+  "import_noBook": {
+    "message": "$1: アドレス帳が選択されていません",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_unknownBook": {
+    "message": "$1: アドレス帳がこのプロファイルにありません。保存する前に選択してください",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_nameFields": {
+    "message": "$1: 名前の確認は $2 にのみ使用できます",
+    "description": "Import problem. $1 says which condition, $2 lists the allowed header names."
+  },
+  "import_invalidDomains_other": {
+    "message": "$1: 無効なドメイン $2 個を削除しました",
+    "description": "Import problem. $1 says which condition, $2 is the number of domains."
+  },
+  "import_emptyDomains": {
+    "message": "$1: ドメインリストが空です",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_emptyValue": {
+    "message": "$1: 値が空です",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_noAction": {
+    "message": "$1: アクションがないため、ルールをスキップしました",
+    "description": "Import problem. $1 says which rule."
+  },
+  "import_unknownAction": {
+    "message": "$1: 不明なアクション \"$2\" を削除しました",
+    "description": "Import problem. $1 says which rule, $2 is the action from the file."
+  },
+  "import_needsFolder": {
+    "message": "$1: \"$2\" には移動先フォルダーが必要なため、削除しました",
+    "description": "Import problem. $1 says which rule, $2 is an action id from the file."
+  },
+  "import_needsTag": {
+    "message": "$1: \"$2\" にはタグが必要なため、削除しました",
+    "description": "Import problem. $1 says which rule, $2 is an action id from the file."
+  },
+  "import_secondTerminal": {
+    "message": "$1: \"$2\" を削除しました。移動または削除するアクションは 1 つだけです (\"$3\" を残しました)",
+    "description": "Import problem. $1 says which rule, $2 and $3 are action ids from the file."
+  },
+  "import_noUsableAction": {
+    "message": "$1: 使用できるアクションがないため、ルールをスキップしました",
+    "description": "Import problem. $1 says which rule."
+  },
+  "import_noConditions": {
+    "message": "$1: 使用できる条件がないため、ルールをスキップしました",
+    "description": "Import problem. $1 says which rule."
+  },
+  "import_unknownFolders_other": {
+    "message": "$1: このプロファイルにないフォルダー $2 個を除外しました",
+    "description": "Import problem. $1 says which rule, $2 is the number of folders."
+  },
+  "import_badSchedule": {
+    "message": "$1: スケジュールが有効な cron 式でないため、オフにしました",
+    "description": "Import problem. $1 says which rule."
+  },
+  "import_defaultRuleName": {
+    "message": "インポートしたルール",
+    "description": "Name of an imported rule that has no name."
+  },
+  "import_anExistingRule": {
+    "message": "既存のルール",
+    "description": "Stands for a rule with no name in status_importDuplicate."
+  },
+  "import_notAnObject": {
+    "message": "有効な JSON オブジェクトではありません",
+    "description": "Import problem: the file is not a rules file."
+  },
+  "import_unexpectedFormat": {
+    "message": "予期しない形式 \"$1\"",
+    "description": "Import problem. $1 is the format named in the file."
+  },
+  "import_noRules": {
+    "message": "rules 配列が見つかりません",
+    "description": "Import problem: the file has no list of rules."
+  },
+  "import_invalidAllowlist_other": {
+    "message": "保護するドメイン: 無効なドメイン $1 個を削除しました",
+    "description": "Import problem about the protected domains. $1 is the number of domains."
+  },
+  "import_advanced": {
+    "message": "詳細設定: $1",
+    "description": "Import problem about the Advanced settings. $1 is setting_outOfRange or setting_mustBeOneOf."
+  },
+  "status_bookAccessAllowed": {
+    "message": "アドレス帳へのアクセスを許可しました。アドレス帳を選択して [保存] を押してください。",
+    "description": "Status after the user allows address book access."
+  },
+  "status_bookAccessDenied": {
+    "message": "アドレス帳へのアクセスが許可されませんでした。許可されるまで、アドレス帳の条件は一致しません。",
+    "description": "Status after the user refuses address book access."
+  },
+  "status_bookAccessFailed": {
+    "message": "アドレス帳へのアクセスを要求できませんでした: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_dnsAccessAllowed": {
+    "message": "DNS サーバーへのアクセスを許可しました。DKIM と DMARC の条件を実行できます。",
+    "description": "Status after the user allows the DNS server."
+  },
+  "status_dnsAccessDenied": {
+    "message": "DNS サーバーへのアクセスが許可されませんでした。許可されるまで、DKIM と DMARC の条件は一致しません。",
+    "description": "Status after the user refuses the DNS server."
+  },
+  "status_dnsAccessFailed": {
+    "message": "DNS サーバーへのアクセスを要求できませんでした: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_tagAccessAllowed": {
+    "message": "タグへのアクセスを許可しました。タグを選択して [保存] を押してください。",
+    "description": "Status after the user allows tag access."
+  },
+  "status_tagAccessDenied": {
+    "message": "タグへのアクセスが許可されなかったため、ここにタグを表示できません。",
+    "description": "Status after the user refuses tag access."
+  },
+  "status_tagAccessFailed": {
+    "message": "タグへのアクセスを要求できませんでした: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_needsAction": {
+    "message": "ルールには 1 つ以上のアクションが必要です。",
+    "description": "Status when the user deletes the last action of a rule."
+  },
+  "status_notSavedNoAction": {
+    "message": "保存していません: $1 のアクションを選択してください。",
+    "description": "Status. $1 is one or more rule names, each in quotation marks."
+  },
+  "status_notSavedBadSchedule": {
+    "message": "保存していません: 「$1」のスケジュールが有効な cron 式ではありません。",
+    "description": "Status. $1 is the rule name."
+  },
+  "status_notSavedNoFolder": {
+    "message": "保存していません: 「$1」のフォルダーを選択するか、ルールをオフにしてください。",
+    "description": "Status. $1 is the rule name."
+  },
+  "status_saved": {
+    "message": "保存しました。スケジュールを更新しました。",
+    "description": "Status after Save."
+  },
+  "status_savedWithCorrections_other": {
+    "message": "保存しました。$1 件を修正しました: $2。",
+    "description": "Status after Save. $1 is the number of corrections, $2 the corrections, separated by semicolons."
+  },
+  "status_noteBookAccess": {
+    "message": "アドレス帳へのアクセスを許可するまで、アドレス帳の条件は一致しません。",
+    "description": "Added to the status after Save."
+  },
+  "status_noteBookMissing": {
+    "message": "アドレス帳の条件が、存在しないアドレス帳を指しているため、一致しません。",
+    "description": "Added to the status after Save."
+  },
+  "status_noteTagConditionMissing": {
+    "message": "タグの条件が、存在しないタグを指しているため、一致しません。",
+    "description": "Added to the status after Save."
+  },
+  "status_noteTagActionMissing": {
+    "message": "タグを付けるアクションが、存在しないタグを指しています。",
+    "description": "Added to the status after Save."
+  },
+  "status_diagCopied": {
+    "message": "診断をコピーしました。メールまたは GitHub issue に貼り付けてください。",
+    "description": "Status after Copy report."
+  },
+  "status_diagSaved": {
+    "message": "$1 を保存しました。",
+    "description": "Status after Save report. $1 is the file name."
+  },
+  "status_diagSaveFailed": {
+    "message": "レポートを保存できませんでした: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_diagCleared": {
+    "message": "診断ログを消去しました。",
+    "description": "Status after Clear log."
+  },
+  "status_exported": {
+    "message": "$1 にエクスポートしました。このページの未保存の編集も含まれます。",
+    "description": "Status after Export. $1 is the file name."
+  },
+  "status_exportFailed": {
+    "message": "エクスポートに失敗しました: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_importReadFailed": {
+    "message": "$1 を読み込めませんでした: $2",
+    "description": "Status. $1 is the file name, $2 the error message, in English."
+  },
+  "status_importFailed": {
+    "message": "インポートに失敗しました: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_importNothingNew": {
+    "message": "インポートする新しい項目はありません。",
+    "description": "Status after Import when the file adds no rule."
+  },
+  "status_importBecause": {
+    "message": "$1。",
+    "description": "Added after status_importNothingNew. $1 is the import problems, separated by semicolons."
+  },
+  "status_importNoRules": {
+    "message": "ファイルに使用できるルールがありませんでした",
+    "description": "Reason in status_importBecause. No final period."
+  },
+  "status_importDuplicates": {
+    "message": "既にあるためスキップ: $1。",
+    "description": "Added to the status after Import. $1 is a list of status_importDuplicate."
+  },
+  "status_importDuplicate": {
+    "message": "「$1」($2、「$3」と同じ)",
+    "description": "A rule of the file that is already on the page. $1 is its name, $2 a short code that identifies it, $3 the name of the rule it equals."
+  },
+  "status_imported_other": {
+    "message": "$1 件のルールをインポートしました。内容を確認し、[保存] を押して保持してください。",
+    "description": "Status after Import. $1 is the number of rules."
+  },
+  "status_importSkipped": {
+    "message": "スキップ: $1。",
+    "description": "Added to the status after Import. $1 is the import problems, separated by semicolons."
+  },
+  "status_running": {
+    "message": "実行中...",
+    "description": "Status while all rules run."
+  },
+  "status_runningRule": {
+    "message": "「$1」を実行中...",
+    "description": "Status while one rule runs. $1 is the rule name."
+  },
+  "status_runDone_other": {
+    "message": "完了しました。$1 件のメッセージを処理しました。",
+    "description": "Status after all rules ran. $1 is the number of messages."
+  },
+  "status_ruleRunDone_other": {
+    "message": "完了しました。「$1」で $2 件のメッセージを処理しました。",
+    "description": "Status after one rule ran. $1 is the rule name, $2 the number of messages."
+  },
+  "status_runFailed": {
+    "message": "実行に失敗しました: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_saveBeforeRun": {
+    "message": "「$1」を実行する前に、変更を保存してください。",
+    "description": "Status when the user runs a rule with unsaved changes. $1 is the rule name."
+  },
+  "status_ruleTurnedOff": {
+    "message": "「$1」はオフになっています。オンにして保存してから実行してください。",
+    "description": "Status when the user runs a rule that is off. $1 is the rule name."
+  },
+  "status_allowlistRestored": {
+    "message": "保護するドメインを初期設定に戻しました。保持するには [保存] を押してください。",
+    "description": "Status after Restore defaults in the protected domains section."
+  },
+  "status_advancedRestored": {
+    "message": "詳細設定を初期設定に戻しました。保持するには [保存] を押してください。",
+    "description": "Status after Restore defaults in the Advanced section."
+  },
+  "status_noFolders": {
+    "message": "フォルダーが見つかりません。「accountsRead」権限を確認して、アドオンを再読み込みしてください。",
+    "description": "Status when the add-on finds no folder. Keep accountsRead: it is the name of a permission."
+  },
+  "popup_runOneRule": {
+    "message": "ルールを 1 つ実行",
+    "description": "Heading over the list of rules in the toolbar popup."
+  },
+  "popup_noRules": {
+    "message": "有効な保存済みルールがありません。",
+    "description": "Shown in the toolbar popup when no rule can run."
+  },
+  "popup_openSettings": {
+    "message": "設定を開く",
+    "description": "Button in the toolbar popup that opens the settings page."
+  },
+  "popup_runningAll": {
+    "message": "すべてのルールを実行中...",
+    "description": "Status in the toolbar popup while all rules run."
+  },
+  "popup_runDone_other": {
+    "message": "完了しました。$1 件のメッセージを処理しました。",
+    "description": "Status in the toolbar popup after a run. $1 is the number of messages."
+  },
+  "popup_loadFailed": {
+    "message": "ルールを読み込めませんでした: $1",
+    "description": "Status in the toolbar popup. $1 is the error message, in English."
+  },
+  "confirm_reading": {
+    "message": "選択したメッセージを読み込み中...",
+    "description": "Shown while the Add spam domains window reads the selected messages."
+  },
+  "confirm_dontShowAgain": {
+    "message": "今後は表示しない",
+    "description": "Checkbox in the Add spam domains window: next time, add the domains without asking."
+  },
+  "confirm_cancel": {
+    "message": "キャンセル",
+    "description": "Button that closes the Add spam domains window without changes."
+  },
+  "confirm_add": {
+    "message": "フィルターに追加",
+    "description": "Button that adds the checked domains to the spam rule."
+  },
+  "confirm_replyToTitle": {
+    "message": "Reply-To のドメイン",
+    "description": "Heading of the group of domains found in the Reply-To header."
+  },
+  "confirm_replyToNote": {
+    "message": "返信の送り先です。大量配信のメールでは偽装しにくい項目です。",
+    "description": "Explanation under the Reply-To domains heading."
+  },
+  "confirm_fromTitle": {
+    "message": "From のドメイン",
+    "description": "Heading of the group of domains found in the From header."
+  },
+  "confirm_fromNote": {
+    "message": "表示される送信者です。ブランドになりすますために偽装されることがあります。追加する前に確認してください。",
+    "description": "Explanation under the From domains heading."
+  },
+  "confirm_domains_other": {
+    "message": "$1 個のドメイン",
+    "description": "Used in confirm_found. $1 is the number of domains."
+  },
+  "confirm_selectedMessages_other": {
+    "message": "選択した $1 件のメッセージ",
+    "description": "Used in confirm_found and confirm_noneNew. $1 is the number of messages."
+  },
+  "confirm_found": {
+    "message": "$2から$1が見つかりました。チェックを付けたドメインはルール「$3」に追加され、一致したメールは通常のスケジュールでごみ箱へ移動されます。",
+    "description": "Summary of the Add spam domains window. $1 is confirm_domains, $2 is confirm_selectedMessages, $3 is the rule name."
+  },
+  "confirm_noneNew": {
+    "message": "$1から追加する新しいドメインはありません。",
+    "description": "Summary of the Add spam domains window. $1 is confirm_selectedMessages."
+  },
+  "confirm_skippedProviders_other": {
+    "message": "よく知られたプロバイダーのドメイン $1 個 ($2) をスキップしました。正当なメールを守るため、これらはブロックしません。",
+    "description": "Note in the Add spam domains window. $1 is the number of domains, $2 the domains."
+  },
+  "confirm_unreadable_other": {
+    "message": "$1 件のメッセージを読み込めませんでした。",
+    "description": "Note in the Add spam domains window. $1 is the number of messages."
+  },
+  "confirm_expired": {
+    "message": "この確認の有効期限が切れました。もう一度操作を実行してください。",
+    "description": "Shown when the Add spam domains window opens too late."
+  },
+  "confirm_updateFailed": {
+    "message": "フィルターを更新できませんでした: $1",
+    "description": "Shown in the Add spam domains window. $1 is the error message, in English."
+  },
+  "confirm_readFailed": {
+    "message": "選択したメッセージを読み込めませんでした: $1",
+    "description": "Shown in the Add spam domains window. $1 is the error message, in English."
   }
 }

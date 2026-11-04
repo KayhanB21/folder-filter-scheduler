@@ -6,5 +6,1184 @@
   "extensionDescription": {
     "message": "Filtros programados en cualquier carpeta, no solo en la bandeja de entrada. Por remitente, asunto, contactos o SPF, DKIM y DMARC.",
     "description": "Short description shown in the add-ons manager."
+  },
+  "common_addSpamDomains": {
+    "message": "Añadir dominios de spam"
+  },
+  "common_runAllRulesNow": {
+    "message": "Ejecutar todas las reglas"
+  },
+  "common_restoreDefaults": {
+    "message": "Restaurar valores predeterminados"
+  },
+  "common_allowTagAccess": {
+    "message": "Permitir acceso a etiquetas…"
+  },
+  "common_noTag": {
+    "message": "(sin etiqueta)"
+  },
+  "common_untitledRule": {
+    "message": "Regla sin nombre"
+  },
+  "common_quoted": {
+    "message": "«$1»"
+  },
+  "menu_runARule": {
+    "message": "Ejecutar una regla"
+  },
+  "options_theme": {
+    "message": "Tema"
+  },
+  "options_themeLight": {
+    "message": "Claro"
+  },
+  "options_themeDark": {
+    "message": "Oscuro"
+  },
+  "options_themeSystem": {
+    "message": "Sistema"
+  },
+  "options_themeSystemTitle": {
+    "message": "Sistema: igual que Thunderbird"
+  },
+  "options_tagline": {
+    "message": "Ejecute reglas en cualquier carpeta con un temporizador, algo que Thunderbird de serie solo hace en la Bandeja de entrada."
+  },
+  "options_runEvery": {
+    "message": "Ejecutar cada $1 minutos"
+  },
+  "options_save": {
+    "message": "Guardar"
+  },
+  "options_collapseAll": {
+    "message": "Contraer todo"
+  },
+  "options_expandAll": {
+    "message": "Expandir todo"
+  },
+  "options_export": {
+    "message": "Exportar…"
+  },
+  "options_import": {
+    "message": "Importar…"
+  },
+  "options_addRule": {
+    "message": "+ Añadir regla"
+  },
+  "allowlist_title": {
+    "message": "Dominios protegidos (nunca se bloquean)"
+  },
+  "allowlist_hint": {
+    "message": "Estos dominios se omiten al añadir dominios de spam desde la lista de mensajes, para que una selección errónea no bloquee un proveedor importante. Un dominio por línea."
+  },
+  "diag_title": {
+    "message": "Diagnóstico"
+  },
+  "diag_hint": {
+    "message": "Si algo no funciona como espera, envíe este informe junto con su mensaje. Incluye su versión de Thunderbird, la estructura de cada regla y lo que hicieron las últimas ejecuciones. Las direcciones, dominios, patrones y nombres de carpeta no se incluyen, salvo que marque la casilla de abajo. Lo que ve aquí es exactamente lo que se compartirá."
+  },
+  "diag_includeValues": {
+    "message": "Incluir los valores de las reglas (direcciones, dominios, patrones, carpetas)"
+  },
+  "diag_copy": {
+    "message": "Copiar informe"
+  },
+  "diag_save": {
+    "message": "Guardar informe…"
+  },
+  "diag_refresh": {
+    "message": "Actualizar"
+  },
+  "diag_clear": {
+    "message": "Borrar registro"
+  },
+  "diag_buildFailed": {
+    "message": "No se pudo generar el informe: $1"
+  },
+  "adv_title": {
+    "message": "Avanzado"
+  },
+  "adv_hint": {
+    "message": "Tiempos del motor de análisis. Los valores predeterminados sirven para la mayoría; cámbielos solo si sabe por qué. Al guardar, cada valor se ajusta a un rango seguro."
+  },
+  "adv_logScheduleRuns": {
+    "message": "Registrar cada ejecución de la programación propia de una regla"
+  },
+  "adv_logScheduleRunsHint": {
+    "message": "Sin esta opción, el registro de diagnóstico solo anota esas ejecuciones cuando cambian correo o fallan. Una regla que se ejecuta cada minuto expulsaría del registro las entradas antiguas en pocas horas. Pulse <b>Guardar</b> para aplicar el cambio."
+  },
+  "adv_runOnNewMail": {
+    "message": "Ejecutar también al llegar correo nuevo"
+  },
+  "adv_runOnNewMailHint": {
+    "message": "Sin esta opción, las reglas solo se ejecutan con el temporizador de arriba, así que el correo nuevo puede esperar ese mismo tiempo. Thunderbird avisa de cada llegada en el momento."
+  },
+  "adv_newMailDelay": {
+    "message": "Esperar $1 segundos tras la última llegada antes de ejecutar"
+  },
+  "adv_newMailDelayHint": {
+    "message": "Una sincronización de correo avisa de muchos mensajes. La espera agrupa todo el lote en una sola ejecución. El máximo es de 15 segundos porque Thunderbird suspende los complementos inactivos."
+  },
+  "adv_catchUp": {
+    "message": "Análisis de recuperación cada $1 minutos, que abarca los últimos $2 días"
+  },
+  "adv_catchUpHint": {
+    "message": "Las ejecuciones normales solo miran el correo con fecha posterior a la ejecución anterior. Un remitente puede antedatar la cabecera Date, así que esta pasada más amplia recoge el correo que esas ejecuciones no vieron. Subir cualquiera de los dos números supone más trabajo en cada pasada."
+  },
+  "adv_overlap": {
+    "message": "Solapar cada análisis normal $1 minutos"
+  },
+  "adv_overlapHint": {
+    "message": "Cuánto antes de la ejecución anterior empieza cada análisis, para no perder el correo que llega durante un análisis o que tiene una fecha algo anterior."
+  },
+  "adv_showMenu": {
+    "message": "Mostrar Programador de filtros de carpeta en el menú contextual"
+  },
+  "adv_showMenuHint": {
+    "message": "El menú añade dominios de spam y ejecuta reglas desde la lista de mensajes. Sin él, el botón de la barra de herramientas y esta página siguen ejecutando reglas. Pulse <b>Guardar</b> para aplicar el cambio."
+  },
+  "adv_shortName": {
+    "message": "Usar el nombre corto FFS en el botón de la barra de herramientas y en el menú contextual"
+  },
+  "adv_shortNameHint": {
+    "message": "El nombre corto ocupa menos espacio. La descripción emergente del botón de la barra de herramientas conserva el nombre completo. Pulse <b>Guardar</b> para aplicar el cambio."
+  },
+  "adv_authHeading": {
+    "message": "Condiciones de autenticación"
+  },
+  "adv_authOwn": {
+    "message": "Verificar DKIM por mi cuenta"
+  },
+  "adv_authOwnHint": {
+    "message": "Un remitente puede añadir una cabecera <code>Authentication-Results</code> falsa, así que el complemento verifica las firmas DKIM por su cuenta y deduce DMARC del resultado. Descarga cada mensaje completo que examina una condición de autenticación y pide la clave de firma al servidor DNS de abajo. El servidor ve los nombres de dominio por los que se le pregunta. Sin esta opción, el complemento lee DKIM y DMARC de la cabecera que añade su proveedor de correo."
+  },
+  "adv_authServer": {
+    "message": "Servidor DNS $1"
+  },
+  "adv_authServerHint": {
+    "message": "Thunderbird le pide que permita el servidor la primera vez que lo usa."
+  },
+  "adv_authPrefer": {
+    "message": "Si mi verificación y la cabecera del proveedor no coinciden, usar $1"
+  },
+  "adv_authPreferOwn": {
+    "message": "mi verificación"
+  },
+  "adv_authPreferProvider": {
+    "message": "la cabecera del proveedor"
+  },
+  "adv_authPreferHint": {
+    "message": "Con la cabecera del proveedor, el complemento usa su propio resultado solo para las comprobaciones que la cabecera no indica."
+  },
+  "adv_authTrusted": {
+    "message": "Servidores de autenticación de confianza $1"
+  },
+  "adv_authTrustedPlaceholder": {
+    "message": "Un servidor por línea, por ejemplo\nmta.yahoo.com\nmx.google.com"
+  },
+  "adv_authTrustedHint": {
+    "message": "Déjelo vacío para confiar en la cabecera <code>Authentication-Results</code> superior, la última que añade su proveedor. Si introduce nombres de servidor, uno por línea, el complemento usa la cabecera superior de uno de ellos. El nombre es la primera palabra de la cabecera, como <code>mta.yahoo.com</code> o <code>mx.google.com</code>."
+  },
+  "help_title": {
+    "message": "Problemas frecuentes"
+  },
+  "help_otherFolderTitle": {
+    "message": "Una regla no procesa el correo de Enviados u otra carpeta distinta de la Bandeja de entrada"
+  },
+  "help_otherFolderCause": {
+    "message": "En las cuentas IMAP, Thunderbird solo comprueba de forma predeterminada si hay correo nuevo en la Bandeja de entrada. El complemento solo puede procesar los mensajes que Thunderbird ha descargado, así que el correo que otro programa envía con su cuenta, o que archiva una regla del servidor, espera hasta que abra la carpeta. <b>Ejecutar todas las reglas</b> parece funcionar porque antes abrió la carpeta."
+  },
+  "help_otherFolderFix": {
+    "message": "Para solucionarlo, haga clic derecho en la carpeta y abra <b>Propiedades</b>. En la pestaña <b>Información general</b>, active <b>Al obtener mensajes nuevos de esta cuenta, comprobar siempre esta carpeta</b>."
+  },
+  "help_closedTitle": {
+    "message": "Llegó correo con Thunderbird cerrado"
+  },
+  "help_closedBody": {
+    "message": "Las reglas solo se ejecutan mientras Thunderbird está abierto. Al iniciar Thunderbird, la primera ejecución programada revisa los últimos 30 días, o los días indicados en <b>Avanzado</b>, y procesa lo que se le haya escapado."
+  },
+  "help_otherTitle": {
+    "message": "Otra cosa no funciona"
+  },
+  "help_otherBody": {
+    "message": "Abra <b>Diagnóstico</b> y adjunte el informe a una <a>incidencia en GitHub</a>. El informe muestra lo que analizó y encontró cada ejecución reciente."
+  },
+  "rule_collapseTitle": {
+    "message": "Contraer o expandir esta regla"
+  },
+  "rule_namePlaceholder": {
+    "message": "Nombre de la regla"
+  },
+  "rule_newName": {
+    "message": "Regla nueva"
+  },
+  "rule_enabled": {
+    "message": "activada"
+  },
+  "rule_run": {
+    "message": "Ejecutar"
+  },
+  "rule_runTitle": {
+    "message": "Ejecutar solo esta regla ahora, en todos los mensajes de sus carpetas"
+  },
+  "rule_delete": {
+    "message": "Eliminar"
+  },
+  "rule_folders": {
+    "message": "Carpetas"
+  },
+  "rule_foldersExpand": {
+    "message": "Expandir"
+  },
+  "rule_foldersExpandTitle": {
+    "message": "Expandir todo: mostrar todas las cuentas y subcarpetas"
+  },
+  "rule_foldersCollapse": {
+    "message": "Contraer"
+  },
+  "rule_foldersCollapseTitle": {
+    "message": "Contraer todo: mostrar solo los nombres de las cuentas"
+  },
+  "rule_folderFilter": {
+    "message": "Filtrar carpetas"
+  },
+  "rule_selectMatching": {
+    "message": "Seleccionar coincidentes"
+  },
+  "rule_includeSubfolders": {
+    "message": "Incluir subcarpetas, también las que se creen después"
+  },
+  "rule_match": {
+    "message": "Cumplir"
+  },
+  "rule_matchAny": {
+    "message": "alguna de las condiciones (O)"
+  },
+  "rule_matchAll": {
+    "message": "todas las condiciones (Y)"
+  },
+  "rule_addCondition": {
+    "message": "+ Añadir condición"
+  },
+  "rule_addAction": {
+    "message": "+ Añadir acción"
+  },
+  "rule_schedule": {
+    "message": "Horario"
+  },
+  "rule_scheduleOn": {
+    "message": "Ejecutar esta regla con su propia programación"
+  },
+  "rule_cronLabel": {
+    "message": "Expresión cron"
+  },
+  "rule_cronHelp": {
+    "message": "Cómo escribir una expresión cron"
+  },
+  "rule_scheduleHint": {
+    "message": "Una expresión cron tiene cinco campos: minuto, hora, día del mes, mes y día de la semana, en la hora local de su equipo. Con programación propia, la regla solo se ejecuta en esos momentos. Ni el temporizador de la parte superior de la página ni el correo nuevo la inician."
+  },
+  "schedule_error": {
+    "message": "$1."
+  },
+  "schedule_next": {
+    "message": "$1. Próxima ejecución: $2."
+  },
+  "schedule_never": {
+    "message": "$1. Esa fecha no existe, así que la regla nunca se ejecuta."
+  },
+  "cron_fieldMinute": {
+    "message": "minuto"
+  },
+  "cron_fieldHour": {
+    "message": "hora"
+  },
+  "cron_fieldDay": {
+    "message": "día del mes"
+  },
+  "cron_fieldMonth": {
+    "message": "mes"
+  },
+  "cron_fieldWeekday": {
+    "message": "día de la semana"
+  },
+  "cron_errorEmpty": {
+    "message": "Introduzca una expresión cron"
+  },
+  "cron_errorTooLong": {
+    "message": "La expresión es demasiado larga"
+  },
+  "cron_errorFieldCount": {
+    "message": "Una expresión cron tiene 5 campos: minuto, hora, día del mes, mes y día de la semana. Esta tiene $1"
+  },
+  "cron_errorInvalid": {
+    "message": "«$1» no es válido en el campo $2"
+  },
+  "cron_errorOutOfRange": {
+    "message": "el campo $1 debe estar entre $2 y $3, pero vale $4"
+  },
+  "cron_errorStep": {
+    "message": "el paso «$1» del campo $2 debe ser 1 o más"
+  },
+  "cron_errorRange": {
+    "message": "«$1» no es un rango válido en el campo $2"
+  },
+  "cron_errorBackwards": {
+    "message": "el rango «$1» del campo $2 está invertido"
+  },
+  "cron_range": {
+    "message": "de $1 a $2"
+  },
+  "cron_atTimes": {
+    "message": "A las $1"
+  },
+  "cron_everyMinute": {
+    "message": "Cada minuto"
+  },
+  "cron_everyMinutes_one": {
+    "message": "Cada $1 minuto"
+  },
+  "cron_everyMinutes_other": {
+    "message": "Cada $1 minutos"
+  },
+  "cron_everyHourOnTheHour": {
+    "message": "Cada hora, en punto"
+  },
+  "cron_everyHourAtMinute": {
+    "message": "Cada hora, en el minuto $1"
+  },
+  "cron_atMinutes_one": {
+    "message": "En el minuto $1 de cada hora"
+  },
+  "cron_atMinutes_other": {
+    "message": "En los minutos $1 de cada hora"
+  },
+  "cron_timeAndHours": {
+    "message": "$1, $2"
+  },
+  "cron_everyHours_one": {
+    "message": "cada $1 hora"
+  },
+  "cron_everyHours_other": {
+    "message": "cada $1 horas"
+  },
+  "cron_betweenHours": {
+    "message": "entre las $1 y las $2"
+  },
+  "cron_duringHours_one": {
+    "message": "durante la hora $1"
+  },
+  "cron_duringHours_other": {
+    "message": "durante las horas $1"
+  },
+  "cron_everyDay": {
+    "message": "todos los días"
+  },
+  "cron_onDaysOfMonth_one": {
+    "message": "el día $1 del mes"
+  },
+  "cron_onDaysOfMonth_other": {
+    "message": "los días $1 del mes"
+  },
+  "cron_onWeekdays": {
+    "message": "$1"
+  },
+  "cron_inMonths": {
+    "message": "en $1"
+  },
+  "cron_withDays": {
+    "message": "$1, $2"
+  },
+  "cron_withMonths": {
+    "message": "$1 $2"
+  },
+  "folders_account": {
+    "message": "Cuenta"
+  },
+  "folders_includedAsSubfolder": {
+    "message": "incluida como subcarpeta"
+  },
+  "folders_selectedInside_one": {
+    "message": "$1 seleccionada dentro"
+  },
+  "folders_selectedInside_other": {
+    "message": "$1 seleccionadas dentro"
+  },
+  "folders_expanded": {
+    "message": "expandida"
+  },
+  "folders_collapsed": {
+    "message": "contraída"
+  },
+  "folders_countSelected_one": {
+    "message": "$1 seleccionada"
+  },
+  "folders_countSelected_other": {
+    "message": "$1 seleccionadas"
+  },
+  "folders_countSubfolders_one": {
+    "message": "$1 más como subcarpeta"
+  },
+  "folders_countSubfolders_other": {
+    "message": "$1 más como subcarpetas"
+  },
+  "folders_countFiltered_one": {
+    "message": "$1 oculta por el filtro"
+  },
+  "folders_countFiltered_other": {
+    "message": "$1 ocultas por el filtro"
+  },
+  "folders_countFolded_one": {
+    "message": "$1 en carpetas contraídas"
+  },
+  "folders_countFolded_other": {
+    "message": "$1 en carpetas contraídas"
+  },
+  "field_from": {
+    "message": "de"
+  },
+  "field_to": {
+    "message": "para"
+  },
+  "field_cc": {
+    "message": "cc"
+  },
+  "field_subject": {
+    "message": "asunto"
+  },
+  "field_reply_to": {
+    "message": "responder a"
+  },
+  "field_list_id": {
+    "message": "list-id"
+  },
+  "field_sender": {
+    "message": "remitente"
+  },
+  "field_age": {
+    "message": "antigüedad"
+  },
+  "field_read": {
+    "message": "leído"
+  },
+  "field_star": {
+    "message": "destacado"
+  },
+  "field_junk": {
+    "message": "no deseado"
+  },
+  "field_tag": {
+    "message": "etiqueta"
+  },
+  "field_priority": {
+    "message": "prioridad"
+  },
+  "field_auth": {
+    "message": "autenticación"
+  },
+  "op_contains": {
+    "message": "contiene"
+  },
+  "op_is": {
+    "message": "es"
+  },
+  "op_startsWith": {
+    "message": "empieza por"
+  },
+  "op_endsWith": {
+    "message": "termina en"
+  },
+  "op_matchesRegex": {
+    "message": "coincide con regex"
+  },
+  "op_domainInList": {
+    "message": "dominio en la lista"
+  },
+  "op_inAddressBook": {
+    "message": "está en la libreta de direcciones"
+  },
+  "op_nameShowsOtherAddress": {
+    "message": "el nombre muestra otra dirección"
+  },
+  "op_olderThan": {
+    "message": "más de"
+  },
+  "op_newerThan": {
+    "message": "menos de"
+  },
+  "op_isOn": {
+    "message": "es"
+  },
+  "op_isOff": {
+    "message": "no es"
+  },
+  "op_hasTag": {
+    "message": "tiene la etiqueta"
+  },
+  "op_priorityIs": {
+    "message": "es"
+  },
+  "op_authPasses": {
+    "message": "supera"
+  },
+  "op_greyIsOn": {
+    "message": "está leído, destacado o es no deseado"
+  },
+  "op_greyIsOff": {
+    "message": "no está leído, no está destacado o no es no deseado"
+  },
+  "op_greyPriorityIs": {
+    "message": "prioridad es"
+  },
+  "op_ageOnly": {
+    "message": "$1 (solo antigüedad)"
+  },
+  "op_ageOnlyReason": {
+    "message": "Solo funciona con el campo antigüedad."
+  },
+  "op_stateOnlyReason": {
+    "message": "Solo funciona con los campos leído, destacado y no deseado."
+  },
+  "op_tagOnly": {
+    "message": "$1 (solo etiqueta)"
+  },
+  "op_tagOnlyReason": {
+    "message": "Solo funciona con el campo etiqueta."
+  },
+  "op_priorityOnlyReason": {
+    "message": "Solo funciona con el campo prioridad."
+  },
+  "op_authOnly": {
+    "message": "$1 (solo autenticación)"
+  },
+  "op_authOnlyReason": {
+    "message": "Solo funciona con el campo autenticación."
+  },
+  "op_headerOnly": {
+    "message": "$1 (solo cabeceras)"
+  },
+  "op_headerOnlyReason": {
+    "message": "Solo funciona con un campo de cabecera, como de o asunto."
+  },
+  "state_read_isOn": {
+    "message": "está leído"
+  },
+  "state_read_isOff": {
+    "message": "no está leído"
+  },
+  "state_star_isOn": {
+    "message": "está destacado"
+  },
+  "state_star_isOff": {
+    "message": "no está destacado"
+  },
+  "state_junk_isOn": {
+    "message": "es no deseado"
+  },
+  "state_junk_isOff": {
+    "message": "no es no deseado"
+  },
+  "priority_highest": {
+    "message": "Muy alta"
+  },
+  "priority_high": {
+    "message": "Alta"
+  },
+  "priority_normal": {
+    "message": "Normal"
+  },
+  "priority_low": {
+    "message": "Baja"
+  },
+  "priority_lowest": {
+    "message": "Muy baja"
+  },
+  "cond_not": {
+    "message": "no"
+  },
+  "cond_valuePlaceholder": {
+    "message": "valor"
+  },
+  "cond_daysUnit": {
+    "message": "días"
+  },
+  "cond_allowBookAccess": {
+    "message": "Permitir acceso a libretas…"
+  },
+  "cond_allowDnsAccess": {
+    "message": "Permitir acceso al servidor DNS…"
+  },
+  "cond_allAddressBooks": {
+    "message": "Todas las libretas de direcciones"
+  },
+  "cond_missingAddressBook": {
+    "message": "(libreta de direcciones no encontrada)"
+  },
+  "cond_domainsPlaceholder": {
+    "message": "Un dominio por línea, por ejemplo evil.com\nLos subdominios se incluyen automáticamente."
+  },
+  "cond_otherFields": {
+    "message": "Funciona con otros campos"
+  },
+  "cond_greyFieldList": {
+    "message": "No funciona con «dominio en la lista». Cambie primero el operador."
+  },
+  "cond_greyFieldAddress": {
+    "message": "Este operador lee direcciones y este campo no contiene ninguna. Cambie primero el operador."
+  },
+  "cond_domainListOnly": {
+    "message": "$1 (solo lista de dominios)"
+  },
+  "cond_greyDomainSet": {
+    "message": "Solo funciona con el operador «dominio en la lista»."
+  },
+  "cond_nameHint": {
+    "message": "Coincide cuando el nombre del remitente contiene una dirección de correo de un dominio distinto al de la dirección real. Ejemplo: el nombre es <code>Lena <lena@yahoo.com></code> y la dirección real es <code>someone@sina.com</code>. El spam lo hace para parecer otro remitente. Algunas listas de correo también, así que pruebe la regla moviendo a una carpeta antes de usar la Papelera."
+  },
+  "cond_priorityHint": {
+    "message": "Para leer la prioridad, el complemento descarga las cabeceras de cada mensaje, así que esta comprobación es más lenta que las demás. Un mensaje sin prioridad cuenta como Normal."
+  },
+  "cond_authHint": {
+    "message": "Comprueba si el remitente es quien dice ser la dirección De. Para ello, el complemento descarga una vez cada mensaje completo que examina la regla y guarda el resultado. SPF se toma de la cabecera <code>Authentication-Results</code> que añade su proveedor de correo. El complemento verifica DKIM por su cuenta y deduce DMARC de ambos. Si una comprobación no termina, por ejemplo porque el servidor DNS no responde, la condición no coincide. El complemento lo reintenta durante 24 horas. Consulte la configuración en <b>Avanzado</b>."
+  },
+  "cond_stateHint": {
+    "message": "Una ejecución programada solo revisa el correo antiguo en el análisis de recuperación, de forma predeterminada cada 30 minutos (consulte <b>Avanzado</b>). Así que, después de destacar, etiquetar o leer un mensaje antiguo, la regla puede tardar ese tiempo en actuar. <b>Ejecutar</b> revisa todos los mensajes al momento."
+  },
+  "action_then": {
+    "message": "Después"
+  },
+  "action_choose": {
+    "message": "Elija una acción…"
+  },
+  "action_chooseHint": {
+    "message": "Elija qué hacer con los mensajes que coincidan."
+  },
+  "action_trash": {
+    "message": "Mover a la Papelera (de la cuenta de cada mensaje)"
+  },
+  "action_trashHint": {
+    "message": "Envía cada mensaje coincidente a la Papelera de su propia cuenta, sin problemas en reglas con varias cuentas."
+  },
+  "action_move": {
+    "message": "Mover a carpeta…"
+  },
+  "action_moveHint": {
+    "message": "Envía cada coincidencia a la carpeta elegida, incluso a una carpeta de otra cuenta (Thunderbird copia a la cuenta de destino y luego elimina el original)."
+  },
+  "action_archive": {
+    "message": "Archivar"
+  },
+  "action_archiveHint": {
+    "message": "Archiva cada mensaje como el botón Archivar de Thunderbird, con la configuración de archivado de su propia cuenta. Una cuenta con el archivado desactivado deja su correo donde está."
+  },
+  "action_copy": {
+    "message": "Copiar a carpeta…"
+  },
+  "action_copyHint": {
+    "message": "Deja el original donde está y copia un duplicado en la carpeta elegida (también entre cuentas)."
+  },
+  "action_tag": {
+    "message": "Etiquetar como…"
+  },
+  "action_tagHint": {
+    "message": "Añade una de sus etiquetas de Thunderbird. Las etiquetas que ya tiene el mensaje se conservan, así que varias reglas pueden etiquetar el mismo correo."
+  },
+  "action_markRead": {
+    "message": "Marcar como leído"
+  },
+  "action_markReadHint": {
+    "message": "Marca las coincidencias como leídas sin moverlas."
+  },
+  "action_markUnread": {
+    "message": "Marcar como no leído"
+  },
+  "action_markUnreadHint": {
+    "message": "Marca las coincidencias como no leídas sin moverlas."
+  },
+  "action_markFlagged": {
+    "message": "Destacar"
+  },
+  "action_markFlaggedHint": {
+    "message": "Destaca las coincidencias sin moverlas."
+  },
+  "action_markUnflagged": {
+    "message": "Quitar destacado"
+  },
+  "action_markUnflaggedHint": {
+    "message": "Quita el destacado de las coincidencias sin moverlas."
+  },
+  "action_markJunk": {
+    "message": "Marcar como no deseado"
+  },
+  "action_markJunkHint": {
+    "message": "Marca las coincidencias como correo no deseado (no las mueve; el tratamiento del correo no deseado de Thunderbird decide el resto)."
+  },
+  "action_markNotJunk": {
+    "message": "Marcar como deseado"
+  },
+  "action_markNotJunkHint": {
+    "message": "Quita la marca de correo no deseado de las coincidencias sin moverlas."
+  },
+  "action_deletePermanently": {
+    "message": "Eliminar definitivamente"
+  },
+  "action_deletePermanentlyHint": {
+    "message": "Omite la Papelera y elimina las coincidencias de inmediato. No se puede deshacer."
+  },
+  "summary_not": {
+    "message": "no $1"
+  },
+  "summary_text": {
+    "message": "$1 $2 «$3»"
+  },
+  "summary_age_one": {
+    "message": "$1 $2 $3 día"
+  },
+  "summary_age_other": {
+    "message": "$1 $2 $3 días"
+  },
+  "summary_hasTag": {
+    "message": "tiene la etiqueta $1"
+  },
+  "summary_notHasTag": {
+    "message": "no tiene la etiqueta $1"
+  },
+  "summary_priorityIs": {
+    "message": "prioridad es $1"
+  },
+  "summary_priorityIsNot": {
+    "message": "prioridad no es $1"
+  },
+  "summary_authPasses": {
+    "message": "$1 supera"
+  },
+  "summary_authNotPasses": {
+    "message": "$1 no supera"
+  },
+  "summary_inBook": {
+    "message": "$1 en $2"
+  },
+  "summary_notInBook": {
+    "message": "$1 no en $2"
+  },
+  "summary_nameShows": {
+    "message": "$1: el nombre muestra otra dirección"
+  },
+  "summary_notNameShows": {
+    "message": "$1: el nombre no muestra otra dirección"
+  },
+  "summary_inList_one": {
+    "message": "$1 en lista de $2 dominio"
+  },
+  "summary_inList_other": {
+    "message": "$1 en lista de $2 dominios"
+  },
+  "summary_notInList_one": {
+    "message": "$1 no en lista de $2 dominio"
+  },
+  "summary_notInList_other": {
+    "message": "$1 no en lista de $2 dominios"
+  },
+  "summary_and": {
+    "message": "Y"
+  },
+  "summary_or": {
+    "message": "O"
+  },
+  "summary_noConditions": {
+    "message": "sin condiciones"
+  },
+  "summary_noAction": {
+    "message": "sin acción"
+  },
+  "summary_tagAction": {
+    "message": "Etiquetar como $1"
+  },
+  "summary_folders_one": {
+    "message": "$1 carpeta"
+  },
+  "summary_folders_other": {
+    "message": "$1 carpetas"
+  },
+  "summary_foldersAndSubfolders_one": {
+    "message": "$1 carpeta y subcarpetas"
+  },
+  "summary_foldersAndSubfolders_other": {
+    "message": "$1 carpetas y subcarpetas"
+  },
+  "reject_tagActionNoTag": {
+    "message": "regla «$1»: acción de etiquetar sin etiqueta elegida"
+  },
+  "reject_secondTerminal": {
+    "message": "regla «$1»: solo una acción puede mover o eliminar, se descartó «$2»"
+  },
+  "reject_ageDays": {
+    "message": "la condición de antigüedad necesita un número entero de días (se recibió \"$1\")"
+  },
+  "reject_ageDaysEmpty": {
+    "message": "la condición de antigüedad necesita un número entero de días (no se indicó nada)"
+  },
+  "reject_tagConditionNoTag": {
+    "message": "una condición de etiqueta no tiene etiqueta elegida, así que no coincidirá"
+  },
+  "setting_newMailDelaySeconds": {
+    "message": "espera antes de ejecutar con correo nuevo (segundos)"
+  },
+  "setting_scanOverlapMinutes": {
+    "message": "solapamiento del análisis incremental (minutos)"
+  },
+  "setting_catchUpEveryMinutes": {
+    "message": "intervalo del análisis de recuperación (minutos)"
+  },
+  "setting_catchUpLookbackDays": {
+    "message": "periodo del análisis de recuperación (días)"
+  },
+  "setting_authPrefer": {
+    "message": "resultado que se usa cuando las comprobaciones no coinciden"
+  },
+  "setting_authDohServer": {
+    "message": "servidor DNS"
+  },
+  "setting_outOfRange": {
+    "message": "$1 debe estar entre $2 y $3, se usa $4"
+  },
+  "setting_mustBeOneOf": {
+    "message": "$1 debe ser uno de $2, se usa $3"
+  },
+  "import_whereRule": {
+    "message": "Regla $1"
+  },
+  "import_whereNamedRule": {
+    "message": "Regla $1 («$2»)"
+  },
+  "import_whereCondition": {
+    "message": "$1, condición $2"
+  },
+  "import_noField": {
+    "message": "$1: ningún campo de cabecera reconocido"
+  },
+  "import_unknownOperator": {
+    "message": "$1: operador desconocido \"$2\""
+  },
+  "import_operatorMismatch": {
+    "message": "$1: \"$2\" no se aplica a \"$3\""
+  },
+  "import_ageDays": {
+    "message": "$1: la antigüedad necesita un número entero de días, 1 o más"
+  },
+  "import_noTag": {
+    "message": "$1: no se eligió ninguna etiqueta"
+  },
+  "import_priorityLevel": {
+    "message": "$1: la prioridad debe ser una de $2"
+  },
+  "import_authMethod": {
+    "message": "$1: la comprobación debe ser una de $2"
+  },
+  "import_bookFields": {
+    "message": "$1: las comprobaciones de libreta de direcciones solo se aplican a $2"
+  },
+  "import_noBook": {
+    "message": "$1: no se eligió ninguna libreta de direcciones"
+  },
+  "import_unknownBook": {
+    "message": "$1: la libreta de direcciones no está en este perfil, elija una antes de guardar"
+  },
+  "import_nameFields": {
+    "message": "$1: la comprobación del nombre solo se aplica a $2"
+  },
+  "import_invalidDomains_one": {
+    "message": "$1: se descartó $2 dominio no válido"
+  },
+  "import_invalidDomains_other": {
+    "message": "$1: se descartaron $2 dominios no válidos"
+  },
+  "import_emptyDomains": {
+    "message": "$1: la lista de dominios está vacía"
+  },
+  "import_emptyValue": {
+    "message": "$1: valor vacío"
+  },
+  "import_noAction": {
+    "message": "$1: sin acción, se omitió la regla"
+  },
+  "import_unknownAction": {
+    "message": "$1: acción desconocida \"$2\", se descartó"
+  },
+  "import_needsFolder": {
+    "message": "$1: \"$2\" necesita una carpeta de destino, se descartó"
+  },
+  "import_needsTag": {
+    "message": "$1: \"$2\" necesita una etiqueta, se descartó"
+  },
+  "import_secondTerminal": {
+    "message": "$1: se descartó \"$2\", una regla solo puede terminar en una acción que mueva o elimine (se conservó \"$3\")"
+  },
+  "import_noUsableAction": {
+    "message": "$1: ninguna acción utilizable, se omitió la regla"
+  },
+  "import_noConditions": {
+    "message": "$1: ninguna condición utilizable, se omitió la regla"
+  },
+  "import_unknownFolders_one": {
+    "message": "$1: $2 carpeta no está en este perfil, se quitó"
+  },
+  "import_unknownFolders_other": {
+    "message": "$1: $2 carpetas no están en este perfil, se quitaron"
+  },
+  "import_badSchedule": {
+    "message": "$1: la programación no es una expresión cron válida, se desactivó"
+  },
+  "import_defaultRuleName": {
+    "message": "Regla importada"
+  },
+  "import_anExistingRule": {
+    "message": "una regla existente"
+  },
+  "import_notAnObject": {
+    "message": "No es un objeto JSON válido"
+  },
+  "import_unexpectedFormat": {
+    "message": "Formato inesperado \"$1\""
+  },
+  "import_noRules": {
+    "message": "No se encontró ninguna lista de reglas"
+  },
+  "import_invalidAllowlist_one": {
+    "message": "Dominios protegidos: se descartó $1 dominio no válido"
+  },
+  "import_invalidAllowlist_other": {
+    "message": "Dominios protegidos: se descartaron $1 dominios no válidos"
+  },
+  "import_advanced": {
+    "message": "Avanzado: $1"
+  },
+  "status_bookAccessAllowed": {
+    "message": "Acceso a las libretas de direcciones permitido. Elija una libreta y pulse Guardar."
+  },
+  "status_bookAccessDenied": {
+    "message": "No se permitió el acceso a las libretas de direcciones. Las condiciones de libreta de direcciones no coincidirán hasta que se permita."
+  },
+  "status_bookAccessFailed": {
+    "message": "No se pudo solicitar acceso a las libretas de direcciones: $1"
+  },
+  "status_dnsAccessAllowed": {
+    "message": "Acceso al servidor DNS permitido. Las condiciones DKIM y DMARC ya pueden ejecutarse."
+  },
+  "status_dnsAccessDenied": {
+    "message": "No se permitió el acceso al servidor DNS. Las condiciones DKIM y DMARC no coincidirán hasta que se permita."
+  },
+  "status_dnsAccessFailed": {
+    "message": "No se pudo solicitar acceso al servidor DNS: $1"
+  },
+  "status_tagAccessAllowed": {
+    "message": "Acceso a etiquetas permitido. Elija una etiqueta y pulse Guardar."
+  },
+  "status_tagAccessDenied": {
+    "message": "No se permitió el acceso a las etiquetas, así que sus etiquetas no pueden mostrarse aquí."
+  },
+  "status_tagAccessFailed": {
+    "message": "No se pudo solicitar acceso a las etiquetas: $1"
+  },
+  "status_needsAction": {
+    "message": "Una regla necesita al menos una acción."
+  },
+  "status_notSavedNoAction": {
+    "message": "No se guardó: elija una acción para $1."
+  },
+  "status_notSavedBadSchedule": {
+    "message": "No se guardó: la programación de «$1» no es una expresión cron válida."
+  },
+  "status_notSavedNoFolder": {
+    "message": "No se guardó: elija una carpeta para «$1» o desactive la regla."
+  },
+  "status_saved": {
+    "message": "Guardado. Programación actualizada."
+  },
+  "status_savedWithCorrections_one": {
+    "message": "Guardado, con $1 corrección: $2."
+  },
+  "status_savedWithCorrections_other": {
+    "message": "Guardado, con $1 correcciones: $2."
+  },
+  "status_noteBookAccess": {
+    "message": "Las condiciones de libreta de direcciones no coincidirán hasta que permita el acceso a las libretas de direcciones."
+  },
+  "status_noteBookMissing": {
+    "message": "Una condición de libreta de direcciones apunta a una libreta que ya no existe; no coincidirá."
+  },
+  "status_noteTagConditionMissing": {
+    "message": "Una condición de etiqueta apunta a una etiqueta que ya no existe; no coincidirá."
+  },
+  "status_noteTagActionMissing": {
+    "message": "Una acción de etiquetar apunta a una etiqueta que ya no existe."
+  },
+  "status_diagCopied": {
+    "message": "Diagnóstico copiado. Péguelo en su correo o en la incidencia de GitHub."
+  },
+  "status_diagSaved": {
+    "message": "Guardado $1."
+  },
+  "status_diagSaveFailed": {
+    "message": "No se pudo guardar el informe: $1"
+  },
+  "status_diagCleared": {
+    "message": "Registro de diagnóstico borrado."
+  },
+  "status_exported": {
+    "message": "Exportado a $1. Se incluyen los cambios sin guardar de esta página."
+  },
+  "status_exportFailed": {
+    "message": "Error al exportar: $1"
+  },
+  "status_importReadFailed": {
+    "message": "No se pudo leer $1: $2"
+  },
+  "status_importFailed": {
+    "message": "Error al importar: $1"
+  },
+  "status_importNothingNew": {
+    "message": "No hay nada nuevo que importar."
+  },
+  "status_importBecause": {
+    "message": "$1."
+  },
+  "status_importNoRules": {
+    "message": "El archivo no contenía reglas utilizables"
+  },
+  "status_importDuplicates": {
+    "message": "Ya existentes, omitidas: $1."
+  },
+  "status_importDuplicate": {
+    "message": "«$1» ($2, igual que «$3»)"
+  },
+  "status_imported_one": {
+    "message": "Se importó $1 regla. Revísela y pulse Guardar para conservarla."
+  },
+  "status_imported_other": {
+    "message": "Se importaron $1 reglas. Revíselas y pulse Guardar para conservarlas."
+  },
+  "status_importSkipped": {
+    "message": "Omitido: $1."
+  },
+  "status_running": {
+    "message": "Ejecutando…"
+  },
+  "status_runningRule": {
+    "message": "Ejecutando «$1»…"
+  },
+  "status_runDone_one": {
+    "message": "Hecho: $1 mensaje afectado."
+  },
+  "status_runDone_other": {
+    "message": "Hecho: $1 mensajes afectados."
+  },
+  "status_ruleRunDone_one": {
+    "message": "Hecho. «$1» afectó a $2 mensaje."
+  },
+  "status_ruleRunDone_other": {
+    "message": "Hecho. «$1» afectó a $2 mensajes."
+  },
+  "status_runFailed": {
+    "message": "Error en la ejecución: $1"
+  },
+  "status_saveBeforeRun": {
+    "message": "Guarde los cambios antes de ejecutar «$1»."
+  },
+  "status_ruleTurnedOff": {
+    "message": "«$1» está desactivada. Actívela y guarde antes de ejecutarla."
+  },
+  "status_allowlistRestored": {
+    "message": "Dominios protegidos restaurados a los valores predeterminados. Pulse Guardar para conservarlos."
+  },
+  "status_advancedRestored": {
+    "message": "Ajustes avanzados restaurados a los valores predeterminados. Pulse Guardar para conservarlos."
+  },
+  "status_noFolders": {
+    "message": "No se encontraron carpetas. Compruebe el permiso «accountsRead» y vuelva a cargar el complemento."
+  },
+  "popup_runOneRule": {
+    "message": "Ejecutar una regla"
+  },
+  "popup_noRules": {
+    "message": "No hay ninguna regla guardada activada."
+  },
+  "popup_openSettings": {
+    "message": "Abrir ajustes"
+  },
+  "popup_runningAll": {
+    "message": "Ejecutando todas las reglas…"
+  },
+  "popup_runDone_one": {
+    "message": "Hecho. $1 mensaje afectado."
+  },
+  "popup_runDone_other": {
+    "message": "Hecho. $1 mensajes afectados."
+  },
+  "popup_loadFailed": {
+    "message": "No se pudieron cargar las reglas: $1"
+  },
+  "confirm_reading": {
+    "message": "Leyendo los mensajes seleccionados…"
+  },
+  "confirm_dontShowAgain": {
+    "message": "No volver a mostrar"
+  },
+  "confirm_cancel": {
+    "message": "Cancelar"
+  },
+  "confirm_add": {
+    "message": "Añadir al filtro"
+  },
+  "confirm_replyToTitle": {
+    "message": "Dominios de Responder a"
+  },
+  "confirm_replyToNote": {
+    "message": "Adonde irían las respuestas. Más difícil de falsificar en el correo masivo."
+  },
+  "confirm_fromTitle": {
+    "message": "Dominios de De"
+  },
+  "confirm_fromNote": {
+    "message": "El remitente visible, que puede falsificarse para suplantar a una marca. Revíselos antes de añadirlos."
+  },
+  "confirm_domains_one": {
+    "message": "$1 dominio"
+  },
+  "confirm_domains_other": {
+    "message": "$1 dominios"
+  },
+  "confirm_selectedMessages_one": {
+    "message": "$1 mensaje seleccionado"
+  },
+  "confirm_selectedMessages_other": {
+    "message": "$1 mensajes seleccionados"
+  },
+  "confirm_found": {
+    "message": "En $2 hay $1. Los dominios marcados se añadirán a la regla «$3», que mueve el correo coincidente a la Papelera con la programación normal."
+  },
+  "confirm_noneNew": {
+    "message": "No hay dominios nuevos que añadir de $1."
+  },
+  "confirm_skippedProviders_one": {
+    "message": "Se omitió $1 dominio de un proveedor conocido ($2). Estos nunca se bloquean, para proteger el correo legítimo."
+  },
+  "confirm_skippedProviders_other": {
+    "message": "Se omitieron $1 dominios de proveedores conocidos ($2). Estos nunca se bloquean, para proteger el correo legítimo."
+  },
+  "confirm_unreadable_one": {
+    "message": "No se pudo leer $1 mensaje."
+  },
+  "confirm_unreadable_other": {
+    "message": "No se pudieron leer $1 mensajes."
+  },
+  "confirm_expired": {
+    "message": "Esta confirmación ha caducado. Vuelva a ejecutar la acción."
+  },
+  "confirm_updateFailed": {
+    "message": "No se pudo actualizar el filtro: $1"
+  },
+  "confirm_readFailed": {
+    "message": "No se pudo leer la selección: $1"
   }
 }

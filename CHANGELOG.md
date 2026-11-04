@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **The interface is ready for translation.** Every text on the settings page,
+  the toolbar popup, the Add spam domains window, and the right-click menu
+  comes from `_locales/<lang>/messages.json`. A language without a file, or a
+  message a file leaves out, shows English. The diagnostics log and report
+  stay English. `docs/TRANSLATING.md` explains how to add a language.
+- **The interface in 7 more languages:** German, Spanish, French, Italian,
+  Japanese, Korean, and Simplified Chinese. Thunderbird picks the language of
+  its own interface. Thunderbird's own labels, such as the folder
+  **Properties** checkbox in **Common problems**, use Thunderbird's wording
+  for each language.
+
 ## [0.4.1]
 
 ### Added

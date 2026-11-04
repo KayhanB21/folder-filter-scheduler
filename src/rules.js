@@ -12,6 +12,7 @@
  * carry an action that deletes mail, so each rule is rebuilt field by field from
  * known-good values rather than merged in as-is. Anything unrecognised is
  * dropped and reported instead of being stored and quietly misbehaving later.
+ * The options page shows those reports, so they come from the message catalog.
  */
 
 import { ACTIONS_BY_ID, actionsOf, orderActions } from './actions.js';
@@ -20,6 +21,7 @@ import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 import { sanitizeAdvanced } from './settings.js';
 import { sanitizeSchedule, scheduleOf } from './cron.js';
+import { plural, t } from './i18n.js';
 
 export const EXPORT_FORMAT = 'folder-filter-scheduler/rules';
 export const EXPORT_VERSION = 1;
@@ -158,7 +160,7 @@ function sanitizeFields(raw, problems, where) {
   const fields = listed.map((f) => String(f).toLowerCase()).filter((f) => KNOWN_FIELDS.has(f));
 
   if (fields.length === 0) {
-    problems.push(`${where}: no recognised header field`);
+    problems.push(t('import_noField', where));
     return null;
   }
   return fields;
@@ -167,7 +169,7 @@ function sanitizeFields(raw, problems, where) {
 function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
   const operator = String(raw?.operator ?? '');
   if (!KNOWN_OPERATORS.has(operator)) {
-    problems.push(`${where}: unknown operator "${operator}"`);
+    problems.push(t('import_unknownOperator', where, operator));
     return null;
   }
 
@@ -182,13 +184,13 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
   const ageField = fields.length === 1 && fields[0] === AGE_FIELD;
   const ageOperator = AGE_OPERATOR_SET.has(operator);
   if (ageField !== ageOperator) {
-    problems.push(`${where}: "${operator}" does not apply to "${fields.join(',')}"`);
+    problems.push(t('import_operatorMismatch', where, operator, fields.join(',')));
     return null;
   }
   if (ageField) {
     const days = ageDays(raw);
     if (days === null) {
-      problems.push(`${where}: age needs a whole number of days, 1 or more`);
+      problems.push(t('import_ageDays', where));
       return null;
     }
     condition.days = days;
@@ -211,14 +213,14 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
     priorityField !== (operator === PRIORITY_IS) ||
     authField !== (operator === AUTH_PASSES)
   ) {
-    problems.push(`${where}: "${operator}" does not apply to "${fields.join(',')}"`);
+    problems.push(t('import_operatorMismatch', where, operator, fields.join(',')));
     return null;
   }
   if (stateField) return condition;
   if (tagField) {
     const tagKey = typeof raw?.tagKey === 'string' ? raw.tagKey.trim() : '';
     if (!tagKey) {
-      problems.push(`${where}: no tag chosen`);
+      problems.push(t('import_noTag', where));
       return null;
     }
     condition.tagKey = tagKey;
@@ -227,7 +229,7 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
   if (priorityField) {
     const level = String(raw?.value ?? '').trim().toLowerCase();
     if (!PRIORITY_LEVELS.includes(level)) {
-      problems.push(`${where}: priority must be one of ${PRIORITY_LEVELS.join(', ')}`);
+      problems.push(t('import_priorityLevel', where, PRIORITY_LEVELS.join(', ')));
       return null;
     }
     condition.value = level;
@@ -236,7 +238,7 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
   if (authField) {
     const method = String(raw?.value ?? '').trim().toLowerCase();
     if (!AUTH_METHODS.includes(method)) {
-      problems.push(`${where}: the check must be one of ${AUTH_METHODS.join(', ')}`);
+      problems.push(t('import_authMethod', where, AUTH_METHODS.join(', ')));
       return null;
     }
     condition.value = method;
@@ -245,19 +247,19 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
 
   if (operator === IN_ADDRESS_BOOK) {
     if (!fields.every((f) => ADDRESS_BOOK_FIELDS.includes(f))) {
-      problems.push(`${where}: address book checks only apply to ${ADDRESS_BOOK_FIELDS.join(', ')}`);
+      problems.push(t('import_bookFields', where, ADDRESS_BOOK_FIELDS.join(', ')));
       return null;
     }
     const id = typeof raw?.addressBookId === 'string' ? raw.addressBookId.trim() : '';
     if (!id) {
-      problems.push(`${where}: no address book chosen`);
+      problems.push(t('import_noBook', where));
       return null;
     }
     // Book ids are per profile, like folder ids. An unknown one is kept, not
     // remapped: it never matches until the user picks a book, whereas quietly
     // widening it to "all" could turn a small blocklist book into every contact.
     if (id !== ALL_ADDRESS_BOOKS && knownAddressBookIds && !knownAddressBookIds.has(id)) {
-      problems.push(`${where}: address book not in this profile, choose one before saving`);
+      problems.push(t('import_unknownBook', where));
     }
     condition.addressBookId = id;
     return condition;
@@ -265,7 +267,7 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
 
   if (operator === NAME_SHOWS_OTHER_ADDRESS) {
     if (!fields.every((f) => ADDRESS_BOOK_FIELDS.includes(f))) {
-      problems.push(`${where}: the name check only applies to ${ADDRESS_BOOK_FIELDS.join(', ')}`);
+      problems.push(t('import_nameFields', where, ADDRESS_BOOK_FIELDS.join(', ')));
       return null;
     }
     return condition;
@@ -275,16 +277,16 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
     // Re-validate every domain: an imported list must not be able to smuggle in
     // a blank or malformed entry that would match every message.
     const { domains, invalid } = parseDomainList((raw?.domains ?? []).join('\n'));
-    if (invalid.length > 0) problems.push(`${where}: dropped ${invalid.length} invalid domain(s)`);
+    if (invalid.length > 0) problems.push(plural('import_invalidDomains', invalid.length, where, invalid.length));
     if (domains.length === 0) {
-      problems.push(`${where}: domain list is empty`);
+      problems.push(t('import_emptyDomains', where));
       return null;
     }
     condition.domains = domains;
   } else {
     condition.value = String(raw?.value ?? '');
     if (condition.value === '') {
-      problems.push(`${where}: empty value`);
+      problems.push(t('import_emptyValue', where));
       return null;
     }
   }
@@ -302,7 +304,7 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
 function sanitizeActions(raw, problems, where) {
   const listed = actionsOf(raw);
   if (listed.length === 0) {
-    problems.push(`${where}: no action, rule skipped`);
+    problems.push(t('import_noAction', where));
     return null;
   }
 
@@ -311,20 +313,20 @@ function sanitizeActions(raw, problems, where) {
   for (const candidate of orderActions(listed)) {
     const def = ACTIONS_BY_ID[candidate?.type];
     if (!def) {
-      problems.push(`${where}: unknown action "${candidate?.type ?? ''}", dropped`);
+      problems.push(t('import_unknownAction', where, candidate?.type ?? ''));
       continue;
     }
     if (def.needsFolder && !candidate.folderId) {
-      problems.push(`${where}: "${def.id}" needs a destination folder, dropped`);
+      problems.push(t('import_needsFolder', where, def.id));
       continue;
     }
     if (def.needsTag && !candidate.tagKey) {
-      problems.push(`${where}: "${def.id}" needs a tag, dropped`);
+      problems.push(t('import_needsTag', where, def.id));
       continue;
     }
     if (def.terminal) {
       if (terminal) {
-        problems.push(`${where}: "${def.id}" dropped, a rule can only end in one action that moves or deletes (kept "${terminal}")`);
+        problems.push(t('import_secondTerminal', where, def.id, terminal));
         continue;
       }
       terminal = def.id;
@@ -340,25 +342,25 @@ function sanitizeActions(raw, problems, where) {
   }
 
   if (actions.length === 0) {
-    problems.push(`${where}: no usable action, rule skipped`);
+    problems.push(t('import_noUsableAction', where));
     return null;
   }
   return actions;
 }
 
 function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds) {
-  const where = `Rule ${index + 1}${raw?.name ? ` ("${raw.name}")` : ''}`;
+  const where = raw?.name ? t('import_whereNamedRule', index + 1, raw.name) : t('import_whereRule', index + 1);
 
   const actions = sanitizeActions(raw, problems, where);
   if (!actions) return null;
 
   const conditions = (Array.isArray(raw?.conditions) ? raw.conditions : [])
-    .map((c, i) => sanitizeCondition(c, problems, `${where} condition ${i + 1}`, knownAddressBookIds))
+    .map((c, i) => sanitizeCondition(c, problems, t('import_whereCondition', where, i + 1), knownAddressBookIds))
     .filter(Boolean);
 
   // A rule with no usable conditions is dropped rather than imported inert.
   if (conditions.length === 0) {
-    problems.push(`${where}: no usable conditions, rule skipped`);
+    problems.push(t('import_noConditions', where));
     return null;
   }
 
@@ -366,7 +368,7 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
   if (knownFolderIds) {
     const missing = folderIds.filter((id) => !knownFolderIds.has(id));
     if (missing.length > 0) {
-      problems.push(`${where}: ${missing.length} folder(s) not in this profile, removed`);
+      problems.push(plural('import_unknownFolders', missing.length, where, missing.length));
       folderIds = folderIds.filter((id) => knownFolderIds.has(id));
     }
   }
@@ -377,12 +379,12 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
   if (raw?.schedule && typeof raw.schedule === 'object') {
     schedule = sanitizeSchedule(raw.schedule);
     if (raw.schedule.enabled === true && !schedule.enabled) {
-      problems.push(`${where}: the schedule is not a valid cron expression, turned off`);
+      problems.push(t('import_badSchedule', where));
     }
   }
 
   return {
-    name: String(raw?.name ?? '').trim() || 'Imported rule',
+    name: String(raw?.name ?? '').trim() || t('import_defaultRuleName'),
     // Imported rules always get fresh ids so they cannot collide with existing
     // rules or inherit another profile's run state.
     enabled: raw?.enabled !== false,
@@ -405,13 +407,13 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
   const empty = { rules: [], duplicates, allowlist: null, intervalMinutes: null, advanced: null };
 
   if (!data || typeof data !== 'object') {
-    return { ...empty, problems: ['Not a valid JSON object'] };
+    return { ...empty, problems: [t('import_notAnObject')] };
   }
   if (data.format && data.format !== EXPORT_FORMAT) {
-    problems.push(`Unexpected format "${data.format}"`);
+    problems.push(t('import_unexpectedFormat', data.format));
   }
   if (!Array.isArray(data.rules)) {
-    return { ...empty, problems: [...problems, 'No rules array found'] };
+    return { ...empty, problems: [...problems, t('import_noRules')] };
   }
 
   const known = knownFolderIds ? new Set(knownFolderIds) : null;
@@ -421,7 +423,7 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
   // no-op rather than a way to accumulate duplicate rules.
   const seen = new Map();
   for (const rule of existingRules ?? []) {
-    seen.set(ruleFingerprint(rule), rule.name ?? 'an existing rule');
+    seen.set(ruleFingerprint(rule), rule.name ?? t('import_anExistingRule'));
   }
 
   const rules = [];
@@ -443,7 +445,7 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
     const parsed = parseDomainList(data.allowlist.join('\n'));
     allowlist = parsed.domains;
     if (parsed.invalid.length > 0) {
-      problems.push(`Allowlist: dropped ${parsed.invalid.length} invalid domain(s)`);
+      problems.push(plural('import_invalidAllowlist', parsed.invalid.length, parsed.invalid.length));
     }
   }
 
@@ -456,7 +458,7 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
   if (data.advanced && typeof data.advanced === 'object') {
     const sanitized = sanitizeAdvanced(data.advanced);
     advanced = sanitized.settings;
-    problems.push(...sanitized.problems.map((p) => `Advanced: ${p}`));
+    problems.push(...sanitized.problems.map((p) => t('import_advanced', p)));
   }
 
   return { rules, duplicates, allowlist, intervalMinutes, advanced, problems };

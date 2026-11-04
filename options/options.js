@@ -11,7 +11,6 @@ import {
   AGE_OPERATORS,
   STATE_FIELDS,
   STATE_OPERATORS,
-  STATE_LABELS,
   TAG_FIELD,
   HAS_TAG,
   PRIORITY_FIELD,
@@ -30,8 +29,13 @@ import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
 import { collapsedTree, folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
 import { describeCron, nextRun, parseCron } from '../src/cron.js';
+import { applyI18n, formatList, plural, t } from '../src/i18n.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
+
+// Before anything reads or clones the page, so every text, and every
+// template, is in the user's language from the start.
+applyI18n();
 
 // --- Theme -------------------------------------------------------------------
 
@@ -102,8 +106,8 @@ async function loadAddressBooks() {
 }
 
 function bookLabel(id) {
-  if (id === ALL_ADDRESS_BOOKS) return 'All address books';
-  return addressBooks.find((b) => b.id === id)?.name ?? '(missing address book)';
+  if (id === ALL_ADDRESS_BOOKS) return t('cond_allAddressBooks');
+  return addressBooks.find((b) => b.id === id)?.name ?? t('cond_missingAddressBook');
 }
 
 function fillBookSelect(select, currentId) {
@@ -125,7 +129,7 @@ function fillBookFieldSelect(select, current) {
   for (const field of ADDRESS_BOOK_FIELDS) {
     const opt = document.createElement('option');
     opt.value = field;
-    opt.textContent = field;
+    opt.textContent = fieldLabel(field);
     select.append(opt);
   }
   select.value = ADDRESS_BOOK_FIELDS.includes(current) ? current : 'from';
@@ -143,13 +147,11 @@ function requestBookAccess() {
       await loadAddressBooks();
       refreshBookRows();
       flash(
-        granted
-          ? 'Address book access allowed. Pick a book and press Save.'
-          : 'Address book access was not allowed. Address book conditions will not match until it is.',
+        granted ? t('status_bookAccessAllowed') : t('status_bookAccessDenied'),
         !granted,
       );
     })
-    .catch((e) => flash(`Could not request address book access: ${e.message}`, true));
+    .catch((e) => flash(t('status_bookAccessFailed', e.message), true));
 }
 
 /**
@@ -182,13 +184,11 @@ function requestDnsAccess() {
       await loadDnsAccess();
       refreshDnsRows();
       flash(
-        granted
-          ? 'DNS server access allowed. DKIM and DMARC conditions can now run.'
-          : 'DNS server access was not allowed. DKIM and DMARC conditions will not match until it is.',
+        granted ? t('status_dnsAccessAllowed') : t('status_dnsAccessDenied'),
         !granted,
       );
     })
-    .catch((e) => flash(`Could not request DNS server access: ${e.message}`, true));
+    .catch((e) => flash(t('status_dnsAccessFailed', e.message), true));
 }
 
 /**
@@ -216,7 +216,7 @@ async function loadTags() {
 }
 
 function tagLabel(key) {
-  if (!key) return '(no tag)';
+  if (!key) return t('common_noTag');
   return tags.find((t) => t.key === key)?.tag ?? key;
 }
 
@@ -246,13 +246,11 @@ function requestTagAccess() {
       await loadTags();
       refreshTagRows();
       flash(
-        granted
-          ? 'Tag access allowed. Pick a tag and press Save.'
-          : 'Tag access was not allowed, so your tags cannot be listed here.',
+        granted ? t('status_tagAccessAllowed') : t('status_tagAccessDenied'),
         !granted,
       );
     })
-    .catch((e) => flash(`Could not request tag access: ${e.message}`, true));
+    .catch((e) => flash(t('status_tagAccessFailed', e.message), true));
 }
 
 /**
@@ -394,10 +392,10 @@ const ACCOUNT_PREFIX = 'account:';
 function paintFolderOption(opt, folder, { filtering = false, covered = false, arrow = null, inside = 0 } = {}) {
   const depth = Math.max(1, folder.depth);
   const name = filtering ? folder.path.replace(/^\//, '') : folder.name;
-  let note = covered ? ' · included as a subfolder' : '';
-  if (inside) note += ` · ${inside} selected inside`;
+  let note = covered ? ` · ${t('folders_includedAsSubfolder')}` : '';
+  if (inside) note += ` · ${plural('folders_selectedInside', inside, inside)}`;
   opt.textContent = `${arrow ? ARROWS[arrow] : ''}${name}${note}`;
-  const state = arrow ? `, ${arrow === 'open' ? 'expanded' : 'collapsed'}` : '';
+  const state = arrow ? `, ${arrow === 'open' ? t('folders_expanded') : t('folders_collapsed')}` : '';
   opt.setAttribute('aria-label', `${name}${state}${note}`);
   opt.dataset.arrow = arrow ?? '';
   opt.style.paddingInlineStart = filtering ? '' : `${(depth - 1) * INDENT_EM + 0.4}em`;
@@ -422,7 +420,7 @@ function fillFolderSelect(select, selectedIds = []) {
   for (const f of folders) {
     if (!group || group.dataset.accountId !== f.accountId) {
       group = document.createElement('optgroup');
-      group.label = f.accountName || 'Account';
+      group.label = f.accountName || t('folders_account');
       group.dataset.name = group.label;
       group.dataset.accountId = f.accountId ?? '';
       select.append(group);
@@ -504,13 +502,17 @@ function wireFolderPicker(node) {
       group.label =
         (filtering ? '' : ARROWS[accountClosed ? 'closed' : 'open']) +
         group.dataset.name +
-        (inside ? ` · ${inside} selected inside` : '');
+        (inside ? ` · ${plural('folders_selectedInside', inside, inside)}` : '');
     }
-    count.textContent =
-      `${selectedIds.length} selected` +
-      (covered.size ? `, ${covered.size} more as subfolders` : '') +
-      (filtered ? `, ${filtered} hidden by the filter` : '') +
-      (folded ? `, ${folded} in collapsed folders` : '');
+    count.textContent = formatList(
+      [
+        plural('folders_countSelected', selectedIds.length, selectedIds.length),
+        covered.size ? plural('folders_countSubfolders', covered.size, covered.size) : '',
+        filtered ? plural('folders_countFiltered', filtered, filtered) : '',
+        folded ? plural('folders_countFolded', folded, folded) : '',
+      ].filter(Boolean),
+      'unit',
+    );
     // With no filter, "all matching" would be every folder in every account.
     selectMatching.disabled = !filtering;
   };
@@ -586,12 +588,20 @@ function refreshFolderPickers() {
   for (const node of rulesEl.querySelectorAll('.rule')) node.refreshFolders?.();
 }
 
+/**
+ * The name of a field in the list. The stored value never changes; only the
+ * text does. A message key cannot hold "-", so "reply-to" reads `field_reply_to`.
+ */
+const fieldLabel = (field) => t(`field_${field.replace(/-/g, '_')}`);
+
+/** A field or a comma-joined set of fields as prose: "reply-to or from". */
+const fieldsLabel = (value) => formatList(value.split(',').map(fieldLabel), 'disjunction');
+
 /** A domain-list condition can watch several headers at once. */
-const DOMAIN_FIELD_SETS = [
-  { value: 'reply-to,from', label: 'reply-to or from' },
-  { value: 'reply-to', label: 'reply-to' },
-  { value: 'from', label: 'from' },
-];
+const DOMAIN_FIELD_SETS = ['reply-to,from', 'reply-to', 'from'].map((value) => ({
+  value,
+  get label() { return fieldsLabel(value); },
+}));
 
 function fillDomainFieldSelect(select, cond) {
   const current = (cond.fields ?? [cond.field ?? 'reply-to']).join(',');
@@ -605,10 +615,6 @@ function fillDomainFieldSelect(select, cond) {
   }
   if (!DOMAIN_FIELD_SETS.some((s) => s.value === current)) select.value = 'reply-to,from';
 }
-
-/** Fields whose name in the list differs from their stored name. */
-const FIELD_LABELS = { [AUTH_FIELD]: 'authentication' };
-const fieldLabel = (field) => FIELD_LABELS[field] ?? field;
 
 function fillFieldSelect(select, value) {
   select.innerHTML = '';
@@ -627,10 +633,9 @@ function fillFieldSelect(select, value) {
  * reach it. This adds those fields after the ones the fill functions offer.
  */
 const GREY_FIELD_REASONS = {
-  list: 'Doesn\'t work with "domain is in list". Change the operator first.',
-  address: 'This operator reads addresses, and this field holds none. Change the operator first.',
+  get list() { return t('cond_greyFieldList'); },
+  get address() { return t('cond_greyFieldAddress'); },
 };
-const DOMAIN_SET_REASON = 'Works only with the "domain is in list" operator.';
 
 function greyOtherFields(select, mode) {
   const offered = new Set([...select.options].map((o) => o.value));
@@ -641,31 +646,33 @@ function greyOtherFields(select, mode) {
     const opt = document.createElement('option');
     opt.value = value;
     opt.disabled = true;
-    opt.textContent = isSet ? `${label} (domain list only)` : label;
-    opt.title = isSet ? DOMAIN_SET_REASON : GREY_FIELD_REASONS[mode];
+    opt.textContent = isSet ? t('cond_domainListOnly', label) : label;
+    opt.title = isSet ? t('cond_greyDomainSet') : GREY_FIELD_REASONS[mode];
     select.append(opt);
   }
 }
 
 /**
- * The same for operators, by the kind of field each one needs. The label is
- * the greyed text: it names the field, because "is" alone says nothing there.
+ * The same for operators, by the kind of field each one needs. `suffix` is a
+ * message with the label as `$1`, or null when the label alone says enough.
  */
 const GREY_OPERATORS = {
-  age: { suffix: ' (age field only)', reason: 'Works only with the age field.' },
-  state: { suffix: '', reason: 'Works only with the read, star, and junk fields.' },
-  tag: { suffix: ' (tag field only)', reason: 'Works only with the tag field.' },
-  priority: { suffix: '', reason: 'Works only with the priority field.' },
-  auth: { suffix: ' (authentication only)', reason: 'Works only with the authentication field.' },
-  plain: { suffix: ' (header fields only)', reason: 'Works only with a header field, such as from or subject.' },
+  age: { suffix: 'op_ageOnly', reason: 'op_ageOnlyReason' },
+  state: { suffix: null, reason: 'op_stateOnlyReason' },
+  tag: { suffix: 'op_tagOnly', reason: 'op_tagOnlyReason' },
+  priority: { suffix: null, reason: 'op_priorityOnlyReason' },
+  auth: { suffix: 'op_authOnly', reason: 'op_authOnlyReason' },
+  plain: { suffix: 'op_headerOnly', reason: 'op_headerOnlyReason' },
 };
+/** The greyed text names the field, because "is" alone says nothing there. */
 const GREY_OPERATOR_LABELS = {
-  isOn: 'is read, starred, or junk',
-  isOff: 'is unread, not starred, or not junk',
-  priorityIs: 'priority is',
+  get isOn() { return t('op_greyIsOn'); },
+  get isOff() { return t('op_greyIsOff'); },
+  get priorityIs() { return t('op_greyPriorityIs'); },
 };
 
-const AGE_OPERATOR_LABELS = { olderThan: 'older than', newerThan: 'newer than' };
+/** "is read", "is not starred", and so on. STATE_LABELS stays English for the log. */
+const stateLabel = (field, operator) => t(`state_${field}_${operator}`);
 
 function renderCondition(container, cond = {}) {
   const node = $('#condition-template').content.firstElementChild.cloneNode(true);
@@ -727,7 +734,7 @@ function renderCondition(container, cond = {}) {
   // some menus, so the heading, not the color, sets them apart.
   const opOrder = [...op.options];
   const otherOps = document.createElement('optgroup');
-  otherOps.label = 'Works with other fields';
+  otherOps.label = t('cond_otherFields');
   otherOps.disabled = true;
   const syncRow = () => {
     const isList = op.value === DOMAIN_IN_LIST;
@@ -772,12 +779,13 @@ function renderCondition(container, cond = {}) {
       const needs = kindOf(option.value);
       option.dataset.label ??= option.textContent;
       option.disabled = needs !== kind;
-      option.title = option.disabled ? GREY_OPERATORS[needs].reason : '';
+      option.title = option.disabled ? t(GREY_OPERATORS[needs].reason) : '';
       if (option.disabled) {
         const label = GREY_OPERATOR_LABELS[option.value] ?? option.dataset.label;
-        option.textContent = `${label}${GREY_OPERATORS[needs].suffix}`;
+        const { suffix } = GREY_OPERATORS[needs];
+        option.textContent = suffix ? t(suffix, label) : label;
       } else if (isState && option.value in STATE_OPERATORS) {
-        option.textContent = STATE_LABELS[field][option.value];
+        option.textContent = stateLabel(field, option.value);
       } else {
         option.textContent = option.dataset.label;
       }
@@ -852,7 +860,7 @@ function renderAction(container, action = {}) {
   // tag, so a new row starts on this placeholder and save refuses it.
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = 'Choose an action…';
+  placeholder.textContent = t('action_choose');
   type.append(placeholder);
 
   // Populate from the registry — the UI stays in lockstep with the engine.
@@ -884,7 +892,7 @@ function renderAction(container, action = {}) {
   const sync = () => {
     const def = ACTIONS_BY_ID[type.value];
     folder.classList.toggle('hidden', !def?.needsFolder);
-    hint.textContent = def?.hint ?? 'Pick what should happen to matching messages.';
+    hint.textContent = def?.hint ?? t('action_chooseHint');
     node.classList.toggle('unchosen', !def);
     hint.classList.toggle('danger', !!def?.danger);
     node.syncTags();
@@ -895,7 +903,7 @@ function renderAction(container, action = {}) {
   $('.del-action', node).addEventListener('click', () => {
     // A rule with no action would do nothing but still scan every folder.
     if (container.querySelectorAll('.action').length <= 1) {
-      flash('A rule needs at least one action.', true);
+      flash(t('status_needsAction'), true);
       return;
     }
     node.remove();
@@ -921,7 +929,7 @@ function renderRule(rule = {}, saved = false) {
   for (const type of ['input', 'change', 'click']) node.addEventListener(type, markUnsaved);
   $('.run-rule', node).addEventListener('click', () => runRuleNow(node));
   $('.rule-id', node).value = rule.id ?? crypto.randomUUID();
-  $('.rule-name', node).value = rule.name ?? 'New rule';
+  $('.rule-name', node).value = rule.name ?? t('rule_newName');
   $('.rule-enabled', node).checked = rule.enabled !== false;
   $('.rule-match', node).value = rule.match ?? 'any';
   fillFolderSelect($('.rule-folders', node), rule.folderIds ?? []);
@@ -979,14 +987,14 @@ function refreshSchedule(node) {
   const cron = parseCron($('.rule-cron', node).value);
   text.classList.toggle('danger', !cron.ok);
   if (!cron.ok) {
-    text.textContent = `${cron.error}.`;
+    text.textContent = t('schedule_error', cron.error);
     $('.cron-help', node).href = 'https://crontab.guru/';
     return;
   }
   const next = nextRun(cron);
-  text.textContent = `${describeCron(cron)}. ${
-    next ? `Next run: ${next.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}.` : 'This date never comes, so the rule never runs.'
-  }`;
+  text.textContent = next
+    ? t('schedule_next', describeCron(cron), next.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))
+    : t('schedule_never', describeCron(cron));
   // Opens the same expression in the editor the link points to.
   $('.cron-help', node).href = `https://crontab.guru/#${cron.expression.replaceAll(' ', '_')}`;
 }
@@ -1002,35 +1010,41 @@ function scheduleFrom(node) {
 function ruleSummary(node) {
   const conditions = [...node.querySelectorAll('.condition')].map((c) => {
     // A multi-field set is stored comma-joined; read it back as prose.
-    const field = $('.cond-field', c).value.split(',').join(' or ');
-    const negate = $('.cond-negate', c).checked ? 'not ' : '';
-    if (field === AGE_FIELD) {
-      const opLabel = AGE_OPERATOR_LABELS[$('.cond-op', c).value] ?? $('.cond-op', c).value;
+    const value = $('.cond-field', c).value;
+    const field = fieldsLabel(value);
+    const negate = $('.cond-negate', c).checked;
+    const operator = $('.cond-op', c).value;
+    // The operator's own text, before syncRow greyed or renamed it.
+    const opOption = $('.cond-op', c).selectedOptions[0];
+    const opLabel = opOption?.dataset.label ?? opOption?.textContent ?? operator;
+    const op = negate ? t('summary_not', opLabel) : opLabel;
+    if (value === AGE_FIELD) {
       const days = $('.cond-days', c).value || '?';
-      return `age ${negate}${opLabel} ${days} day${days === '1' ? '' : 's'}`;
+      return plural('summary_age', Number(days), field, op, days);
     }
-    if (STATE_FIELDS.includes(field)) return STATE_LABELS[field][$('.cond-op', c).value] ?? field;
-    if (field === TAG_FIELD) {
-      return `${negate ? 'does not have' : 'has'} tag ${tagLabel(c.dataset.tagKey)}`;
+    if (STATE_FIELDS.includes(value)) return stateLabel(value, operator);
+    if (value === TAG_FIELD) return t(negate ? 'summary_notHasTag' : 'summary_hasTag', tagLabel(c.dataset.tagKey));
+    if (value === PRIORITY_FIELD) {
+      const level = $('.cond-priority', c).selectedOptions[0]?.textContent ?? $('.cond-priority', c).value;
+      return t(negate ? 'summary_priorityIsNot' : 'summary_priorityIs', level);
     }
-    if (field === PRIORITY_FIELD) return `priority ${negate ? 'is not' : 'is'} ${$('.cond-priority', c).value}`;
-    if (field === AUTH_FIELD) {
-      return `${$('.cond-auth', c).value.toUpperCase()} ${negate ? 'does not pass' : 'passes'}`;
+    if (value === AUTH_FIELD) {
+      return t(negate ? 'summary_authNotPasses' : 'summary_authPasses', $('.cond-auth', c).value.toUpperCase());
     }
-    if ($('.cond-op', c).value === IN_ADDRESS_BOOK) {
-      return `${field} ${negate}in ${bookLabel(c.dataset.bookId)}`;
+    if (operator === IN_ADDRESS_BOOK) {
+      return t(negate ? 'summary_notInBook' : 'summary_inBook', field, bookLabel(c.dataset.bookId));
     }
-    if ($('.cond-op', c).value === NAME_SHOWS_OTHER_ADDRESS) {
-      return `${field} ${negate}name shows a different address`;
+    if (operator === NAME_SHOWS_OTHER_ADDRESS) {
+      return t(negate ? 'summary_notNameShows' : 'summary_nameShows', field);
     }
-    if ($('.cond-op', c).value === DOMAIN_IN_LIST) {
+    if (operator === DOMAIN_IN_LIST) {
       const { domains } = parseDomainList($('.cond-domains', c).value);
-      return `${field} ${negate}in list of ${domains.length}`;
+      return plural(negate ? 'summary_notInList' : 'summary_inList', domains.length, field, domains.length);
     }
-    return `${field} ${negate}${$('.cond-op', c).value} “${$('.cond-value', c).value}”`;
+    return t('summary_text', field, op, $('.cond-value', c).value);
   });
 
-  const joiner = $('.rule-match', node).value === 'all' ? ' AND ' : ' OR ';
+  const joiner = ` ${$('.rule-match', node).value === 'all' ? t('summary_and') : t('summary_or')} `;
   // Listed in execution order, not row order, so the digest matches what runs.
   const actions = orderActions(
     [...node.querySelectorAll('.action')].map((a) => ({
@@ -1039,19 +1053,18 @@ function ruleSummary(node) {
     })),
   ).map((a) => {
     const def = ACTIONS_BY_ID[a.type];
-    if (!def) return 'no action';
-    // "Tag as…" reads badly with the tag appended; the ellipsis means "picker".
-    return def.needsTag ? `${def.label.replace(/…$/, '')} ${tagLabel(a.tagKey)}` : def.label;
+    if (!def) return t('summary_noAction');
+    return def.needsTag ? t('summary_tagAction', tagLabel(a.tagKey)) : def.label;
   });
   const folderCount = $('.rule-folders', node).selectedOptions.length;
-  const subs = $('.rule-subfolders', node).checked ? ' and subfolders' : '';
-  const where = `${folderCount} folder${folderCount === 1 ? '' : 's'}${subs}`;
-  const what = conditions.join(joiner) || 'no conditions';
+  const subs = $('.rule-subfolders', node).checked;
+  const where = plural(subs ? 'summary_foldersAndSubfolders' : 'summary_folders', folderCount, folderCount);
+  const what = conditions.join(joiner) || t('summary_noConditions');
 
   const cron = $('.rule-schedule-on', node).checked ? parseCron($('.rule-cron', node).value) : null;
   const when = cron?.ok ? ` · ${describeCron(cron)}` : '';
 
-  return `${what} → ${actions.join(' + ') || 'no action'} · ${where}${when}`;
+  return `${what} → ${actions.join(' + ') || t('summary_noAction')} · ${where}${when}`;
 }
 
 function setCollapsed(node, isCollapsed) {
@@ -1068,9 +1081,13 @@ function setCollapsed(node, isCollapsed) {
   saveCollapsed(collapsed);
 }
 
+/** What "Collapse all" did last, so the button knows which way to go next. */
+let allCollapsed = false;
+
 function setAllCollapsed(isCollapsed) {
   for (const node of rulesEl.querySelectorAll('.rule')) setCollapsed(node, isCollapsed);
-  $('#toggle-all').textContent = isCollapsed ? 'Expand all' : 'Collapse all';
+  allCollapsed = isCollapsed;
+  $('#toggle-all').textContent = isCollapsed ? t('options_expandAll') : t('options_collapseAll');
 }
 
 /**
@@ -1096,12 +1113,12 @@ function collectActions(node, ruleName, rejected) {
   let terminal = null;
   for (const action of orderActions(fromRows)) {
     if (ACTIONS_BY_ID[action.type]?.needsTag && !action.tagKey) {
-      rejected.push(`rule “${ruleName}”: tag action with no tag chosen`);
+      rejected.push(t('reject_tagActionNoTag', ruleName));
       continue;
     }
     if (isTerminalAction(action)) {
       if (terminal) {
-        rejected.push(`rule “${ruleName}”: only one action can move or delete, dropped “${action.type}”`);
+        rejected.push(t('reject_secondTerminal', ruleName, ACTIONS_BY_ID[action.type].label));
         continue;
       }
       terminal = action.type;
@@ -1114,7 +1131,7 @@ function collectActions(node, ruleName, rejected) {
 /** Read the DOM back into a config object. */
 function collectConfig(rejected = []) {
   const rules = [...rulesEl.querySelectorAll('.rule')].map((node) => {
-    const name = $('.rule-name', node).value.trim() || 'Untitled rule';
+    const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
     const actions = collectActions(node, name, rejected);
     return {
       id: $('.rule-id', node).value || crypto.randomUUID(),
@@ -1137,13 +1154,13 @@ function collectConfig(rejected = []) {
           const raw = $('.cond-days', c).value.trim();
           const days = ageDays({ days: raw });
           condition.days = days ?? 0;
-          if (days === null) rejected.push(`age condition needs a whole number of days (got "${raw || 'nothing'}")`);
+          if (days === null) rejected.push(raw ? t('reject_ageDays', raw) : t('reject_ageDaysEmpty'));
         } else if (STATE_FIELDS.includes(condition.field)) {
           condition.negate = false;
         } else if (condition.field === TAG_FIELD) {
           // A missing tag is stored as-is and never matches (the matcher guards it).
           condition.tagKey = c.dataset.tagKey || '';
-          if (!condition.tagKey) rejected.push('a tag condition has no tag chosen, so it will not match');
+          if (!condition.tagKey) rejected.push(t('reject_tagConditionNoTag'));
         } else if (condition.field === PRIORITY_FIELD) {
           condition.value = $('.cond-priority', c).value;
         } else if (condition.field === AUTH_FIELD) {
@@ -1226,7 +1243,7 @@ function unchosenActions() {
   return [...rulesEl.querySelectorAll('.rule')].flatMap((node) =>
     [...node.querySelectorAll('.action')]
       .filter((row) => !ACTIONS_BY_ID[$('.action-type', row).value])
-      .map(() => $('.rule-name', node).value.trim() || 'Untitled rule'),
+      .map(() => $('.rule-name', node).value.trim() || t('common_untitledRule')),
   );
 }
 
@@ -1235,12 +1252,12 @@ async function save() {
   // action, and guessing one is exactly the mistake this check exists to stop.
   const unchosen = unchosenActions();
   if (unchosen.length > 0) {
-    const names = [...new Set(unchosen)].map((n) => `“${n}”`).join(', ');
+    const names = formatList([...new Set(unchosen)].map((n) => t('common_quoted', n)), 'unit');
     for (const node of rulesEl.querySelectorAll('.rule')) {
       if (node.querySelector('.action.unchosen')) setCollapsed(node, false);
     }
     rulesEl.querySelector('.action.unchosen .action-type')?.focus();
-    flash(`Not saved: choose an action for ${names}.`, true);
+    flash(t('status_notSavedNoAction', names), true);
     return;
   }
 
@@ -1252,8 +1269,8 @@ async function save() {
   if (badSchedule) {
     setCollapsed(badSchedule, false);
     $('.rule-cron', badSchedule).focus();
-    const name = $('.rule-name', badSchedule).value.trim() || 'Untitled rule';
-    flash(`Not saved: the schedule of “${name}” is not a valid cron expression.`, true);
+    const name = $('.rule-name', badSchedule).value.trim() || t('common_untitledRule');
+    flash(t('status_notSavedBadSchedule', name), true);
     return;
   }
 
@@ -1265,8 +1282,8 @@ async function save() {
   if (noFolders) {
     setCollapsed(noFolders, false);
     $('.folder-filter', noFolders).focus();
-    const name = $('.rule-name', noFolders).value.trim() || 'Untitled rule';
-    flash(`Not saved: choose a folder for “${name}”, or turn the rule off.`, true);
+    const name = $('.rule-name', noFolders).value.trim() || t('common_untitledRule');
+    flash(t('status_notSavedNoFolder', name), true);
     return;
   }
 
@@ -1289,26 +1306,29 @@ async function save() {
   const tagActions = collected.rules.flatMap((r) => r.actions.filter((a) => a.type === 'tag'));
   const bookConds = collected.rules.flatMap((r) => r.conditions.filter((c) => c.operator === IN_ADDRESS_BOOK));
   const knownBooks = new Set([ALL_ADDRESS_BOOKS, ...addressBooks.map((b) => b.id)]);
-  let note = '';
+  const notes = [];
   if (bookConds.length > 0 && !bookAccess) {
-    note = ' Address book conditions will not match until you allow address book access.';
+    notes.push(t('status_noteBookAccess'));
   } else if (bookConds.some((c) => !knownBooks.has(c.addressBookId))) {
-    note = ' An address book condition points at a book that no longer exists; it will not match.';
+    notes.push(t('status_noteBookMissing'));
   }
   const tagConds = collected.rules.flatMap((r) => r.conditions.filter((c) => c.field === TAG_FIELD && c.tagKey));
-  if (tagConds.length > 0 && tagAccess && tagConds.some((c) => !tags.some((t) => t.key === c.tagKey))) {
-    note += ' A tag condition points at a tag that no longer exists; it will not match.';
+  if (tagConds.length > 0 && tagAccess && tagConds.some((c) => !tags.some((tag) => tag.key === c.tagKey))) {
+    notes.push(t('status_noteTagConditionMissing'));
   }
   // Tagging itself works without messagesTagsList; only the picker needs it.
-  if (tagActions.length > 0 && tagAccess && tagActions.some((a) => !tags.some((t) => t.key === a.tagKey))) {
-    note += ' A tag action points at a tag that no longer exists.';
+  if (tagActions.length > 0 && tagAccess && tagActions.some((a) => !tags.some((tag) => tag.key === a.tagKey))) {
+    notes.push(t('status_noteTagActionMissing'));
   }
 
   flash(
-    (rejected.length > 0
-      ? `Saved, with ${rejected.length} correction${rejected.length === 1 ? '' : 's'}: ${rejected.join('; ')}.`
-      : 'Saved. Schedule updated.') + note,
-    note !== '',
+    [
+      rejected.length > 0
+        ? plural('status_savedWithCorrections', rejected.length, rejected.length, rejected.join('; '))
+        : t('status_saved'),
+      ...notes,
+    ].join(' '),
+    notes.length > 0,
   );
 }
 
@@ -1322,7 +1342,7 @@ async function refreshDiagnostics() {
     });
     $('#diag-report').value = res?.report ?? '';
   } catch (e) {
-    $('#diag-report').value = `Could not build the report: ${e.message}`;
+    $('#diag-report').value = t('diag_buildFailed', e.message);
   }
 }
 
@@ -1334,7 +1354,7 @@ async function copyDiagnostics() {
     $('#diag-report').select();
     document.execCommand('copy');
   }
-  flash('Diagnostics copied. Paste it into your email or GitHub issue.');
+  flash(t('status_diagCopied'));
 }
 
 function saveDiagnostics() {
@@ -1348,13 +1368,13 @@ function saveDiagnostics() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  flash(`Saved ${diagnosticsFilename(now)}.`);
+  flash(t('status_diagSaved', diagnosticsFilename(now)));
 }
 
 async function clearDiagnostics() {
   await messenger.runtime.sendMessage({ command: 'clearDiagnostics' });
   await refreshDiagnostics();
-  flash('Diagnostics log cleared.');
+  flash(t('status_diagCleared'));
 }
 
 function exportRules() {
@@ -1370,7 +1390,7 @@ function exportRules() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  flash(`Exported to ${exportFilename(now)}. Unsaved edits on this page are included.`);
+  flash(t('status_exported', exportFilename(now)));
 }
 
 /**
@@ -1383,7 +1403,7 @@ async function importRules(file) {
   try {
     data = JSON.parse(await file.text());
   } catch (e) {
-    flash(`Could not read ${file.name}: ${e.message}`, true);
+    flash(t('status_importReadFailed', file.name, e.message), true);
     return;
   }
 
@@ -1397,14 +1417,15 @@ async function importRules(file) {
   });
 
   const dupeNote = duplicates.length
-    ? ` Already present, skipped: ${duplicates
-        .map((d) => `“${d.name}” (${d.hash}, same as “${d.matches}”)`)
-        .join(', ')}.`
+    ? t('status_importDuplicates', formatList(duplicates.map((d) => t('status_importDuplicate', d.name, d.hash, d.matches)), 'unit'))
     : '';
 
   if (rules.length === 0) {
-    const why = problems.join('; ') || (duplicates.length ? '' : 'The file contained no usable rules.');
-    flash(`Nothing new to import.${why ? ` ${why}.` : ''}${dupeNote}`, !duplicates.length);
+    const why = problems.join('; ') || (duplicates.length ? '' : t('status_importNoRules'));
+    flash(
+      [t('status_importNothingNew'), why ? t('status_importBecause', why) : '', dupeNote].filter(Boolean).join(' '),
+      !duplicates.length,
+    );
     return;
   }
 
@@ -1413,43 +1434,45 @@ async function importRules(file) {
   if (intervalMinutes) $('#interval').value = intervalMinutes;
   if (advanced) fillAdvanced(advanced);
 
-  const skipped = problems.length > 0 ? ` Skipped: ${problems.join('; ')}.` : '';
+  const skipped = problems.length > 0 ? t('status_importSkipped', problems.join('; ')) : '';
   flash(
-    `Imported ${rules.length} rule(s) — review them, then press Save to keep them.${skipped}${dupeNote}`,
+    [plural('status_imported', rules.length, rules.length), skipped, dupeNote].filter(Boolean).join(' '),
     problems.length > 0,
   );
 }
 
 async function runNow() {
-  flash('Running…');
+  flash(t('status_running'));
   try {
     const res = await messenger.runtime.sendMessage({ command: 'runNow' });
-    flash(`Done — ${res?.affected ?? 0} message(s) affected.`);
+    const affected = res?.affected ?? 0;
+    flash(plural('status_runDone', affected, affected));
   } catch (e) {
-    flash(`Run failed: ${e.message}`, true);
+    flash(t('status_runFailed', e.message), true);
   }
 }
 
 /** Run one saved rule on every message in its folders. */
 async function runRuleNow(node) {
-  const name = $('.rule-name', node).value.trim() || 'Untitled rule';
+  const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
   if (node.dataset.unsaved === 'true') {
-    flash(`Save your changes before you run “${name}”.`, true);
+    flash(t('status_saveBeforeRun', name), true);
     return;
   }
   if (!$('.rule-enabled', node).checked) {
-    flash(`“${name}” is turned off. Turn it on and save before you run it.`, true);
+    flash(t('status_ruleTurnedOff', name), true);
     return;
   }
-  flash(`Running “${name}”…`);
+  flash(t('status_runningRule', name));
   try {
     const res = await messenger.runtime.sendMessage({
       command: 'runNow',
       ruleId: $('.rule-id', node).value,
     });
-    flash(`Done. “${name}” affected ${res?.affected ?? 0} message(s).`);
+    const affected = res?.affected ?? 0;
+    flash(plural('status_ruleRunDone', affected, name, affected));
   } catch (e) {
-    flash(`Run failed: ${e.message}`, true);
+    flash(t('status_runFailed', e.message), true);
   }
 }
 
@@ -1477,17 +1500,17 @@ async function init() {
   $('#allowlist').value = (config?.allowlist ?? DEFAULT_ALLOWLIST).join('\n');
   $('#reset-allowlist').addEventListener('click', () => {
     $('#allowlist').value = [...DEFAULT_ALLOWLIST].join('\n');
-    flash('Protected domains restored to defaults. Press Save to keep them.');
+    flash(t('status_allowlistRestored'));
   });
 
   $('#reset-advanced').addEventListener('click', () => {
     fillAdvanced(ADVANCED_DEFAULTS);
-    flash('Advanced settings restored to defaults. Press Save to keep them.');
+    flash(t('status_advancedRestored'));
   });
 
   $('#add-rule').addEventListener('click', () => renderRule({}));
   $('#toggle-all').addEventListener('click', () =>
-    setAllCollapsed($('#toggle-all').textContent === 'Collapse all'),
+    setAllCollapsed(!allCollapsed),
   );
   $('#save').addEventListener('click', () => save().catch((e) => flash(e.message, true)));
   $('#run-now').addEventListener('click', runNow);
@@ -1495,7 +1518,7 @@ async function init() {
     try {
       exportRules();
     } catch (e) {
-      flash(`Export failed: ${e.message}`, true);
+      flash(t('status_exportFailed', e.message), true);
     }
   });
   $('#import').addEventListener('click', () => $('#import-file').click());
@@ -1503,7 +1526,7 @@ async function init() {
     const [file] = event.target.files ?? [];
     // Reset so re-picking the same file fires change again.
     event.target.value = '';
-    if (file) importRules(file).catch((e) => flash(`Import failed: ${e.message}`, true));
+    if (file) importRules(file).catch((e) => flash(t('status_importFailed', e.message), true));
   });
 
   // Keep book rows honest if access is granted or revoked in the Add-ons Manager
@@ -1527,7 +1550,7 @@ async function init() {
     try {
       saveDiagnostics();
     } catch (e) {
-      flash(`Could not save the report: ${e.message}`, true);
+      flash(t('status_diagSaveFailed', e.message), true);
     }
   });
   $('#diag-clear').addEventListener('click', () =>
@@ -1535,7 +1558,7 @@ async function init() {
   );
 
   if (folders.length === 0) {
-    flash('No folders found — check the “accountsRead” permission and reload the add-on.', true);
+    flash(t('status_noFolders'), true);
   }
 }
 

@@ -11,24 +11,26 @@
  * because a long domain list does not belong in a query string.
  */
 
+import { applyI18n, formatList, plural, t } from '../src/i18n.js';
+
+applyI18n();
+
 const $ = (sel) => document.querySelector(sel);
 const summaryEl = $('#summary');
 const listEl = $('#domain-list');
 const notesEl = $('#notes');
 const addButton = $('#add');
 
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-
 let payload = null;
 
 const FIELD_LABELS = {
   'reply-to': {
-    title: 'Reply-To domains',
-    note: 'Where replies would go. Harder to forge on bulk mail.',
+    get title() { return t('confirm_replyToTitle'); },
+    get note() { return t('confirm_replyToNote'); },
   },
   from: {
-    title: 'From domains',
-    note: 'The visible sender, which can be forged to impersonate a brand. Check these before adding.',
+    get title() { return t('confirm_fromTitle'); },
+    get note() { return t('confirm_fromNote'); },
   },
 };
 
@@ -69,13 +71,10 @@ function renderNotes() {
   const notes = [];
   const allowlisted = [...new Set(payload.groups.flatMap((g) => g.skippedAllowlisted))];
   if (allowlisted.length > 0) {
-    notes.push(
-      `Skipped ${plural(allowlisted.length, 'well-known provider domain')} ` +
-        `(${allowlisted.join(', ')}). These are never blocked, to protect legitimate mail.`,
-    );
+    notes.push(plural('confirm_skippedProviders', allowlisted.length, allowlisted.length, formatList(allowlisted, 'unit')));
   }
   if (payload.unreadable > 0) {
-    notes.push(`${plural(payload.unreadable, 'message')} could not be read.`);
+    notes.push(plural('confirm_unreadable', payload.unreadable, payload.unreadable));
   }
   notesEl.textContent = notes.join(' ');
 }
@@ -94,17 +93,16 @@ async function load() {
   payload = res?.payload;
 
   if (!payload) {
-    summaryEl.textContent = 'This confirmation has expired. Please run the action again.';
+    summaryEl.textContent = t('confirm_expired');
     return;
   }
 
   const total = payload.groups.reduce((n, g) => n + g.accepted.length, 0);
+  const messages = plural('confirm_selectedMessages', payload.scanned, payload.scanned);
   summaryEl.textContent =
     total > 0
-      ? `Found ${plural(total, 'domain')} in ${plural(payload.scanned, 'selected message')}. ` +
-        `Checked domains will be added to the “${payload.ruleName}” rule, which moves ` +
-        'matching mail to Trash on the normal schedule.'
-      : `No new domains to add from ${plural(payload.scanned, 'selected message')}.`;
+      ? t('confirm_found', plural('confirm_domains', total, total), messages, payload.ruleName)
+      : t('confirm_noneNew', messages);
 
   listEl.hidden = total === 0;
   for (const group of payload.groups) renderGroup(group);
@@ -126,11 +124,11 @@ $('#add').addEventListener('click', async () => {
     });
     window.close();
   } catch (e) {
-    summaryEl.textContent = `Could not update the filter: ${e.message}`;
+    summaryEl.textContent = t('confirm_updateFailed', e.message);
     addButton.disabled = false;
   }
 });
 
 load().catch((e) => {
-  summaryEl.textContent = `Could not read the selection: ${e.message}`;
+  summaryEl.textContent = t('confirm_readFailed', e.message);
 });

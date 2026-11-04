@@ -13,6 +13,9 @@
 }
 .popup-body h2 { margin: 6px 0 0; font-size: 12px; font-weight: 600; opacity: 0.7; }
 .popup-body button { width: 100%; }
+/* The popup is 280px wide, so a long translated label wraps. The rule
+   buttons keep one line and cut the name instead. */
+.popup-body > button { white-space: normal; }
 
 .rule-list { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
 .rule-list:empty { display: none; }
