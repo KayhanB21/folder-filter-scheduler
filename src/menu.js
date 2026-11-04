@@ -10,6 +10,8 @@
  * lists the same rules, so both offer exactly the rules a run accepts.
  */
 
+import { t } from './i18n.js';
+
 const PREFIX = 'folder-filter-scheduler';
 
 export const MENU_ROOT = `${PREFIX}.root`;
@@ -20,7 +22,7 @@ const MENU_RULE_PREFIX = `${MENU_RUN_RULE}.`;
 
 const TITLE_MAX = 60;
 
-export const FULL_NAME = 'Folder Filter Scheduler';
+export const FULL_NAME = t('extensionName');
 export const SHORT_NAME = 'FFS';
 
 /** The name on the toolbar button and the right-click menu. */
@@ -30,7 +32,7 @@ export const displayName = (short) => (short === true ? SHORT_NAME : FULL_NAME);
 export function runnableRules(rules) {
   return (rules ?? [])
     .filter((rule) => typeof rule?.id === 'string' && rule.id && rule.enabled !== false)
-    .map((rule) => ({ id: rule.id, name: String(rule.name ?? '').trim() || 'Untitled rule' }));
+    .map((rule) => ({ id: rule.id, name: String(rule.name ?? '').trim() || t('common_untitledRule') }));
 }
 
 /**
@@ -52,9 +54,9 @@ export function menuItems(rules, contexts = ['message_list'], rootTitle = FULL_N
   const runnable = runnableRules(rules);
   return [
     { id: MENU_ROOT, title: rootTitle, contexts },
-    { id: MENU_HARVEST, parentId: MENU_ROOT, title: 'Add spam domains', contexts },
-    { id: MENU_RUN_ALL, parentId: MENU_ROOT, title: 'Run all rules now', contexts },
-    { id: MENU_RUN_RULE, parentId: MENU_ROOT, title: 'Run a rule', contexts, enabled: runnable.length > 0 },
+    { id: MENU_HARVEST, parentId: MENU_ROOT, title: t('common_addSpamDomains'), contexts },
+    { id: MENU_RUN_ALL, parentId: MENU_ROOT, title: t('common_runAllRulesNow'), contexts },
+    { id: MENU_RUN_RULE, parentId: MENU_ROOT, title: t('menu_runARule'), contexts, enabled: runnable.length > 0 },
     ...runnable.map((rule) => ({
       id: `${MENU_RULE_PREFIX}${rule.id}`,
       parentId: MENU_RUN_RULE,

@@ -10,7 +10,12 @@
  * fields (minute, hour, day of month, month, day of week) with lists, ranges,
  * steps, and English month and weekday names. Times are the computer's local
  * time, which is what a user who writes "0 21 * * *" means.
+ *
+ * The error messages and the plain-words description are shown on the
+ * options page, so they come from the message catalog (see i18n.js).
  */
+
+import { formatList, plural, t, uiLanguage } from './i18n.js';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -21,13 +26,14 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 const abbreviations = (names, first) =>
   Object.fromEntries(names.map((name, i) => [name.slice(0, 3).toLowerCase(), i + first]));
 
+// The names typed in an expression are English in every language, as in cron.
 const FIELDS = [
-  { key: 'minute', label: 'minute', min: 0, max: 59 },
-  { key: 'hour', label: 'hour', min: 0, max: 23 },
-  { key: 'day', label: 'day of month', min: 1, max: 31 },
-  { key: 'month', label: 'month', min: 1, max: 12, names: abbreviations(MONTH_NAMES, 1) },
+  { key: 'minute', get label() { return t('cron_fieldMinute'); }, min: 0, max: 59 },
+  { key: 'hour', get label() { return t('cron_fieldHour'); }, min: 0, max: 23 },
+  { key: 'day', get label() { return t('cron_fieldDay'); }, min: 1, max: 31 },
+  { key: 'month', get label() { return t('cron_fieldMonth'); }, min: 1, max: 12, names: abbreviations(MONTH_NAMES, 1) },
   // 7 is accepted as Sunday, as cron does, and folded to 0.
-  { key: 'weekday', label: 'day of week', min: 0, max: 7, names: abbreviations(DAY_NAMES, 0) },
+  { key: 'weekday', get label() { return t('cron_fieldWeekday'); }, min: 0, max: 7, names: abbreviations(DAY_NAMES, 0) },
 ];
 
 /** Longest expression accepted. Generous for a real one, small enough to parse safely. */
@@ -38,10 +44,10 @@ const MINUTE = 60_000;
 function parseNumber(text, spec) {
   const named = spec.names?.[text.toLowerCase()];
   if (named !== undefined) return named;
-  if (!/^\d{1,2}$/.test(text)) throw new Error(`"${text}" is not a valid ${spec.label}`);
+  if (!/^\d{1,2}$/.test(text)) throw new Error(t('cron_errorInvalid', text, spec.label));
   const n = Number(text);
   if (n < spec.min || n > spec.max) {
-    throw new Error(`${spec.label} must be from ${spec.min} to ${spec.max}, got ${n}`);
+    throw new Error(t('cron_errorOutOfRange', spec.label, spec.min, spec.max, n));
   }
   return n;
 }
@@ -51,12 +57,12 @@ function parseField(text, spec) {
   for (const part of text.split(',')) {
     const [range, stepText, extra] = part.split('/');
     if (extra !== undefined || range === '' || stepText === '') {
-      throw new Error(`"${part}" is not a valid ${spec.label}`);
+      throw new Error(t('cron_errorInvalid', part, spec.label));
     }
     let step = 1;
     if (stepText !== undefined) {
       if (!/^\d{1,2}$/.test(stepText) || Number(stepText) < 1) {
-        throw new Error(`the step "${stepText}" in the ${spec.label} must be 1 or more`);
+        throw new Error(t('cron_errorStep', stepText, spec.label));
       }
       step = Number(stepText);
     }
@@ -68,10 +74,10 @@ function parseField(text, spec) {
       to = spec.key === 'weekday' ? 6 : spec.max;
     } else if (range.includes('-')) {
       const [a, b, more] = range.split('-');
-      if (more !== undefined) throw new Error(`"${range}" is not a valid ${spec.label} range`);
+      if (more !== undefined) throw new Error(t('cron_errorRange', range, spec.label));
       from = parseNumber(a, spec);
       to = parseNumber(b, spec);
-      if (from > to) throw new Error(`the ${spec.label} range "${range}" runs backwards`);
+      if (from > to) throw new Error(t('cron_errorBackwards', range, spec.label));
     } else {
       from = parseNumber(range, spec);
       // "5/15" means "from 5, every 15", as cron reads it.
@@ -99,15 +105,12 @@ function parseField(text, spec) {
  */
 export function parseCron(expression) {
   const text = String(expression ?? '').trim().replace(/\s+/g, ' ');
-  if (!text) return { ok: false, error: 'Enter a cron expression' };
-  if (text.length > CRON_MAX_LENGTH) return { ok: false, error: 'The expression is too long' };
+  if (!text) return { ok: false, error: t('cron_errorEmpty') };
+  if (text.length > CRON_MAX_LENGTH) return { ok: false, error: t('cron_errorTooLong') };
 
   const parts = text.split(' ');
   if (parts.length !== FIELDS.length) {
-    return {
-      ok: false,
-      error: `A cron expression has 5 fields: minute, hour, day of month, month, day of week. This one has ${parts.length}`,
-    };
+    return { ok: false, error: t('cron_errorFieldCount', parts.length) };
   }
 
   const cron = { ok: true, expression: text };
@@ -209,16 +212,25 @@ export function missedRun(cron, lastRunAt, now = new Date()) {
   return due !== null && due.getTime() <= now.getTime();
 }
 
-// --- Plain-English description -------------------------------------------------
+// --- Plain-words description ------------------------------------------------
+
+/*
+ * Each piece of the sentence is a message with placeholders, so a language
+ * can put the parts in its own order. Weekday and month names, and the way a
+ * list is joined ("a, b, and c"), come from Intl in the interface language.
+ */
 
 const pad = (n) => String(n).padStart(2, '0');
 const sorted = (field) => [...field.values].sort((a, b) => a - b);
+const time = (h, m) => `${pad(h)}:${pad(m)}`;
 
-function joinList(items) {
-  if (items.length <= 1) return items.join('');
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
-}
+const joinList = (items) => formatList(items, 'conjunction');
+
+/** January 1, 2023 was a Sunday, so day `d` of that week is weekday `d`. */
+const dayName = (d) =>
+  new Intl.DateTimeFormat(uiLanguage(), { weekday: 'long', timeZone: 'UTC' }).format(Date.UTC(2023, 0, 1 + d));
+const monthName = (m) =>
+  new Intl.DateTimeFormat(uiLanguage(), { month: 'long', timeZone: 'UTC' }).format(Date.UTC(2023, m - 1, 1));
 
 /** Sorted values as words, with three or more in a row folded to "a through b". */
 function listValues(values, name = String) {
@@ -226,7 +238,7 @@ function listValues(values, name = String) {
   for (let i = 0; i < values.length; ) {
     let j = i;
     while (j + 1 < values.length && values[j + 1] === values[j] + 1) j += 1;
-    if (j - i >= 2) out.push(`${name(values[i])} through ${name(values[j])}`);
+    if (j - i >= 2) out.push(t('cron_range', name(values[i]), name(values[j])));
     else for (let k = i; k <= j; k += 1) out.push(name(values[k]));
     i = j + 1;
   }
@@ -236,12 +248,12 @@ function listValues(values, name = String) {
 const isRun = (values) => values.every((v, i) => i === 0 || v === values[i - 1] + 1);
 
 function describeHours(hour) {
-  if (hour.every) return `every ${hour.every} hours`;
+  if (hour.every) return plural('cron_everyHours', hour.every, hour.every);
   const hours = sorted(hour);
   if (hours.length > 1 && isRun(hours)) {
-    return `between ${pad(hours[0])}:00 and ${pad(hours[hours.length - 1])}:59`;
+    return t('cron_betweenHours', time(hours[0], 0), time(hours[hours.length - 1], 59));
   }
-  return `during ${hours.length === 1 ? 'hour' : 'hours'} ${listValues(hours)}`;
+  return plural('cron_duringHours', hours.length, listValues(hours));
 }
 
 /** The time-of-day half, and whether it names fixed clock times. */
@@ -250,28 +262,28 @@ function describeTime({ minute, hour }) {
   const hours = sorted(hour);
 
   if (!hour.any && !hour.every && minutes.length * hours.length <= 6) {
-    const times = hours.flatMap((h) => minutes.map((m) => `${pad(h)}:${pad(m)}`));
-    return { text: `At ${joinList(times)}`, fixed: true };
+    const times = hours.flatMap((h) => minutes.map((m) => time(h, m)));
+    return { text: t('cron_atTimes', joinList(times)), fixed: true };
   }
 
   let text;
-  if (minute.any) text = 'Every minute';
-  else if (minute.every) text = `Every ${minute.every} minutes`;
+  if (minute.any) text = t('cron_everyMinute');
+  else if (minute.every) text = plural('cron_everyMinutes', minute.every, minute.every);
   else if (minutes.length === 1 && hour.any) {
-    return { text: minutes[0] === 0 ? 'Every hour, on the hour' : `Every hour, at minute ${minutes[0]}` };
-  } else text = `At ${minutes.length === 1 ? 'minute' : 'minutes'} ${listValues(minutes)} of the hour`;
+    return { text: minutes[0] === 0 ? t('cron_everyHourOnTheHour') : t('cron_everyHourAtMinute', minutes[0]) };
+  } else text = plural('cron_atMinutes', minutes.length, listValues(minutes));
 
-  return { text: hour.any ? text : `${text}, ${describeHours(hour)}` };
+  return { text: hour.any ? text : t('cron_timeAndHours', text, describeHours(hour)) };
 }
 
 function describeDays({ day, weekday }) {
   const parts = [];
   if (!day.any) {
     const days = sorted(day);
-    parts.push(`on ${days.length === 1 ? 'day' : 'days'} ${listValues(days)} of the month`);
+    parts.push(plural('cron_onDaysOfMonth', days.length, listValues(days)));
   }
-  if (!weekday.any) parts.push(`on ${listValues(sorted(weekday), (d) => DAY_NAMES[d])}`);
-  return parts.join(' or ');
+  if (!weekday.any) parts.push(t('cron_onWeekdays', listValues(sorted(weekday), dayName)));
+  return formatList(parts, 'disjunction');
 }
 
 /**
@@ -280,11 +292,10 @@ function describeDays({ day, weekday }) {
  * Monday through Friday".
  */
 export function describeCron(cron) {
-  const time = describeTime(cron);
+  const { text, fixed } = describeTime(cron);
   const days = describeDays(cron);
-  const months = cron.month.any
-    ? ''
-    : `in ${listValues(sorted(cron.month), (m) => MONTH_NAMES[m - 1])}`;
-  const everyDay = time.fixed && !days && !months ? 'every day' : '';
-  return [time.text, everyDay, days, months].filter(Boolean).join(' ');
+  const months = cron.month.any ? '' : t('cron_inMonths', listValues(sorted(cron.month), monthName));
+  const when = days || (fixed && !months ? t('cron_everyDay') : '');
+  const withDays = when ? t('cron_withDays', text, when) : text;
+  return months ? t('cron_withMonths', withDays, months) : withDays;
 }

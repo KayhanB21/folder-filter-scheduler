@@ -15,7 +15,12 @@
  * A rule can carry several actions. `terminal` marks the ones that consume the
  * message (its id stops being valid at the source folder afterwards), which is
  * why ordering is derived rather than trusted: see `orderActions`.
+ *
+ * `label` and `hint` are getters that read the message catalog, so they are in
+ * the user's language whenever the options page reads them.
  */
+
+import { t } from './i18n.js';
 
 /**
  * Add a tag without disturbing the ones already on the message.
@@ -37,91 +42,91 @@ async function applyTag(messenger, ids, action) {
 export const ACTIONS = [
   {
     id: 'trash',
-    label: "Move to Trash (each message's own account)",
+    get label() { return t('action_trash'); },
     needsFolder: false,
     terminal: true,
-    hint: 'Routes each matched message to the Trash of its own account — safe across multi-account rules.',
+    get hint() { return t('action_trashHint'); },
     apply: (messenger, ids) => messenger.messages.delete(ids, false),
   },
   {
     id: 'move',
-    label: 'Move to folder…',
+    get label() { return t('action_move'); },
     needsFolder: true,
     terminal: true,
-    hint: 'Sends every match to the chosen folder — including a folder in a different account (Thunderbird copies to the target account, then deletes the source).',
+    get hint() { return t('action_moveHint'); },
     apply: (messenger, ids, action) => messenger.messages.move(ids, action.folderId),
   },
   {
     id: 'archive',
-    label: 'Archive',
+    get label() { return t('action_archive'); },
     needsFolder: false,
     terminal: true,
-    hint: "Archives each message the way Thunderbird's Archive button does, using its own account's archive settings. An account with archiving turned off keeps its mail in place.",
+    get hint() { return t('action_archiveHint'); },
     apply: (messenger, ids) => messenger.messages.archive(ids),
   },
   {
     id: 'copy',
-    label: 'Copy to folder…',
+    get label() { return t('action_copy'); },
     needsFolder: true,
-    hint: 'Leaves the original in place and copies a duplicate into the chosen folder (works across accounts too).',
+    get hint() { return t('action_copyHint'); },
     apply: (messenger, ids, action) => messenger.messages.copy(ids, action.folderId),
   },
   {
     id: 'tag',
-    label: 'Tag as…',
+    get label() { return t('action_tag'); },
     needsTag: true,
-    hint: 'Adds one of your Thunderbird tags. Tags already on the message are kept, so several rules can tag the same mail.',
+    get hint() { return t('action_tagHint'); },
     apply: applyTag,
   },
   {
     id: 'markRead',
-    label: 'Mark as read',
+    get label() { return t('action_markRead'); },
     needsFolder: false,
-    hint: 'Marks matches as read without moving them.',
+    get hint() { return t('action_markReadHint'); },
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { read: true }))),
   },
   {
     id: 'markUnread',
-    label: 'Mark as unread',
+    get label() { return t('action_markUnread'); },
     needsFolder: false,
-    hint: 'Marks matches as unread without moving them.',
+    get hint() { return t('action_markUnreadHint'); },
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { read: false }))),
   },
   {
     id: 'markFlagged',
-    label: 'Add star',
+    get label() { return t('action_markFlagged'); },
     needsFolder: false,
-    hint: 'Adds a star to matches without moving them.',
+    get hint() { return t('action_markFlaggedHint'); },
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { flagged: true }))),
   },
   {
     id: 'markUnflagged',
-    label: 'Remove star',
+    get label() { return t('action_markUnflagged'); },
     needsFolder: false,
-    hint: 'Removes the star from matches without moving them.',
+    get hint() { return t('action_markUnflaggedHint'); },
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { flagged: false }))),
   },
   {
     id: 'markJunk',
-    label: 'Mark as junk',
+    get label() { return t('action_markJunk'); },
     needsFolder: false,
-    hint: 'Marks matches as junk (does not move them — Thunderbird’s junk handling decides the rest).',
+    get hint() { return t('action_markJunkHint'); },
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { junk: true }))),
   },
   {
     id: 'markNotJunk',
-    label: 'Mark as not junk',
+    get label() { return t('action_markNotJunk'); },
     needsFolder: false,
-    hint: 'Removes the junk mark from matches without moving them.',
+    get hint() { return t('action_markNotJunkHint'); },
     apply: (messenger, ids) => Promise.all(ids.map((id) => messenger.messages.update(id, { junk: false }))),
   },
   {
     id: 'deletePermanently',
-    label: 'Delete permanently',
+    get label() { return t('action_deletePermanently'); },
     needsFolder: false,
     terminal: true,
     danger: true,
-    hint: 'Skips the Trash and deletes matches immediately. This cannot be undone.',
+    get hint() { return t('action_deletePermanentlyHint'); },
     apply: (messenger, ids) => messenger.messages.delete(ids, true),
   },
 ];

@@ -8,93 +8,93 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Folder Filter Scheduler</title>
+    <title data-i18n="extensionName">Folder Filter Scheduler</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <header>
       <div class="title-row">
-        <h1>Folder Filter Scheduler</h1>
+        <h1 data-i18n="extensionName">Folder Filter Scheduler</h1>
         <!-- Radio buttons styled as a switch: arrow keys move between them. -->
         <fieldset id="theme" class="theme-switch">
-          <legend class="visually-hidden">Theme</legend>
-          <label title="Light">
+          <legend class="visually-hidden" data-i18n="options_theme">Theme</legend>
+          <label title="Light" data-i18n-title="options_themeLight">
             <input type="radio" name="theme" value="light" />
-            <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="visually-hidden">Light</span></span>
+            <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="visually-hidden" data-i18n="options_themeLight">Light</span></span>
           </label>
-          <label title="Dark">
+          <label title="Dark" data-i18n-title="options_themeDark">
             <input type="radio" name="theme" value="dark" />
-            <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span class="visually-hidden">Dark</span></span>
+            <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span class="visually-hidden" data-i18n="options_themeDark">Dark</span></span>
           </label>
-          <label title="System: match Thunderbird">
+          <label title="System: match Thunderbird" data-i18n-title="options_themeSystemTitle">
             <input type="radio" name="theme" value="system" />
-            <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="visually-hidden">System</span></span>
+            <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="visually-hidden" data-i18n="options_themeSystem">System</span></span>
           </label>
         </fieldset>
       </div>
-      <p class="sub">
+      <p class="sub" data-i18n="options_tagline">
         Run rules on any folder on a timer — the piece stock Thunderbird only does for the Inbox.
       </p>
     </header>
 
     <section class="bar">
-      <label>
+      <label data-i18n-rich="options_runEvery">
         Run every
         <input id="interval" type="number" min="1" step="1" value="10" /> minutes
       </label>
       <span class="spacer"></span>
-      <button id="run-now" type="button">Run all rules now</button>
-      <button id="save" type="button" class="primary">Save</button>
+      <button id="run-now" type="button" data-i18n="common_runAllRulesNow">Run all rules now</button>
+      <button id="save" type="button" class="primary" data-i18n="options_save">Save</button>
     </section>
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
 
     <details id="allowlist-box" class="allowlist">
-      <summary>Protected domains (never blocked)</summary>
-      <p class="allowlist-hint">
+      <summary data-i18n="allowlist_title">Protected domains (never blocked)</summary>
+      <p class="allowlist-hint" data-i18n="allowlist_hint">
         Domains here are skipped when adding spam domains from the message list, so a
         mistaken selection cannot block a major provider. One domain per line.
       </p>
       <textarea id="allowlist" rows="6" spellcheck="false"></textarea>
-      <button id="reset-allowlist" type="button">Restore defaults</button>
+      <button id="reset-allowlist" type="button" data-i18n="common_restoreDefaults">Restore defaults</button>
     </details>
 
     <section class="rules-bar">
-      <button id="toggle-all" type="button">Collapse all</button>
+      <button id="toggle-all" type="button" data-i18n="options_collapseAll">Collapse all</button>
       <span class="spacer"></span>
-      <button id="export" type="button">Export…</button>
-      <button id="import" type="button">Import…</button>
+      <button id="export" type="button" data-i18n="options_export">Export…</button>
+      <button id="import" type="button" data-i18n="options_import">Import…</button>
       <input id="import-file" type="file" accept="application/json,.json" hidden />
     </section>
 
     <section id="rules"></section>
-    <button id="add-rule" type="button" class="add">+ Add rule</button>
+    <button id="add-rule" type="button" class="add" data-i18n="options_addRule">+ Add rule</button>
 
     <details id="diagnostics-box" class="allowlist diagnostics">
-      <summary>Diagnostics</summary>
-      <p class="allowlist-hint">
+      <summary data-i18n="diag_title">Diagnostics</summary>
+      <p class="allowlist-hint" data-i18n="diag_hint">
         If something does not behave as expected, send this report along with your message. It
         lists your Thunderbird version, the shape of each rule, and what recent runs did.
         Addresses, domains, patterns and folder names are left out unless you tick the box below.
         What you see here is exactly what will be shared.
       </p>
-      <label class="toggle">
+      <label class="toggle" data-i18n="diag_includeValues">
         <input id="diag-values" type="checkbox" /> Include rule values (addresses, domains,
         patterns, folders)
       </label>
       <textarea id="diag-report" rows="14" readonly spellcheck="false"></textarea>
       <div class="diag-actions">
-        <button id="diag-copy" type="button">Copy report</button>
-        <button id="diag-save" type="button">Save report…</button>
-        <button id="diag-refresh" type="button">Refresh</button>
+        <button id="diag-copy" type="button" data-i18n="diag_copy">Copy report</button>
+        <button id="diag-save" type="button" data-i18n="diag_save">Save report…</button>
+        <button id="diag-refresh" type="button" data-i18n="diag_refresh">Refresh</button>
         <span class="spacer"></span>
-        <button id="diag-clear" type="button" class="danger">Clear log</button>
+        <button id="diag-clear" type="button" class="danger" data-i18n="diag_clear">Clear log</button>
       </div>
 
-      <label class="toggle adv-row">
+      <label class="toggle adv-row" data-i18n="adv_logScheduleRuns">
         <input id="adv-log-schedule" type="checkbox" /> Log every run on a rule's own schedule
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n-rich="adv_logScheduleRunsHint">
         Without this, the diagnostics log records such a run only when it changes
         mail or fails. A rule that runs every minute would otherwise push the older
         entries out of the log within hours. Select <b>Save</b> to apply a change.
@@ -102,72 +102,72 @@
     </details>
 
     <details id="advanced-box" class="allowlist">
-      <summary>Advanced</summary>
-      <p class="allowlist-hint">
+      <summary data-i18n="adv_title">Advanced</summary>
+      <p class="allowlist-hint" data-i18n="adv_hint">
         Timings for the scan engine. The defaults suit most people; change them only
         if you know why. Every value is clamped to a safe range when you save.
       </p>
-      <label class="toggle adv-row">
+      <label class="toggle adv-row" data-i18n="adv_runOnNewMail">
         <input id="adv-new-mail" type="checkbox" checked /> Also run when new mail arrives
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n="adv_runOnNewMailHint">
         Without this, rules only run on the timer above, so new mail waits up to that
         long. Thunderbird reports each arrival as it happens.
       </p>
 
-      <label class="adv-row">
+      <label class="adv-row" data-i18n-rich="adv_newMailDelay">
         Wait <input id="adv-new-mail-delay" type="number" min="1" max="15" step="1" />
         seconds after the last arrival before running
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n="adv_newMailDelayHint">
         One mail sync reports many messages. Waiting collapses the whole batch into a
         single run. Capped at 15 seconds because Thunderbird suspends idle add-ons.
       </p>
 
-      <label class="adv-row">
+      <label class="adv-row" data-i18n-rich="adv_catchUp">
         Catch-up scan every <input id="adv-catchup-every" type="number" min="1" max="1440" step="1" />
         minutes, covering the last
         <input id="adv-catchup-days" type="number" min="1" max="365" step="1" /> days
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n="adv_catchUpHint">
         Normal runs only look at mail dated since the previous run. A sender can
         backdate the Date header, so this wider pass catches mail those runs missed.
         Raising either number costs more work per pass.
       </p>
 
-      <label class="adv-row">
+      <label class="adv-row" data-i18n-rich="adv_overlap">
         Overlap each normal scan by <input id="adv-overlap" type="number" min="0" max="1440" step="1" />
         minutes
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n="adv_overlapHint">
         How far before the previous run each scan starts, so mail arriving mid-scan or
         dated slightly early is not missed.
       </p>
 
-      <label class="toggle adv-row">
+      <label class="toggle adv-row" data-i18n="adv_showMenu">
         <input id="adv-show-menu" type="checkbox" checked /> Show Folder Filter Scheduler in the
         right-click menu
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n-rich="adv_showMenuHint">
         The menu adds spam domains and runs rules from the message list. Without it,
         the toolbar button and this page still run rules. Select <b>Save</b> to apply
         a change.
       </p>
 
-      <label class="toggle adv-row">
+      <label class="toggle adv-row" data-i18n="adv_shortName">
         <input id="adv-short-name" type="checkbox" /> Use the short name FFS on the toolbar
         button and in the right-click menu
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n-rich="adv_shortNameHint">
         The short name takes less room. The tooltip of the toolbar button keeps the
         full name. Select <b>Save</b> to apply a change.
       </p>
 
-      <h3 class="adv-heading">Authentication conditions</h3>
-      <label class="toggle adv-row">
+      <h3 class="adv-heading" data-i18n="adv_authHeading">Authentication conditions</h3>
+      <label class="toggle adv-row" data-i18n="adv_authOwn">
         <input id="adv-auth-own" type="checkbox" checked /> Verify DKIM myself
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n-rich="adv_authOwnHint">
         A sender can add a fake <code>Authentication-Results</code> header, so the
         add-on verifies DKIM signatures itself and works out DMARC from the result.
         It downloads each full message an authentication condition looks at and asks
@@ -176,39 +176,40 @@
         your mail provider adds.
       </p>
 
-      <label class="adv-row">
+      <label class="adv-row" data-i18n-rich="adv_authServer">
         DNS server
         <select id="adv-auth-server">
           <option value="cloudflare">Cloudflare (cloudflare-dns.com)</option>
           <option value="google">Google (dns.google)</option>
         </select>
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n="adv_authServerHint">
         Thunderbird asks you to allow the server the first time you use it.
       </p>
 
-      <label class="adv-row">
+      <label class="adv-row" data-i18n-rich="adv_authPrefer">
         When my check and the provider's header disagree, use
         <select id="adv-auth-prefer">
-          <option value="own">my check</option>
-          <option value="provider">the provider's header</option>
+          <option value="own" data-i18n="adv_authPreferOwn">my check</option>
+          <option value="provider" data-i18n="adv_authPreferProvider">the provider's header</option>
         </select>
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n="adv_authPreferHint">
         With the provider's header, the add-on uses its own result only for a check
         that the header doesn't report.
       </p>
 
-      <label class="adv-row">
+      <label class="adv-row" data-i18n-rich="adv_authTrusted">
         Trusted authentication servers
         <textarea
           id="adv-auth-trusted"
           rows="3"
           spellcheck="false"
           placeholder="One server per line, for example&#10;mta.yahoo.com&#10;mx.google.com"
+          data-i18n-placeholder="adv_authTrustedPlaceholder"
         ></textarea>
       </label>
-      <p class="adv-hint">
+      <p class="adv-hint" data-i18n-rich="adv_authTrustedHint">
         Leave this empty to trust the topmost <code>Authentication-Results</code>
         header, which your provider adds last. If you enter server names, one per
         line, the add-on uses the topmost header from one of them. The name is
@@ -216,35 +217,35 @@
         <code>mx.google.com</code>.
       </p>
 
-      <button id="reset-advanced" type="button">Restore defaults</button>
+      <button id="reset-advanced" type="button" data-i18n="common_restoreDefaults">Restore defaults</button>
     </details>
 
     <details id="help-box" class="allowlist help">
-      <summary>Common problems</summary>
+      <summary data-i18n="help_title">Common problems</summary>
 
-      <h3>A rule misses mail in Sent or another folder that isn't the Inbox</h3>
-      <p>
+      <h3 data-i18n="help_otherFolderTitle">A rule misses mail in Sent or another folder that isn't the Inbox</h3>
+      <p data-i18n-rich="help_otherFolderCause">
         For IMAP accounts, Thunderbird checks only the Inbox for new mail by default. The
         add-on can process only messages that Thunderbird has downloaded, so mail that
         another program sends through your account, or that a server rule files, waits
         until you open the folder. <b>Run all rules now</b> seems to work because you
         opened the folder first.
       </p>
-      <p>
+      <p data-i18n-rich="help_otherFolderFix">
         To fix this, right-click the folder and open <b>Properties</b>. On the
         <b>General</b> tab, turn on <b>When getting new messages for this account, always
         check this folder</b>.
       </p>
 
-      <h3>Mail arrived while Thunderbird was closed</h3>
-      <p>
+      <h3 data-i18n="help_closedTitle">Mail arrived while Thunderbird was closed</h3>
+      <p data-i18n-rich="help_closedBody">
         Rules run only while Thunderbird is running. After Thunderbird starts, the first
         scheduled run checks the last 30 days, or the number of days set under
         <b>Advanced</b>, and processes anything it missed.
       </p>
 
-      <h3>Something else doesn't work</h3>
-      <p>
+      <h3 data-i18n="help_otherTitle">Something else doesn't work</h3>
+      <p data-i18n-rich="help_otherBody">
         Open <b>Diagnostics</b> and attach the report to a
         <a href="https://github.com/KayhanB21/folder-filter-scheduler/issues" target="_blank" rel="noopener">GitHub issue</a>.
         The report shows what each recent run scanned and matched.
@@ -257,11 +258,11 @@
         <!-- Stable id, round-tripped so per-rule run state survives a rename. -->
         <input class="rule-id" type="hidden" />
         <div class="rule-head">
-          <button class="rule-collapse" type="button" aria-expanded="true" title="Collapse or expand this rule">▾</button>
-          <input class="rule-name" type="text" placeholder="Rule name" />
-          <label class="toggle"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
-          <button class="run-rule" type="button" title="Run only this rule now, on every message in its folders">Run</button>
-          <button class="del-rule danger" type="button">Delete</button>
+          <button class="rule-collapse" type="button" aria-expanded="true" title="Collapse or expand this rule" data-i18n-title="rule_collapseTitle">▾</button>
+          <input class="rule-name" type="text" placeholder="Rule name" data-i18n-placeholder="rule_namePlaceholder" />
+          <label class="toggle" data-i18n="rule_enabled"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
+          <button class="run-rule" type="button" title="Run only this rule now, on every message in its folders" data-i18n="rule_run" data-i18n-title="rule_runTitle">Run</button>
+          <button class="del-rule danger" type="button" data-i18n="rule_delete">Delete</button>
         </div>
         <!-- One-line digest, shown in place of the body while collapsed. -->
         <p class="rule-summary"></p>
@@ -269,49 +270,49 @@
         <div class="rule-body">
         <div class="row">
           <div class="lbl-col">
-            <span class="lbl">Folders</span>
-            <button class="folder-expand-all" type="button" title="Expand all: show every account and subfolder">Expand</button>
-            <button class="folder-collapse-all" type="button" title="Collapse all: show only the account names">Collapse</button>
+            <span class="lbl" data-i18n="rule_folders">Folders</span>
+            <button class="folder-expand-all" type="button" title="Expand all: show every account and subfolder" data-i18n="rule_foldersExpand" data-i18n-title="rule_foldersExpandTitle">Expand</button>
+            <button class="folder-collapse-all" type="button" title="Collapse all: show only the account names" data-i18n="rule_foldersCollapse" data-i18n-title="rule_foldersCollapseTitle">Collapse</button>
           </div>
           <div class="folder-picker">
             <div class="folder-tools">
-              <input class="folder-filter" type="search" placeholder="Filter folders" aria-label="Filter folders" />
-              <button class="folder-select-matching" type="button" disabled>Select all matching</button>
+              <input class="folder-filter" type="search" placeholder="Filter folders" aria-label="Filter folders" data-i18n-placeholder="rule_folderFilter" data-i18n-aria-label="rule_folderFilter" />
+              <button class="folder-select-matching" type="button" disabled data-i18n="rule_selectMatching">Select all matching</button>
               <span class="folder-count" aria-live="polite"></span>
             </div>
-            <select class="rule-folders" multiple size="8" aria-label="Folders"></select>
-            <label class="toggle">
+            <select class="rule-folders" multiple size="8" aria-label="Folders" data-i18n-aria-label="rule_folders"></select>
+            <label class="toggle" data-i18n="rule_includeSubfolders">
               <input class="rule-subfolders" type="checkbox" /> Include subfolders, and any created later
             </label>
           </div>
         </div>
 
         <div class="row">
-          <span class="lbl">Match</span>
+          <span class="lbl" data-i18n="rule_match">Match</span>
           <select class="rule-match">
-            <option value="any">any of the conditions (OR)</option>
-            <option value="all">all of the conditions (AND)</option>
+            <option value="any" data-i18n="rule_matchAny">any of the conditions (OR)</option>
+            <option value="all" data-i18n="rule_matchAll">all of the conditions (AND)</option>
           </select>
         </div>
 
         <div class="conditions"></div>
-        <button class="add-cond" type="button">+ Add condition</button>
+        <button class="add-cond" type="button" data-i18n="rule_addCondition">+ Add condition</button>
 
         <div class="actions"></div>
-        <button class="add-action" type="button">+ Add action</button>
+        <button class="add-action" type="button" data-i18n="rule_addAction">+ Add action</button>
 
         <!-- Off by default: a rule runs on the timer at the top of the page. -->
         <div class="row schedule">
-          <span class="lbl">Schedule</span>
+          <span class="lbl" data-i18n="rule_schedule">Schedule</span>
           <div class="schedule-box">
-            <label class="toggle">
+            <label class="toggle" data-i18n="rule_scheduleOn">
               <input class="rule-schedule-on" type="checkbox" /> Run this rule on its own schedule
             </label>
             <div class="schedule-fields hidden">
-              <input class="rule-cron" type="text" placeholder="0 21 * * *" spellcheck="false" autocomplete="off" aria-label="Cron expression" />
-              <a class="cron-help" href="https://crontab.guru/" target="_blank" rel="noopener">How to write a cron expression</a>
+              <input class="rule-cron" type="text" placeholder="0 21 * * *" spellcheck="false" autocomplete="off" aria-label="Cron expression" data-i18n-aria-label="rule_cronLabel" />
+              <a class="cron-help" href="https://crontab.guru/" target="_blank" rel="noopener" data-i18n="rule_cronHelp">How to write a cron expression</a>
               <p class="schedule-text" aria-live="polite"></p>
-              <p class="schedule-hint">
+              <p class="schedule-hint" data-i18n="rule_scheduleHint">
                 A cron expression has five fields: minute, hour, day of month, month, and
                 day of week, in your computer's local time. With its own schedule, the rule
                 runs only at these times. The timer at the top of the page and new mail no
@@ -328,14 +329,14 @@
          that moves or deletes last, so "tag, then move" keeps the tag. -->
     <template id="action-template">
       <div class="action">
-        <span class="lbl">Then</span>
+        <span class="lbl" data-i18n="action_then">Then</span>
         <!-- Options are rendered from src/actions.js (single source of truth). -->
         <select class="action-type"></select>
         <select class="action-folder hidden"></select>
         <!-- Shown only for the tag action. Without access, the button asks for
              the optional messagesTagsList permission instead. -->
         <select class="action-tag hidden"></select>
-        <button class="action-tag-grant hidden" type="button">Allow tag access…</button>
+        <button class="action-tag-grant hidden" type="button" data-i18n="common_allowTagAccess">Allow tag access…</button>
         <button class="del-action danger" type="button">×</button>
         <p class="action-hint"></p>
       </div>
@@ -345,49 +346,49 @@
       <div class="condition">
         <select class="cond-field"></select>
         <select class="cond-op">
-          <option value="contains">contains</option>
-          <option value="is">is</option>
-          <option value="startsWith">starts with</option>
-          <option value="endsWith">ends with</option>
-          <option value="matchesRegex">matches regex</option>
-          <option value="domainInList">domain is in list</option>
-          <option value="inAddressBook">is in address book</option>
-          <option value="nameShowsOtherAddress">name shows a different address</option>
+          <option value="contains" data-i18n="op_contains">contains</option>
+          <option value="is" data-i18n="op_is">is</option>
+          <option value="startsWith" data-i18n="op_startsWith">starts with</option>
+          <option value="endsWith" data-i18n="op_endsWith">ends with</option>
+          <option value="matchesRegex" data-i18n="op_matchesRegex">matches regex</option>
+          <option value="domainInList" data-i18n="op_domainInList">domain is in list</option>
+          <option value="inAddressBook" data-i18n="op_inAddressBook">is in address book</option>
+          <option value="nameShowsOtherAddress" data-i18n="op_nameShowsOtherAddress">name shows a different address</option>
           <!-- For the age field only. -->
-          <option value="olderThan" class="op-age">older than</option>
-          <option value="newerThan" class="op-age">newer than</option>
+          <option value="olderThan" class="op-age" data-i18n="op_olderThan">older than</option>
+          <option value="newerThan" class="op-age" data-i18n="op_newerThan">newer than</option>
           <!-- For the read, star, and junk fields only. The text is set for
                the field: "is read" and "is unread", and so on. -->
-          <option value="isOn">is</option>
-          <option value="isOff">is not</option>
+          <option value="isOn" data-i18n="op_isOn">is</option>
+          <option value="isOff" data-i18n="op_isOff">is not</option>
           <!-- For the tag field only. -->
-          <option value="hasTag">has tag</option>
+          <option value="hasTag" data-i18n="op_hasTag">has tag</option>
           <!-- For the priority field only. options.js greys out each
                operator that the chosen field rules out. -->
-          <option value="priorityIs">is</option>
+          <option value="priorityIs" data-i18n="op_priorityIs">is</option>
           <!-- For the authentication field only. -->
-          <option value="authPasses">passes</option>
+          <option value="authPasses" data-i18n="op_authPasses">passes</option>
         </select>
-        <label class="toggle"><input class="cond-negate" type="checkbox" /> not</label>
-        <input class="cond-value" type="text" placeholder="value" />
+        <label class="toggle" data-i18n="cond_not"><input class="cond-negate" type="checkbox" /> not</label>
+        <input class="cond-value" type="text" placeholder="value" data-i18n-placeholder="cond_valuePlaceholder" />
         <!-- Shown only for the age field: a whole number of days. -->
         <input class="cond-days hidden" type="number" min="1" step="1" placeholder="30" />
-        <span class="cond-days-unit hidden">days</span>
+        <span class="cond-days-unit hidden" data-i18n="cond_daysUnit">days</span>
         <!-- Shown only for the inAddressBook operator. Without access, the
              button asks for the optional addressBooks permission instead. -->
         <select class="cond-book hidden"></select>
-        <button class="cond-book-grant hidden" type="button">Allow address book access…</button>
+        <button class="cond-book-grant hidden" type="button" data-i18n="cond_allowBookAccess">Allow address book access…</button>
         <!-- Shown only for the tag field. Without access, the button asks for
              the optional messagesTagsList permission instead. -->
         <select class="cond-tag hidden"></select>
-        <button class="cond-tag-grant hidden" type="button">Allow tag access…</button>
+        <button class="cond-tag-grant hidden" type="button" data-i18n="common_allowTagAccess">Allow tag access…</button>
         <!-- Shown only for the priority field. -->
         <select class="cond-priority hidden">
-          <option value="highest">Highest</option>
-          <option value="high">High</option>
-          <option value="normal">Normal</option>
-          <option value="low">Low</option>
-          <option value="lowest">Lowest</option>
+          <option value="highest" data-i18n="priority_highest">Highest</option>
+          <option value="high" data-i18n="priority_high">High</option>
+          <option value="normal" data-i18n="priority_normal">Normal</option>
+          <option value="low" data-i18n="priority_low">Low</option>
+          <option value="lowest" data-i18n="priority_lowest">Lowest</option>
         </select>
         <!-- Shown only for the authentication field. -->
         <select class="cond-auth hidden">
@@ -395,7 +396,7 @@
           <option value="dkim">DKIM</option>
           <option value="dmarc">DMARC</option>
         </select>
-        <button class="cond-auth-grant hidden" type="button">Allow DNS server access…</button>
+        <button class="cond-auth-grant hidden" type="button" data-i18n="cond_allowDnsAccess">Allow DNS server access…</button>
         <button class="del-cond danger" type="button">×</button>
         <!-- Shown only for the domainInList operator: one domain per line. -->
         <textarea
@@ -403,9 +404,10 @@
           rows="6"
           spellcheck="false"
           placeholder="One domain per line, e.g. evil.com&#10;Subdomains are matched automatically."
+          data-i18n-placeholder="cond_domainsPlaceholder"
         ></textarea>
         <!-- Shown only for the nameShowsOtherAddress operator. -->
-        <p class="cond-hint hidden">
+        <p class="cond-hint hidden" data-i18n-rich="cond_nameHint">
           Matches when the sender name contains an email address from a different
           domain than the real address. Example: the name is
           <code>Lena &lt;lena@yahoo.com&gt;</code> and the real address is
@@ -414,13 +416,13 @@
           folder before you use Trash.
         </p>
         <!-- Shown only for the priority field. -->
-        <p class="cond-priority-hint cond-hint hidden">
+        <p class="cond-priority-hint cond-hint hidden" data-i18n="cond_priorityHint">
           To read the priority, the add-on downloads the headers of each message,
           so this check is slower than the others. A message with no priority
           counts as Normal.
         </p>
         <!-- Shown only for the authentication field. -->
-        <p class="cond-auth-hint cond-hint hidden">
+        <p class="cond-auth-hint cond-hint hidden" data-i18n-rich="cond_authHint">
           Checks whether the sender is who the From address claims. To check, the
           add-on downloads each full message the rule looks at, once, and keeps the
           result. SPF comes from the <code>Authentication-Results</code> header your
@@ -430,7 +432,7 @@
           See <b>Advanced</b> for the settings.
         </p>
         <!-- Shown only for the read, star, junk, and tag fields. -->
-        <p class="cond-state-hint cond-hint hidden">
+        <p class="cond-state-hint cond-hint hidden" data-i18n-rich="cond_stateHint">
           A scheduled run checks older mail only in the catch-up scan, by default
           every 30 minutes (see <b>Advanced</b>). So after you star, tag, or read an
           older message, the rule can take that long to act on it.

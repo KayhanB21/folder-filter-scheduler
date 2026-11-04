@@ -17,6 +17,8 @@
  * no combination is pathological.
  */
 
+import { t } from './i18n.js';
+
 export const ADVANCED_DEFAULTS = Object.freeze({
   runOnNewMail: true,
   newMailDelaySeconds: 10,
@@ -72,10 +74,11 @@ export function trustedServerList(text) {
  * races the suspension. `alarms` cannot stand in: its minimum is a minute.
  */
 export const ADVANCED_LIMITS = Object.freeze({
-  newMailDelaySeconds: { min: 1, max: 15, label: 'delay before running on new mail (seconds)' },
-  scanOverlapMinutes: { min: 0, max: 1440, label: 'incremental scan overlap (minutes)' },
-  catchUpEveryMinutes: { min: 1, max: 1440, label: 'catch-up scan interval (minutes)' },
-  catchUpLookbackDays: { min: 1, max: 365, label: 'catch-up scan lookback (days)' },
+  // The label names the setting in a problem the options page shows.
+  newMailDelaySeconds: { min: 1, max: 15, get label() { return t('setting_newMailDelaySeconds'); } },
+  scanOverlapMinutes: { min: 0, max: 1440, get label() { return t('setting_scanOverlapMinutes'); } },
+  catchUpEveryMinutes: { min: 1, max: 1440, get label() { return t('setting_catchUpEveryMinutes'); } },
+  catchUpLookbackDays: { min: 1, max: 365, get label() { return t('setting_catchUpLookbackDays'); } },
 });
 
 function clampInteger(raw, { min, max }, fallback) {
@@ -121,16 +124,16 @@ export function sanitizeAdvanced(raw) {
     const value = raw?.[key];
     if (value === undefined || value === null || value === '') return ADVANCED_DEFAULTS[key];
     if (allowed.includes(value)) return value;
-    problems.push(`${label} must be one of ${allowed.join(', ')}, using ${ADVANCED_DEFAULTS[key]}`);
+    problems.push(t('setting_mustBeOneOf', label, allowed.join(', '), ADVANCED_DEFAULTS[key]));
     return ADVANCED_DEFAULTS[key];
   };
-  settings.authPrefer = pick('authPrefer', AUTH_PREFER_VALUES, 'result to use when the checks disagree');
-  settings.authDohServer = pick('authDohServer', Object.keys(AUTH_DOH_SERVERS), 'DNS server');
+  settings.authPrefer = pick('authPrefer', AUTH_PREFER_VALUES, t('setting_authPrefer'));
+  settings.authDohServer = pick('authDohServer', Object.keys(AUTH_DOH_SERVERS), t('setting_authDohServer'));
 
   for (const [key, limit] of Object.entries(ADVANCED_LIMITS)) {
     const { value, problem } = clampInteger(raw?.[key], limit, ADVANCED_DEFAULTS[key]);
     settings[key] = value;
-    if (problem) problems.push(`${limit.label} must be ${limit.min}-${limit.max}, using ${value}`);
+    if (problem) problems.push(t('setting_outOfRange', limit.label, limit.min, limit.max, value));
   }
   return { settings, problems };
 }

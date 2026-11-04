@@ -8,14 +8,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Add spam domains</title>
+    <title data-i18n="common_addSpamDomains">Add spam domains</title>
     <link rel="stylesheet" href="../options/options.css" />
     <link rel="stylesheet" href="confirm.css" />
   </head>
   <body class="confirm-body">
     <header>
-      <h1>Add spam domains</h1>
-      <p class="sub" id="summary">Reading the selected messages…</p>
+      <h1 data-i18n="common_addSpamDomains">Add spam domains</h1>
+      <p class="sub" id="summary" data-i18n="confirm_reading">Reading the selected messages…</p>
     </header>
 
     <div id="domain-list" hidden></div>
@@ -23,12 +23,12 @@
     <p id="notes" class="notes"></p>
 
     <section class="confirm-bar">
-      <label class="toggle">
+      <label class="toggle" data-i18n="confirm_dontShowAgain">
         <input id="skip-next-time" type="checkbox" /> Don’t show this again
       </label>
       <span class="spacer"></span>
-      <button id="cancel" type="button">Cancel</button>
-      <button id="add" type="button" class="primary" disabled>Add to filter</button>
+      <button id="cancel" type="button" data-i18n="confirm_cancel">Cancel</button>
+      <button id="add" type="button" class="primary" disabled data-i18n="confirm_add">Add to filter</button>
     </section>
 
     <script type="module" src="confirm.js"></script>

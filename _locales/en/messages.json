@@ -6,5 +6,1601 @@
   "extensionDescription": {
     "message": "Run filter rules on any folder on a schedule, not just the Inbox. Match by sender, subject, address book, or SPF, DKIM, and DMARC.",
     "description": "Short description shown in the add-ons manager."
+  },
+
+  "common_addSpamDomains": {
+    "message": "Add spam domains",
+    "description": "Right-click menu item and title of the window that adds the sender domains of the selected messages to a spam rule."
+  },
+  "common_runAllRulesNow": {
+    "message": "Run all rules now",
+    "description": "Button on the settings page and in the toolbar popup, and a right-click menu item. Runs every rule once, right away."
+  },
+  "common_restoreDefaults": {
+    "message": "Restore defaults",
+    "description": "Button that puts the settings of a section back to their default values."
+  },
+  "common_allowTagAccess": {
+    "message": "Allow tag access…",
+    "description": "Button that asks Thunderbird for permission to list the user's message tags."
+  },
+  "common_noTag": {
+    "message": "(no tag)",
+    "description": "Shown in place of a tag name when no tag is chosen."
+  },
+  "common_untitledRule": {
+    "message": "Untitled rule",
+    "description": "Name used for a rule whose name is empty."
+  },
+  "common_quoted": {
+    "message": "“$1”",
+    "description": "A rule name in quotation marks, inside a longer message. Use the quotation marks of your language. $1 is the name."
+  },
+
+  "menu_runARule": {
+    "message": "Run a rule",
+    "description": "Right-click submenu that lists the rules; choosing one runs it."
+  },
+
+  "options_theme": {
+    "message": "Theme",
+    "description": "Label for the light, dark, and system theme switch. Read by screen readers only."
+  },
+  "options_themeLight": {
+    "message": "Light",
+    "description": "Theme switch: light colors."
+  },
+  "options_themeDark": {
+    "message": "Dark",
+    "description": "Theme switch: dark colors."
+  },
+  "options_themeSystem": {
+    "message": "System",
+    "description": "Theme switch: follow the Thunderbird theme. Read by screen readers only."
+  },
+  "options_themeSystemTitle": {
+    "message": "System: match Thunderbird",
+    "description": "Tooltip of the theme switch button that follows the Thunderbird theme."
+  },
+  "options_tagline": {
+    "message": "Run rules on any folder on a timer — the piece stock Thunderbird only does for the Inbox.",
+    "description": "One-line explanation under the page title."
+  },
+  "options_runEvery": {
+    "message": "Run every $1 minutes",
+    "description": "Label around the number box for the default timer. $1 is the number box; keep it."
+  },
+  "options_save": {
+    "message": "Save",
+    "description": "Button that saves every rule and setting on the page."
+  },
+  "options_collapseAll": {
+    "message": "Collapse all",
+    "description": "Button that folds every rule card to a one-line summary."
+  },
+  "options_expandAll": {
+    "message": "Expand all",
+    "description": "Button that opens every folded rule card."
+  },
+  "options_export": {
+    "message": "Export…",
+    "description": "Button that saves the rules to a JSON file."
+  },
+  "options_import": {
+    "message": "Import…",
+    "description": "Button that loads rules from a JSON file."
+  },
+  "options_addRule": {
+    "message": "+ Add rule",
+    "description": "Button that adds an empty rule card."
+  },
+
+  "allowlist_title": {
+    "message": "Protected domains (never blocked)",
+    "description": "Heading of the section with the domains that Add spam domains never adds."
+  },
+  "allowlist_hint": {
+    "message": "Domains here are skipped when adding spam domains from the message list, so a mistaken selection cannot block a major provider. One domain per line.",
+    "description": "Explanation of the protected domains list."
+  },
+
+  "diag_title": {
+    "message": "Diagnostics",
+    "description": "Heading of the section with the diagnostics report."
+  },
+  "diag_hint": {
+    "message": "If something does not behave as expected, send this report along with your message. It lists your Thunderbird version, the shape of each rule, and what recent runs did. Addresses, domains, patterns and folder names are left out unless you tick the box below. What you see here is exactly what will be shared.",
+    "description": "Explanation of the diagnostics report. The report itself stays in English."
+  },
+  "diag_includeValues": {
+    "message": "Include rule values (addresses, domains, patterns, folders)",
+    "description": "Checkbox that adds the values of each rule to the diagnostics report."
+  },
+  "diag_copy": {
+    "message": "Copy report",
+    "description": "Button that copies the diagnostics report to the clipboard."
+  },
+  "diag_save": {
+    "message": "Save report…",
+    "description": "Button that saves the diagnostics report to a text file."
+  },
+  "diag_refresh": {
+    "message": "Refresh",
+    "description": "Button that rebuilds the diagnostics report."
+  },
+  "diag_clear": {
+    "message": "Clear log",
+    "description": "Button that deletes the diagnostics log."
+  },
+  "diag_buildFailed": {
+    "message": "Could not build the report: $1",
+    "description": "Shown in the report box when the report fails. $1 is the error message, in English."
+  },
+
+  "adv_title": {
+    "message": "Advanced",
+    "description": "Heading of the Advanced settings section. Other messages refer to it in <b>…</b>; use the same word there."
+  },
+  "adv_hint": {
+    "message": "Timings for the scan engine. The defaults suit most people; change them only if you know why. Every value is clamped to a safe range when you save.",
+    "description": "Explanation at the top of the Advanced section."
+  },
+  "adv_logScheduleRuns": {
+    "message": "Log every run on a rule's own schedule",
+    "description": "Checkbox in the Diagnostics section."
+  },
+  "adv_logScheduleRunsHint": {
+    "message": "Without this, the diagnostics log records such a run only when it changes mail or fails. A rule that runs every minute would otherwise push the older entries out of the log within hours. Select <b>Save</b> to apply a change.",
+    "description": "Explanation of the checkbox that logs every scheduled run. Keep <b>…</b> around the name of the Save button."
+  },
+  "adv_runOnNewMail": {
+    "message": "Also run when new mail arrives",
+    "description": "Checkbox in the Advanced section."
+  },
+  "adv_runOnNewMailHint": {
+    "message": "Without this, rules only run on the timer above, so new mail waits up to that long. Thunderbird reports each arrival as it happens.",
+    "description": "Explanation of the checkbox that runs rules on new mail."
+  },
+  "adv_newMailDelay": {
+    "message": "Wait $1 seconds after the last arrival before running",
+    "description": "Label around a number box. $1 is the number box; keep it."
+  },
+  "adv_newMailDelayHint": {
+    "message": "One mail sync reports many messages. Waiting collapses the whole batch into a single run. Capped at 15 seconds because Thunderbird suspends idle add-ons.",
+    "description": "Explanation of the delay before a run on new mail."
+  },
+  "adv_catchUp": {
+    "message": "Catch-up scan every $1 minutes, covering the last $2 days",
+    "description": "Label around two number boxes. $1 is the box for the minutes and $2 the box for the days; keep both."
+  },
+  "adv_catchUpHint": {
+    "message": "Normal runs only look at mail dated since the previous run. A sender can backdate the Date header, so this wider pass catches mail those runs missed. Raising either number costs more work per pass.",
+    "description": "Explanation of the catch-up scan. Date is the name of a mail header; keep it."
+  },
+  "adv_overlap": {
+    "message": "Overlap each normal scan by $1 minutes",
+    "description": "Label around a number box. $1 is the number box; keep it."
+  },
+  "adv_overlapHint": {
+    "message": "How far before the previous run each scan starts, so mail arriving mid-scan or dated slightly early is not missed.",
+    "description": "Explanation of the scan overlap."
+  },
+  "adv_showMenu": {
+    "message": "Show Folder Filter Scheduler in the right-click menu",
+    "description": "Checkbox in the Advanced section. Folder Filter Scheduler is the name of the extension."
+  },
+  "adv_showMenuHint": {
+    "message": "The menu adds spam domains and runs rules from the message list. Without it, the toolbar button and this page still run rules. Select <b>Save</b> to apply a change.",
+    "description": "Explanation of the right-click menu checkbox. Keep <b>…</b> around the name of the Save button."
+  },
+  "adv_shortName": {
+    "message": "Use the short name FFS on the toolbar button and in the right-click menu",
+    "description": "Checkbox in the Advanced section. FFS is the short name of the extension; keep it."
+  },
+  "adv_shortNameHint": {
+    "message": "The short name takes less room. The tooltip of the toolbar button keeps the full name. Select <b>Save</b> to apply a change.",
+    "description": "Explanation of the short name checkbox. Keep <b>…</b> around the name of the Save button."
+  },
+  "adv_authHeading": {
+    "message": "Authentication conditions",
+    "description": "Subheading in the Advanced section for the SPF, DKIM, and DMARC settings."
+  },
+  "adv_authOwn": {
+    "message": "Verify DKIM myself",
+    "description": "Checkbox: the add-on checks DKIM signatures itself instead of trusting the mail provider. DKIM is a technical name; keep it."
+  },
+  "adv_authOwnHint": {
+    "message": "A sender can add a fake <code>Authentication-Results</code> header, so the add-on verifies DKIM signatures itself and works out DMARC from the result. It downloads each full message an authentication condition looks at and asks the DNS server below for the signing key. The server sees the domain names it is asked about. Without this, the add-on reads DKIM and DMARC from the header your mail provider adds.",
+    "description": "Explanation of the own DKIM check. Keep <code>Authentication-Results</code> as is: it is the name of a mail header."
+  },
+  "adv_authServer": {
+    "message": "DNS server $1",
+    "description": "Label in front of the list of DNS servers. $1 is the list; keep it."
+  },
+  "adv_authServerHint": {
+    "message": "Thunderbird asks you to allow the server the first time you use it.",
+    "description": "Explanation under the DNS server list."
+  },
+  "adv_authPrefer": {
+    "message": "When my check and the provider's header disagree, use $1",
+    "description": "Label around a list with two choices: adv_authPreferOwn and adv_authPreferProvider. $1 is the list; keep it."
+  },
+  "adv_authPreferOwn": {
+    "message": "my check",
+    "description": "Choice in the list after \"When my check and the provider's header disagree, use\"."
+  },
+  "adv_authPreferProvider": {
+    "message": "the provider's header",
+    "description": "Choice in the list after \"When my check and the provider's header disagree, use\"."
+  },
+  "adv_authPreferHint": {
+    "message": "With the provider's header, the add-on uses its own result only for a check that the header doesn't report.",
+    "description": "Explanation of the choice between the own check and the provider's header."
+  },
+  "adv_authTrusted": {
+    "message": "Trusted authentication servers $1",
+    "description": "Label in front of a text box. $1 is the text box; keep it."
+  },
+  "adv_authTrustedPlaceholder": {
+    "message": "One server per line, for example\nmta.yahoo.com\nmx.google.com",
+    "description": "Gray example text in the empty box of trusted servers. Keep the line breaks (\\n) and the server names."
+  },
+  "adv_authTrustedHint": {
+    "message": "Leave this empty to trust the topmost <code>Authentication-Results</code> header, which your provider adds last. If you enter server names, one per line, the add-on uses the topmost header from one of them. The name is the first word of the header, such as <code>mta.yahoo.com</code> or <code>mx.google.com</code>.",
+    "description": "Explanation of the trusted servers. Keep the text inside <code>…</code> as is."
+  },
+
+  "help_title": {
+    "message": "Common problems",
+    "description": "Heading of the help section."
+  },
+  "help_otherFolderTitle": {
+    "message": "A rule misses mail in Sent or another folder that isn't the Inbox",
+    "description": "Help question. Use the names Thunderbird shows for the Sent and Inbox folders in your language."
+  },
+  "help_otherFolderCause": {
+    "message": "For IMAP accounts, Thunderbird checks only the Inbox for new mail by default. The add-on can process only messages that Thunderbird has downloaded, so mail that another program sends through your account, or that a server rule files, waits until you open the folder. <b>Run all rules now</b> seems to work because you opened the folder first.",
+    "description": "Help answer, part 1. The text inside <b>…</b> is the name of a button (common_runAllRulesNow); use the same translation."
+  },
+  "help_otherFolderFix": {
+    "message": "To fix this, right-click the folder and open <b>Properties</b>. On the <b>General</b> tab, turn on <b>When getting new messages for this account, always check this folder</b>.",
+    "description": "Help answer, part 2. The text inside each <b>…</b> names a part of Thunderbird; copy the words Thunderbird uses in your language."
+  },
+  "help_closedTitle": {
+    "message": "Mail arrived while Thunderbird was closed",
+    "description": "Help question."
+  },
+  "help_closedBody": {
+    "message": "Rules run only while Thunderbird is running. After Thunderbird starts, the first scheduled run checks the last 30 days, or the number of days set under <b>Advanced</b>, and processes anything it missed.",
+    "description": "Help answer. <b>Advanced</b> is the section heading adv_title; use the same word."
+  },
+  "help_otherTitle": {
+    "message": "Something else doesn't work",
+    "description": "Help question."
+  },
+  "help_otherBody": {
+    "message": "Open <b>Diagnostics</b> and attach the report to a <a>GitHub issue</a>. The report shows what each recent run scanned and matched.",
+    "description": "Help answer. <b>Diagnostics</b> is the section heading diag_title. The text inside <a>…</a> becomes the link to the issue tracker; keep the tags."
+  },
+
+  "rule_collapseTitle": {
+    "message": "Collapse or expand this rule",
+    "description": "Tooltip of the arrow button on a rule card."
+  },
+  "rule_namePlaceholder": {
+    "message": "Rule name",
+    "description": "Gray text in the empty name box of a rule."
+  },
+  "rule_newName": {
+    "message": "New rule",
+    "description": "Name of a rule the user just added."
+  },
+  "rule_enabled": {
+    "message": "enabled",
+    "description": "Checkbox on a rule card: the rule runs when this is on."
+  },
+  "rule_run": {
+    "message": "Run",
+    "description": "Button on a rule card that runs only this rule. Keep it short."
+  },
+  "rule_runTitle": {
+    "message": "Run only this rule now, on every message in its folders",
+    "description": "Tooltip of the Run button on a rule card."
+  },
+  "rule_delete": {
+    "message": "Delete",
+    "description": "Button that deletes a rule card."
+  },
+  "rule_folders": {
+    "message": "Folders",
+    "description": "Label of the folder list of a rule. The label column is narrow; keep it short."
+  },
+  "rule_foldersExpand": {
+    "message": "Expand",
+    "description": "Small button under the Folders label that opens every account and folder in the list. One short word if you can."
+  },
+  "rule_foldersExpandTitle": {
+    "message": "Expand all: show every account and subfolder",
+    "description": "Tooltip of the Expand button of the folder list."
+  },
+  "rule_foldersCollapse": {
+    "message": "Collapse",
+    "description": "Small button under the Folders label that closes every account in the list. One short word if you can."
+  },
+  "rule_foldersCollapseTitle": {
+    "message": "Collapse all: show only the account names",
+    "description": "Tooltip of the Collapse button of the folder list."
+  },
+  "rule_folderFilter": {
+    "message": "Filter folders",
+    "description": "Gray text and screen reader label of the search box above the folder list."
+  },
+  "rule_selectMatching": {
+    "message": "Select all matching",
+    "description": "Button that selects every folder the search box shows."
+  },
+  "rule_includeSubfolders": {
+    "message": "Include subfolders, and any created later",
+    "description": "Checkbox under the folder list."
+  },
+  "rule_match": {
+    "message": "Match",
+    "description": "Label of the list that chooses between any and all conditions. The label column is narrow; keep it short."
+  },
+  "rule_matchAny": {
+    "message": "any of the conditions (OR)",
+    "description": "Choice after the Match label."
+  },
+  "rule_matchAll": {
+    "message": "all of the conditions (AND)",
+    "description": "Choice after the Match label."
+  },
+  "rule_addCondition": {
+    "message": "+ Add condition",
+    "description": "Button that adds a condition row to a rule."
+  },
+  "rule_addAction": {
+    "message": "+ Add action",
+    "description": "Button that adds an action row to a rule."
+  },
+  "rule_schedule": {
+    "message": "Schedule",
+    "description": "Label of the schedule part of a rule. The label column is narrow; keep it short."
+  },
+  "rule_scheduleOn": {
+    "message": "Run this rule on its own schedule",
+    "description": "Checkbox that gives a rule its own cron schedule."
+  },
+  "rule_cronLabel": {
+    "message": "Cron expression",
+    "description": "Screen reader label of the box for the cron expression. Cron is a technical name."
+  },
+  "rule_cronHelp": {
+    "message": "How to write a cron expression",
+    "description": "Link to crontab.guru, an English site that explains cron expressions."
+  },
+  "rule_scheduleHint": {
+    "message": "A cron expression has five fields: minute, hour, day of month, month, and day of week, in your computer's local time. With its own schedule, the rule runs only at these times. The timer at the top of the page and new mail no longer start it.",
+    "description": "Explanation under the cron box."
+  },
+
+  "schedule_error": {
+    "message": "$1.",
+    "description": "Shown under the cron box when the expression is wrong. $1 is the reason (a cron_error message). Change only the final punctuation if your language needs it."
+  },
+  "schedule_next": {
+    "message": "$1. Next run: $2.",
+    "description": "Shown under the cron box. $1 is the expression in words (for example \"At 21:00 every day\"); $2 is the date and time of the next run."
+  },
+  "schedule_never": {
+    "message": "$1. This date never comes, so the rule never runs.",
+    "description": "Shown under the cron box for a date that does not exist, such as February 30. $1 is the expression in words."
+  },
+
+  "cron_fieldMinute": {
+    "message": "minute",
+    "description": "Name of the 1st field of a cron expression, used in the cron_error messages."
+  },
+  "cron_fieldHour": {
+    "message": "hour",
+    "description": "Name of the 2nd field of a cron expression, used in the cron_error messages."
+  },
+  "cron_fieldDay": {
+    "message": "day of month",
+    "description": "Name of the 3rd field of a cron expression, used in the cron_error messages."
+  },
+  "cron_fieldMonth": {
+    "message": "month",
+    "description": "Name of the 4th field of a cron expression, used in the cron_error messages."
+  },
+  "cron_fieldWeekday": {
+    "message": "day of week",
+    "description": "Name of the 5th field of a cron expression, used in the cron_error messages."
+  },
+  "cron_errorEmpty": {
+    "message": "Enter a cron expression",
+    "description": "Error under the empty cron box. No final period: schedule_error adds it."
+  },
+  "cron_errorTooLong": {
+    "message": "The expression is too long",
+    "description": "Error under the cron box. No final period."
+  },
+  "cron_errorFieldCount": {
+    "message": "A cron expression has 5 fields: minute, hour, day of month, month, day of week. This one has $1",
+    "description": "Error under the cron box. $1 is the number of fields typed. No final period."
+  },
+  "cron_errorInvalid": {
+    "message": "\"$1\" is not a valid $2",
+    "description": "Error under the cron box. $1 is the text typed, $2 a field name (cron_field...). No final period. The first letter is made upper case."
+  },
+  "cron_errorOutOfRange": {
+    "message": "$1 must be from $2 to $3, got $4",
+    "description": "Error under the cron box. $1 is a field name (cron_field...), $2 and $3 the smallest and largest value, $4 the value typed. The first letter is made upper case. No final period."
+  },
+  "cron_errorStep": {
+    "message": "the step \"$1\" in the $2 must be 1 or more",
+    "description": "Error under the cron box, for a step such as */0. $1 is the step typed, $2 a field name (cron_field...). The first letter is made upper case. No final period."
+  },
+  "cron_errorRange": {
+    "message": "\"$1\" is not a valid $2 range",
+    "description": "Error under the cron box. $1 is the range typed, such as 1-2-3; $2 a field name (cron_field...). No final period."
+  },
+  "cron_errorBackwards": {
+    "message": "the $2 range \"$1\" runs backwards",
+    "description": "Error under the cron box, for a range such as 5-1. $1 is the range typed, $2 a field name (cron_field...). The first letter is made upper case. No final period."
+  },
+  "cron_range": {
+    "message": "$1 through $2",
+    "description": "Three or more values in a row in a schedule description, such as \"Monday through Friday\" or \"1 through 5\". $1 is the first value and $2 the last."
+  },
+  "cron_atTimes": {
+    "message": "At $1",
+    "description": "Start of a schedule description. $1 is a list of clock times, such as \"08:30 and 20:30\"."
+  },
+  "cron_everyMinute": {
+    "message": "Every minute",
+    "description": "Start of a schedule description."
+  },
+  "cron_everyMinutes_one": {
+    "message": "Every $1 minute",
+    "description": "Start of a schedule description. $1 is the number of minutes."
+  },
+  "cron_everyMinutes_other": {
+    "message": "Every $1 minutes",
+    "description": "Start of a schedule description. $1 is the number of minutes."
+  },
+  "cron_everyHourOnTheHour": {
+    "message": "Every hour, on the hour",
+    "description": "A complete schedule description: at minute 0 of every hour."
+  },
+  "cron_everyHourAtMinute": {
+    "message": "Every hour, at minute $1",
+    "description": "Start of a schedule description. $1 is a minute of the hour, such as 15."
+  },
+  "cron_atMinutes_one": {
+    "message": "At minute $1 of the hour",
+    "description": "Start of a schedule description. $1 is one minute of the hour."
+  },
+  "cron_atMinutes_other": {
+    "message": "At minutes $1 of the hour",
+    "description": "Start of a schedule description. $1 is a list of minutes, such as \"0 and 30\". The plural form follows the number of minutes in the list."
+  },
+  "cron_timeAndHours": {
+    "message": "$1, $2",
+    "description": "Joins the minutes part and the hours part of a schedule description: \"Every 10 minutes, between 09:00 and 17:59\". $1 is the minutes part, $2 the hours part."
+  },
+  "cron_everyHours_one": {
+    "message": "every $1 hour",
+    "description": "Hours part of a schedule description. $1 is the number of hours."
+  },
+  "cron_everyHours_other": {
+    "message": "every $1 hours",
+    "description": "Hours part of a schedule description. $1 is the number of hours."
+  },
+  "cron_betweenHours": {
+    "message": "between $1 and $2",
+    "description": "Hours part of a schedule description. $1 and $2 are clock times, such as 09:00 and 17:59."
+  },
+  "cron_duringHours_one": {
+    "message": "during hour $1",
+    "description": "Hours part of a schedule description. $1 is one hour, such as 9."
+  },
+  "cron_duringHours_other": {
+    "message": "during hours $1",
+    "description": "Hours part of a schedule description. $1 is a list of hours, such as \"9 and 12\". The plural form follows the number of hours in the list."
+  },
+  "cron_everyDay": {
+    "message": "every day",
+    "description": "Days part of a schedule description: \"At 21:00 every day\"."
+  },
+  "cron_onDaysOfMonth_one": {
+    "message": "on day $1 of the month",
+    "description": "Days part of a schedule description. $1 is one day of the month, such as 1."
+  },
+  "cron_onDaysOfMonth_other": {
+    "message": "on days $1 of the month",
+    "description": "Days part of a schedule description. $1 is a list of days, such as \"1 and 15\". The plural form follows the number of days in the list."
+  },
+  "cron_onWeekdays": {
+    "message": "on $1",
+    "description": "Days part of a schedule description. $1 is one or more weekday names, such as \"Monday through Friday\"."
+  },
+  "cron_inMonths": {
+    "message": "in $1",
+    "description": "Months part of a schedule description. $1 is one or more month names, such as \"January and July\"."
+  },
+  "cron_withDays": {
+    "message": "$1 $2",
+    "description": "Joins the time part and the days part of a schedule description: \"At 09:00\" + \"on Monday\". Swap $1 and $2 if your language puts the days first."
+  },
+  "cron_withMonths": {
+    "message": "$1 $2",
+    "description": "Adds the months part to a schedule description: \"At 09:00\" + \"in January\". Swap $1 and $2 if your language puts the months first."
+  },
+
+  "folders_account": {
+    "message": "Account",
+    "description": "Heading in the folder list for an account that has no name."
+  },
+  "folders_includedAsSubfolder": {
+    "message": "included as a subfolder",
+    "description": "Note after a folder name in the folder list: the rule scans this folder because its parent is selected."
+  },
+  "folders_selectedInside_one": {
+    "message": "$1 selected inside",
+    "description": "Note after a collapsed folder or account in the folder list. $1 is the number of selected folders it hides."
+  },
+  "folders_selectedInside_other": {
+    "message": "$1 selected inside",
+    "description": "Note after a collapsed folder or account in the folder list. $1 is the number of selected folders it hides."
+  },
+  "folders_expanded": {
+    "message": "expanded",
+    "description": "Read by screen readers after the name of a folder whose subfolders are shown."
+  },
+  "folders_collapsed": {
+    "message": "collapsed",
+    "description": "Read by screen readers after the name of a folder whose subfolders are hidden."
+  },
+  "folders_countSelected_one": {
+    "message": "$1 selected",
+    "description": "Count of selected folders, next to the folder search box. $1 is the number."
+  },
+  "folders_countSelected_other": {
+    "message": "$1 selected",
+    "description": "Count of selected folders, next to the folder search box. $1 is the number."
+  },
+  "folders_countSubfolders_one": {
+    "message": "$1 more as subfolders",
+    "description": "Added to the folder count: folders the rule also scans because a parent is selected. $1 is the number."
+  },
+  "folders_countSubfolders_other": {
+    "message": "$1 more as subfolders",
+    "description": "Added to the folder count: folders the rule also scans because a parent is selected. $1 is the number."
+  },
+  "folders_countFiltered_one": {
+    "message": "$1 hidden by the filter",
+    "description": "Added to the folder count: selected folders the search box hides. $1 is the number."
+  },
+  "folders_countFiltered_other": {
+    "message": "$1 hidden by the filter",
+    "description": "Added to the folder count: selected folders the search box hides. $1 is the number."
+  },
+  "folders_countFolded_one": {
+    "message": "$1 in collapsed folders",
+    "description": "Added to the folder count: selected folders inside a collapsed folder or account. $1 is the number."
+  },
+  "folders_countFolded_other": {
+    "message": "$1 in collapsed folders",
+    "description": "Added to the folder count: selected folders inside a collapsed folder or account. $1 is the number."
+  },
+
+  "field_from": {
+    "message": "from",
+    "description": "Condition field: the From header of a message. Lower case in English because it reads as part of a phrase: \"from contains …\"."
+  },
+  "field_to": {
+    "message": "to",
+    "description": "Condition field: the To header."
+  },
+  "field_cc": {
+    "message": "cc",
+    "description": "Condition field: the Cc header."
+  },
+  "field_subject": {
+    "message": "subject",
+    "description": "Condition field: the Subject header."
+  },
+  "field_reply_to": {
+    "message": "reply-to",
+    "description": "Condition field: the Reply-To header. You can keep the header name."
+  },
+  "field_list_id": {
+    "message": "list-id",
+    "description": "Condition field: the List-Id header of a mailing list. You can keep the header name."
+  },
+  "field_sender": {
+    "message": "sender",
+    "description": "Condition field: the Sender header."
+  },
+  "field_age": {
+    "message": "age",
+    "description": "Condition field: how many days old the message is."
+  },
+  "field_read": {
+    "message": "read",
+    "description": "Condition field: whether the message is read."
+  },
+  "field_star": {
+    "message": "star",
+    "description": "Condition field: whether the message has a star."
+  },
+  "field_junk": {
+    "message": "junk",
+    "description": "Condition field: whether the message is marked as junk."
+  },
+  "field_tag": {
+    "message": "tag",
+    "description": "Condition field: the Thunderbird tags of the message."
+  },
+  "field_priority": {
+    "message": "priority",
+    "description": "Condition field: the priority of the message."
+  },
+  "field_auth": {
+    "message": "authentication",
+    "description": "Condition field: the SPF, DKIM, and DMARC checks of the sender."
+  },
+
+  "op_contains": {
+    "message": "contains",
+    "description": "Condition operator, after a field: \"subject contains …\"."
+  },
+  "op_is": {
+    "message": "is",
+    "description": "Condition operator, after a field: \"from is …\"."
+  },
+  "op_startsWith": {
+    "message": "starts with",
+    "description": "Condition operator, after a field."
+  },
+  "op_endsWith": {
+    "message": "ends with",
+    "description": "Condition operator, after a field."
+  },
+  "op_matchesRegex": {
+    "message": "matches regex",
+    "description": "Condition operator: the field matches a regular expression."
+  },
+  "op_domainInList": {
+    "message": "domain is in list",
+    "description": "Condition operator: the domain of the address is in a list of domains."
+  },
+  "op_inAddressBook": {
+    "message": "is in address book",
+    "description": "Condition operator: the address is in an address book."
+  },
+  "op_nameShowsOtherAddress": {
+    "message": "name shows a different address",
+    "description": "Condition operator: the sender name contains an email address from another domain than the real address."
+  },
+  "op_olderThan": {
+    "message": "older than",
+    "description": "Condition operator for the age field: \"age older than 30 days\"."
+  },
+  "op_newerThan": {
+    "message": "newer than",
+    "description": "Condition operator for the age field."
+  },
+  "op_isOn": {
+    "message": "is",
+    "description": "Condition operator for the read, star, and junk fields. The page replaces it with a state message, such as \"is read\"."
+  },
+  "op_isOff": {
+    "message": "is not",
+    "description": "Condition operator for the read, star, and junk fields. The page replaces it with a state message, such as \"is unread\"."
+  },
+  "op_hasTag": {
+    "message": "has tag",
+    "description": "Condition operator for the tag field."
+  },
+  "op_priorityIs": {
+    "message": "is",
+    "description": "Condition operator for the priority field: \"priority is High\"."
+  },
+  "op_authPasses": {
+    "message": "passes",
+    "description": "Condition operator for the authentication field: \"authentication passes DKIM\"."
+  },
+  "op_greyIsOn": {
+    "message": "is read, starred, or junk",
+    "description": "Grayed-out operator for a field it does not work with."
+  },
+  "op_greyIsOff": {
+    "message": "is unread, not starred, or not junk",
+    "description": "Grayed-out operator for a field it does not work with."
+  },
+  "op_greyPriorityIs": {
+    "message": "priority is",
+    "description": "Grayed-out operator for a field it does not work with."
+  },
+  "op_ageOnly": {
+    "message": "$1 (age field only)",
+    "description": "Grayed-out operator. $1 is the operator, such as \"older than\"."
+  },
+  "op_ageOnlyReason": {
+    "message": "Works only with the age field.",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_stateOnlyReason": {
+    "message": "Works only with the read, star, and junk fields.",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_tagOnly": {
+    "message": "$1 (tag field only)",
+    "description": "Grayed-out operator. $1 is the operator, \"has tag\"."
+  },
+  "op_tagOnlyReason": {
+    "message": "Works only with the tag field.",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_priorityOnlyReason": {
+    "message": "Works only with the priority field.",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_authOnly": {
+    "message": "$1 (authentication only)",
+    "description": "Grayed-out operator. $1 is the operator, \"passes\"."
+  },
+  "op_authOnlyReason": {
+    "message": "Works only with the authentication field.",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "op_headerOnly": {
+    "message": "$1 (header fields only)",
+    "description": "Grayed-out operator. $1 is the operator, such as \"contains\"."
+  },
+  "op_headerOnlyReason": {
+    "message": "Works only with a header field, such as from or subject.",
+    "description": "Tooltip of a grayed-out operator."
+  },
+
+  "state_read_isOn": {
+    "message": "is read",
+    "description": "Operator text for the read field, and the summary of the condition."
+  },
+  "state_read_isOff": {
+    "message": "is unread",
+    "description": "Operator text for the read field, and the summary of the condition."
+  },
+  "state_star_isOn": {
+    "message": "is starred",
+    "description": "Operator text for the star field, and the summary of the condition."
+  },
+  "state_star_isOff": {
+    "message": "is not starred",
+    "description": "Operator text for the star field, and the summary of the condition."
+  },
+  "state_junk_isOn": {
+    "message": "is junk",
+    "description": "Operator text for the junk field, and the summary of the condition."
+  },
+  "state_junk_isOff": {
+    "message": "is not junk",
+    "description": "Operator text for the junk field, and the summary of the condition."
+  },
+
+  "priority_highest": {
+    "message": "Highest",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "priority_high": {
+    "message": "High",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "priority_normal": {
+    "message": "Normal",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "priority_low": {
+    "message": "Low",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+  "priority_lowest": {
+    "message": "Lowest",
+    "description": "Message priority. Use the word Thunderbird uses in your language."
+  },
+
+  "cond_not": {
+    "message": "not",
+    "description": "Checkbox on a condition row that turns the condition around."
+  },
+  "cond_valuePlaceholder": {
+    "message": "value",
+    "description": "Gray text in the empty value box of a condition."
+  },
+  "cond_daysUnit": {
+    "message": "days",
+    "description": "Unit after the number box of an age condition."
+  },
+  "cond_allowBookAccess": {
+    "message": "Allow address book access…",
+    "description": "Button that asks Thunderbird for permission to read the address books."
+  },
+  "cond_allowDnsAccess": {
+    "message": "Allow DNS server access…",
+    "description": "Button that asks Thunderbird for permission to contact the DNS server."
+  },
+  "cond_allAddressBooks": {
+    "message": "All address books",
+    "description": "Choice in the address book list of a condition."
+  },
+  "cond_missingAddressBook": {
+    "message": "(missing address book)",
+    "description": "Shown for an address book that a rule names but that no longer exists."
+  },
+  "cond_domainsPlaceholder": {
+    "message": "One domain per line, e.g. evil.com\nSubdomains are matched automatically.",
+    "description": "Gray text in the empty domain list of a condition. Keep the line break (\\n) and evil.com."
+  },
+  "cond_otherFields": {
+    "message": "Works with other fields",
+    "description": "Heading in the operator list over the grayed-out operators."
+  },
+  "cond_greyFieldList": {
+    "message": "Doesn't work with \"domain is in list\". Change the operator first.",
+    "description": "Tooltip of a grayed-out field. \"domain is in list\" is the operator op_domainInList; use the same translation."
+  },
+  "cond_greyFieldAddress": {
+    "message": "This operator reads addresses, and this field holds none. Change the operator first.",
+    "description": "Tooltip of a grayed-out field."
+  },
+  "cond_domainListOnly": {
+    "message": "$1 (domain list only)",
+    "description": "Grayed-out field. $1 is a field set, such as \"reply-to or from\"."
+  },
+  "cond_greyDomainSet": {
+    "message": "Works only with the \"domain is in list\" operator.",
+    "description": "Tooltip of a grayed-out field set. \"domain is in list\" is the operator op_domainInList; use the same translation."
+  },
+  "cond_nameHint": {
+    "message": "Matches when the sender name contains an email address from a different domain than the real address. Example: the name is <code>Lena <lena@yahoo.com></code> and the real address is <code>someone@sina.com</code>. Spam does this to look like another sender. Some mailing lists do it too, so try the rule with a move to a folder before you use Trash.",
+    "description": "Explanation under the \"name shows a different address\" condition. Keep the text inside <code>…</code> as is."
+  },
+  "cond_priorityHint": {
+    "message": "To read the priority, the add-on downloads the headers of each message, so this check is slower than the others. A message with no priority counts as Normal.",
+    "description": "Explanation under a priority condition. Normal is the priority priority_normal."
+  },
+  "cond_authHint": {
+    "message": "Checks whether the sender is who the From address claims. To check, the add-on downloads each full message the rule looks at, once, and keeps the result. SPF comes from the <code>Authentication-Results</code> header your mail provider adds. The add-on verifies DKIM itself and works out DMARC from both. If a check can't finish, for example because the DNS server doesn't answer, the condition doesn't match. The add-on tries again for 24 hours. See <b>Advanced</b> for the settings.",
+    "description": "Explanation under an authentication condition. Keep <code>Authentication-Results</code>. <b>Advanced</b> is the section heading adv_title."
+  },
+  "cond_stateHint": {
+    "message": "A scheduled run checks older mail only in the catch-up scan, by default every 30 minutes (see <b>Advanced</b>). So after you star, tag, or read an older message, the rule can take that long to act on it. <b>Run</b> checks every message at once.",
+    "description": "Explanation under a read, star, junk, or tag condition. <b>Advanced</b> is the section heading adv_title; <b>Run</b> is the button rule_run."
+  },
+
+  "action_then": {
+    "message": "Then",
+    "description": "Label in front of an action of a rule. The label column is narrow; keep it short."
+  },
+  "action_choose": {
+    "message": "Choose an action…",
+    "description": "First entry of the action list, before the user picks one."
+  },
+  "action_chooseHint": {
+    "message": "Pick what should happen to matching messages.",
+    "description": "Hint under an action row that has no action yet."
+  },
+  "action_trash": {
+    "message": "Move to Trash (each message's own account)",
+    "description": "Action in the list."
+  },
+  "action_trashHint": {
+    "message": "Routes each matched message to the Trash of its own account — safe across multi-account rules.",
+    "description": "Hint under the Move to Trash action."
+  },
+  "action_move": {
+    "message": "Move to folder…",
+    "description": "Action in the list. The ellipsis means a folder list follows."
+  },
+  "action_moveHint": {
+    "message": "Sends every match to the chosen folder — including a folder in a different account (Thunderbird copies to the target account, then deletes the source).",
+    "description": "Hint under the Move to folder action."
+  },
+  "action_archive": {
+    "message": "Archive",
+    "description": "Action in the list."
+  },
+  "action_archiveHint": {
+    "message": "Archives each message the way Thunderbird's Archive button does, using its own account's archive settings. An account with archiving turned off keeps its mail in place.",
+    "description": "Hint under the Archive action."
+  },
+  "action_copy": {
+    "message": "Copy to folder…",
+    "description": "Action in the list. The ellipsis means a folder list follows."
+  },
+  "action_copyHint": {
+    "message": "Leaves the original in place and copies a duplicate into the chosen folder (works across accounts too).",
+    "description": "Hint under the Copy to folder action."
+  },
+  "action_tag": {
+    "message": "Tag as…",
+    "description": "Action in the list. The ellipsis means a tag list follows."
+  },
+  "action_tagHint": {
+    "message": "Adds one of your Thunderbird tags. Tags already on the message are kept, so several rules can tag the same mail.",
+    "description": "Hint under the Tag action."
+  },
+  "action_markRead": {
+    "message": "Mark as read",
+    "description": "Action in the list."
+  },
+  "action_markReadHint": {
+    "message": "Marks matches as read without moving them.",
+    "description": "Hint under the Mark as read action."
+  },
+  "action_markUnread": {
+    "message": "Mark as unread",
+    "description": "Action in the list."
+  },
+  "action_markUnreadHint": {
+    "message": "Marks matches as unread without moving them.",
+    "description": "Hint under the Mark as unread action."
+  },
+  "action_markFlagged": {
+    "message": "Add star",
+    "description": "Action in the list."
+  },
+  "action_markFlaggedHint": {
+    "message": "Adds a star to matches without moving them.",
+    "description": "Hint under the Add star action."
+  },
+  "action_markUnflagged": {
+    "message": "Remove star",
+    "description": "Action in the list."
+  },
+  "action_markUnflaggedHint": {
+    "message": "Removes the star from matches without moving them.",
+    "description": "Hint under the Remove star action."
+  },
+  "action_markJunk": {
+    "message": "Mark as junk",
+    "description": "Action in the list."
+  },
+  "action_markJunkHint": {
+    "message": "Marks matches as junk (does not move them — Thunderbird’s junk handling decides the rest).",
+    "description": "Hint under the Mark as junk action."
+  },
+  "action_markNotJunk": {
+    "message": "Mark as not junk",
+    "description": "Action in the list."
+  },
+  "action_markNotJunkHint": {
+    "message": "Removes the junk mark from matches without moving them.",
+    "description": "Hint under the Mark as not junk action."
+  },
+  "action_deletePermanently": {
+    "message": "Delete permanently",
+    "description": "Action in the list."
+  },
+  "action_deletePermanentlyHint": {
+    "message": "Skips the Trash and deletes matches immediately. This cannot be undone.",
+    "description": "Hint under the Delete permanently action, shown in red."
+  },
+
+  "summary_not": {
+    "message": "not $1",
+    "description": "A turned-around operator in the one-line summary of a folded rule: \"from not contains “x”\". $1 is the operator."
+  },
+  "summary_text": {
+    "message": "$1 $2 “$3”",
+    "description": "A condition in the summary of a folded rule. $1 is the field, $2 the operator, $3 the value typed. Use the quotation marks of your language."
+  },
+  "summary_age_one": {
+    "message": "$1 $2 $3 day",
+    "description": "An age condition in the summary of a folded rule: \"age older than 1 day\". $1 is the field, $2 the operator, $3 the number of days."
+  },
+  "summary_age_other": {
+    "message": "$1 $2 $3 days",
+    "description": "An age condition in the summary of a folded rule: \"age older than 30 days\". $1 is the field, $2 the operator, $3 the number of days."
+  },
+  "summary_hasTag": {
+    "message": "has tag $1",
+    "description": "A tag condition in the summary of a folded rule. $1 is the tag name."
+  },
+  "summary_notHasTag": {
+    "message": "does not have tag $1",
+    "description": "A turned-around tag condition in the summary of a folded rule. $1 is the tag name."
+  },
+  "summary_priorityIs": {
+    "message": "priority is $1",
+    "description": "A priority condition in the summary of a folded rule. $1 is a priority, such as High."
+  },
+  "summary_priorityIsNot": {
+    "message": "priority is not $1",
+    "description": "A turned-around priority condition in the summary of a folded rule. $1 is a priority."
+  },
+  "summary_authPasses": {
+    "message": "$1 passes",
+    "description": "An authentication condition in the summary of a folded rule. $1 is SPF, DKIM, or DMARC."
+  },
+  "summary_authNotPasses": {
+    "message": "$1 does not pass",
+    "description": "A turned-around authentication condition in the summary of a folded rule. $1 is SPF, DKIM, or DMARC."
+  },
+  "summary_inBook": {
+    "message": "$1 in $2",
+    "description": "An address book condition in the summary of a folded rule: \"from in Personal Address Book\". $1 is the field, $2 the address book."
+  },
+  "summary_notInBook": {
+    "message": "$1 not in $2",
+    "description": "A turned-around address book condition in the summary of a folded rule. $1 is the field, $2 the address book."
+  },
+  "summary_nameShows": {
+    "message": "$1 name shows a different address",
+    "description": "A condition in the summary of a folded rule. $1 is the field."
+  },
+  "summary_notNameShows": {
+    "message": "$1 not name shows a different address",
+    "description": "A turned-around condition in the summary of a folded rule. $1 is the field."
+  },
+  "summary_inList_one": {
+    "message": "$1 in list of $2",
+    "description": "A domain list condition in the summary of a folded rule. $1 is the field, $2 the number of domains."
+  },
+  "summary_inList_other": {
+    "message": "$1 in list of $2",
+    "description": "A domain list condition in the summary of a folded rule. $1 is the field, $2 the number of domains."
+  },
+  "summary_notInList_one": {
+    "message": "$1 not in list of $2",
+    "description": "A turned-around domain list condition in the summary of a folded rule. $1 is the field, $2 the number of domains."
+  },
+  "summary_notInList_other": {
+    "message": "$1 not in list of $2",
+    "description": "A turned-around domain list condition in the summary of a folded rule. $1 is the field, $2 the number of domains."
+  },
+  "summary_and": {
+    "message": "AND",
+    "description": "Joins the conditions of an all-conditions rule in its summary."
+  },
+  "summary_or": {
+    "message": "OR",
+    "description": "Joins the conditions of an any-condition rule in its summary."
+  },
+  "summary_noConditions": {
+    "message": "no conditions",
+    "description": "Summary of a folded rule with no condition."
+  },
+  "summary_noAction": {
+    "message": "no action",
+    "description": "Summary of an action row with no action chosen."
+  },
+  "summary_tagAction": {
+    "message": "Tag as $1",
+    "description": "The tag action in the summary of a folded rule. $1 is the tag name."
+  },
+  "summary_folders_one": {
+    "message": "$1 folder",
+    "description": "Number of folders in the summary of a folded rule. $1 is the number."
+  },
+  "summary_folders_other": {
+    "message": "$1 folders",
+    "description": "Number of folders in the summary of a folded rule. $1 is the number."
+  },
+  "summary_foldersAndSubfolders_one": {
+    "message": "$1 folder and subfolders",
+    "description": "Number of folders in the summary of a folded rule that includes subfolders. $1 is the number."
+  },
+  "summary_foldersAndSubfolders_other": {
+    "message": "$1 folders and subfolders",
+    "description": "Number of folders in the summary of a folded rule that includes subfolders. $1 is the number."
+  },
+
+  "reject_tagActionNoTag": {
+    "message": "rule “$1”: tag action with no tag chosen",
+    "description": "A correction listed after Saved. $1 is the rule name."
+  },
+  "reject_secondTerminal": {
+    "message": "rule “$1”: only one action can move or delete, dropped “$2”",
+    "description": "A correction listed after Saved. $1 is the rule name, $2 the action that was dropped."
+  },
+  "reject_ageDays": {
+    "message": "age condition needs a whole number of days (got \"$1\")",
+    "description": "A correction listed after Saved. $1 is the text typed in the days box."
+  },
+  "reject_ageDaysEmpty": {
+    "message": "age condition needs a whole number of days (got nothing)",
+    "description": "A correction listed after Saved, for an empty days box."
+  },
+  "reject_tagConditionNoTag": {
+    "message": "a tag condition has no tag chosen, so it will not match",
+    "description": "A correction listed after Saved."
+  },
+
+  "setting_newMailDelaySeconds": {
+    "message": "delay before running on new mail (seconds)",
+    "description": "Name of a setting in setting_outOfRange."
+  },
+  "setting_scanOverlapMinutes": {
+    "message": "incremental scan overlap (minutes)",
+    "description": "Name of a setting in setting_outOfRange."
+  },
+  "setting_catchUpEveryMinutes": {
+    "message": "catch-up scan interval (minutes)",
+    "description": "Name of a setting in setting_outOfRange."
+  },
+  "setting_catchUpLookbackDays": {
+    "message": "catch-up scan lookback (days)",
+    "description": "Name of a setting in setting_outOfRange."
+  },
+  "setting_authPrefer": {
+    "message": "result to use when the checks disagree",
+    "description": "Name of a setting in setting_mustBeOneOf."
+  },
+  "setting_authDohServer": {
+    "message": "DNS server",
+    "description": "Name of a setting in setting_mustBeOneOf."
+  },
+  "setting_outOfRange": {
+    "message": "$1 must be $2-$3, using $4",
+    "description": "A correction after Saved or Imported. $1 is a setting name, $2 and $3 the smallest and largest value, $4 the value the add-on uses instead."
+  },
+  "setting_mustBeOneOf": {
+    "message": "$1 must be one of $2, using $3",
+    "description": "A correction after Saved or Imported. $1 is a setting name, $2 the allowed values (code words, not translated), $3 the value used instead."
+  },
+
+  "import_whereRule": {
+    "message": "Rule $1",
+    "description": "Start of an import problem: which rule of the file. $1 is its number."
+  },
+  "import_whereNamedRule": {
+    "message": "Rule $1 (\"$2\")",
+    "description": "Start of an import problem: which rule of the file. $1 is its number, $2 its name."
+  },
+  "import_whereCondition": {
+    "message": "$1 condition $2",
+    "description": "Start of an import problem about a condition. $1 is import_whereRule or import_whereNamedRule, $2 the number of the condition."
+  },
+  "import_noField": {
+    "message": "$1: no recognised header field",
+    "description": "Import problem. $1 says which rule or condition."
+  },
+  "import_unknownOperator": {
+    "message": "$1: unknown operator \"$2\"",
+    "description": "Import problem. $1 says which condition, $2 is the operator from the file."
+  },
+  "import_operatorMismatch": {
+    "message": "$1: \"$2\" does not apply to \"$3\"",
+    "description": "Import problem. $1 says which condition, $2 is an operator and $3 a field, both as code words from the file."
+  },
+  "import_ageDays": {
+    "message": "$1: age needs a whole number of days, 1 or more",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_noTag": {
+    "message": "$1: no tag chosen",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_priorityLevel": {
+    "message": "$1: priority must be one of $2",
+    "description": "Import problem. $1 says which condition, $2 lists the allowed code words."
+  },
+  "import_authMethod": {
+    "message": "$1: the check must be one of $2",
+    "description": "Import problem. $1 says which condition, $2 lists spf, dkim, and dmarc."
+  },
+  "import_bookFields": {
+    "message": "$1: address book checks only apply to $2",
+    "description": "Import problem. $1 says which condition, $2 lists the allowed header names."
+  },
+  "import_noBook": {
+    "message": "$1: no address book chosen",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_unknownBook": {
+    "message": "$1: address book not in this profile, choose one before saving",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_nameFields": {
+    "message": "$1: the name check only applies to $2",
+    "description": "Import problem. $1 says which condition, $2 lists the allowed header names."
+  },
+  "import_invalidDomains_one": {
+    "message": "$1: dropped $2 invalid domain",
+    "description": "Import problem. $1 says which condition, $2 is the number of domains."
+  },
+  "import_invalidDomains_other": {
+    "message": "$1: dropped $2 invalid domains",
+    "description": "Import problem. $1 says which condition, $2 is the number of domains."
+  },
+  "import_emptyDomains": {
+    "message": "$1: domain list is empty",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_emptyValue": {
+    "message": "$1: empty value",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_noAction": {
+    "message": "$1: no action, rule skipped",
+    "description": "Import problem. $1 says which rule."
+  },
+  "import_unknownAction": {
+    "message": "$1: unknown action \"$2\", dropped",
+    "description": "Import problem. $1 says which rule, $2 is the action from the file."
+  },
+  "import_needsFolder": {
+    "message": "$1: \"$2\" needs a destination folder, dropped",
+    "description": "Import problem. $1 says which rule, $2 is an action id from the file."
+  },
+  "import_needsTag": {
+    "message": "$1: \"$2\" needs a tag, dropped",
+    "description": "Import problem. $1 says which rule, $2 is an action id from the file."
+  },
+  "import_secondTerminal": {
+    "message": "$1: \"$2\" dropped, a rule can only end in one action that moves or deletes (kept \"$3\")",
+    "description": "Import problem. $1 says which rule, $2 and $3 are action ids from the file."
+  },
+  "import_noUsableAction": {
+    "message": "$1: no usable action, rule skipped",
+    "description": "Import problem. $1 says which rule."
+  },
+  "import_noConditions": {
+    "message": "$1: no usable conditions, rule skipped",
+    "description": "Import problem. $1 says which rule."
+  },
+  "import_unknownFolders_one": {
+    "message": "$1: $2 folder not in this profile, removed",
+    "description": "Import problem. $1 says which rule, $2 is the number of folders."
+  },
+  "import_unknownFolders_other": {
+    "message": "$1: $2 folders not in this profile, removed",
+    "description": "Import problem. $1 says which rule, $2 is the number of folders."
+  },
+  "import_badSchedule": {
+    "message": "$1: the schedule is not a valid cron expression, turned off",
+    "description": "Import problem. $1 says which rule."
+  },
+  "import_defaultRuleName": {
+    "message": "Imported rule",
+    "description": "Name of an imported rule that has no name."
+  },
+  "import_anExistingRule": {
+    "message": "an existing rule",
+    "description": "Stands for a rule with no name in status_importDuplicate."
+  },
+  "import_notAnObject": {
+    "message": "Not a valid JSON object",
+    "description": "Import problem: the file is not a rules file."
+  },
+  "import_unexpectedFormat": {
+    "message": "Unexpected format \"$1\"",
+    "description": "Import problem. $1 is the format named in the file."
+  },
+  "import_noRules": {
+    "message": "No rules array found",
+    "description": "Import problem: the file has no list of rules."
+  },
+  "import_invalidAllowlist_one": {
+    "message": "Allowlist: dropped $1 invalid domain",
+    "description": "Import problem about the protected domains. $1 is the number of domains."
+  },
+  "import_invalidAllowlist_other": {
+    "message": "Allowlist: dropped $1 invalid domains",
+    "description": "Import problem about the protected domains. $1 is the number of domains."
+  },
+  "import_advanced": {
+    "message": "Advanced: $1",
+    "description": "Import problem about the Advanced settings. $1 is setting_outOfRange or setting_mustBeOneOf."
+  },
+
+  "status_bookAccessAllowed": {
+    "message": "Address book access allowed. Pick a book and press Save.",
+    "description": "Status after the user allows address book access."
+  },
+  "status_bookAccessDenied": {
+    "message": "Address book access was not allowed. Address book conditions will not match until it is.",
+    "description": "Status after the user refuses address book access."
+  },
+  "status_bookAccessFailed": {
+    "message": "Could not request address book access: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_dnsAccessAllowed": {
+    "message": "DNS server access allowed. DKIM and DMARC conditions can now run.",
+    "description": "Status after the user allows the DNS server."
+  },
+  "status_dnsAccessDenied": {
+    "message": "DNS server access was not allowed. DKIM and DMARC conditions will not match until it is.",
+    "description": "Status after the user refuses the DNS server."
+  },
+  "status_dnsAccessFailed": {
+    "message": "Could not request DNS server access: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_tagAccessAllowed": {
+    "message": "Tag access allowed. Pick a tag and press Save.",
+    "description": "Status after the user allows tag access."
+  },
+  "status_tagAccessDenied": {
+    "message": "Tag access was not allowed, so your tags cannot be listed here.",
+    "description": "Status after the user refuses tag access."
+  },
+  "status_tagAccessFailed": {
+    "message": "Could not request tag access: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_needsAction": {
+    "message": "A rule needs at least one action.",
+    "description": "Status when the user deletes the last action of a rule."
+  },
+  "status_notSavedNoAction": {
+    "message": "Not saved: choose an action for $1.",
+    "description": "Status. $1 is one or more rule names, each in quotation marks."
+  },
+  "status_notSavedBadSchedule": {
+    "message": "Not saved: the schedule of “$1” is not a valid cron expression.",
+    "description": "Status. $1 is the rule name."
+  },
+  "status_notSavedNoFolder": {
+    "message": "Not saved: choose a folder for “$1”, or turn the rule off.",
+    "description": "Status. $1 is the rule name."
+  },
+  "status_saved": {
+    "message": "Saved. Schedule updated.",
+    "description": "Status after Save."
+  },
+  "status_savedWithCorrections_one": {
+    "message": "Saved, with $1 correction: $2.",
+    "description": "Status after Save. $1 is the number of corrections, $2 the corrections."
+  },
+  "status_savedWithCorrections_other": {
+    "message": "Saved, with $1 corrections: $2.",
+    "description": "Status after Save. $1 is the number of corrections, $2 the corrections, separated by semicolons."
+  },
+  "status_noteBookAccess": {
+    "message": "Address book conditions will not match until you allow address book access.",
+    "description": "Added to the status after Save."
+  },
+  "status_noteBookMissing": {
+    "message": "An address book condition points at a book that no longer exists; it will not match.",
+    "description": "Added to the status after Save."
+  },
+  "status_noteTagConditionMissing": {
+    "message": "A tag condition points at a tag that no longer exists; it will not match.",
+    "description": "Added to the status after Save."
+  },
+  "status_noteTagActionMissing": {
+    "message": "A tag action points at a tag that no longer exists.",
+    "description": "Added to the status after Save."
+  },
+  "status_diagCopied": {
+    "message": "Diagnostics copied. Paste it into your email or GitHub issue.",
+    "description": "Status after Copy report."
+  },
+  "status_diagSaved": {
+    "message": "Saved $1.",
+    "description": "Status after Save report. $1 is the file name."
+  },
+  "status_diagSaveFailed": {
+    "message": "Could not save the report: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_diagCleared": {
+    "message": "Diagnostics log cleared.",
+    "description": "Status after Clear log."
+  },
+  "status_exported": {
+    "message": "Exported to $1. Unsaved edits on this page are included.",
+    "description": "Status after Export. $1 is the file name."
+  },
+  "status_exportFailed": {
+    "message": "Export failed: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_importReadFailed": {
+    "message": "Could not read $1: $2",
+    "description": "Status. $1 is the file name, $2 the error message, in English."
+  },
+  "status_importFailed": {
+    "message": "Import failed: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_importNothingNew": {
+    "message": "Nothing new to import.",
+    "description": "Status after Import when the file adds no rule."
+  },
+  "status_importBecause": {
+    "message": "$1.",
+    "description": "Added after status_importNothingNew. $1 is the import problems, separated by semicolons."
+  },
+  "status_importNoRules": {
+    "message": "The file contained no usable rules",
+    "description": "Reason in status_importBecause. No final period."
+  },
+  "status_importDuplicates": {
+    "message": "Already present, skipped: $1.",
+    "description": "Added to the status after Import. $1 is a list of status_importDuplicate."
+  },
+  "status_importDuplicate": {
+    "message": "“$1” ($2, same as “$3”)",
+    "description": "A rule of the file that is already on the page. $1 is its name, $2 a short code that identifies it, $3 the name of the rule it equals."
+  },
+  "status_imported_one": {
+    "message": "Imported $1 rule — review it, then press Save to keep it.",
+    "description": "Status after Import. $1 is the number of rules."
+  },
+  "status_imported_other": {
+    "message": "Imported $1 rules — review them, then press Save to keep them.",
+    "description": "Status after Import. $1 is the number of rules."
+  },
+  "status_importSkipped": {
+    "message": "Skipped: $1.",
+    "description": "Added to the status after Import. $1 is the import problems, separated by semicolons."
+  },
+  "status_running": {
+    "message": "Running…",
+    "description": "Status while all rules run."
+  },
+  "status_runningRule": {
+    "message": "Running “$1”…",
+    "description": "Status while one rule runs. $1 is the rule name."
+  },
+  "status_runDone_one": {
+    "message": "Done — $1 message affected.",
+    "description": "Status after all rules ran. $1 is the number of messages."
+  },
+  "status_runDone_other": {
+    "message": "Done — $1 messages affected.",
+    "description": "Status after all rules ran. $1 is the number of messages."
+  },
+  "status_ruleRunDone_one": {
+    "message": "Done. “$1” affected $2 message.",
+    "description": "Status after one rule ran. $1 is the rule name, $2 the number of messages."
+  },
+  "status_ruleRunDone_other": {
+    "message": "Done. “$1” affected $2 messages.",
+    "description": "Status after one rule ran. $1 is the rule name, $2 the number of messages."
+  },
+  "status_runFailed": {
+    "message": "Run failed: $1",
+    "description": "Status. $1 is the error message, in English."
+  },
+  "status_saveBeforeRun": {
+    "message": "Save your changes before you run “$1”.",
+    "description": "Status when the user runs a rule with unsaved changes. $1 is the rule name."
+  },
+  "status_ruleTurnedOff": {
+    "message": "“$1” is turned off. Turn it on and save before you run it.",
+    "description": "Status when the user runs a rule that is off. $1 is the rule name."
+  },
+  "status_allowlistRestored": {
+    "message": "Protected domains restored to defaults. Press Save to keep them.",
+    "description": "Status after Restore defaults in the protected domains section."
+  },
+  "status_advancedRestored": {
+    "message": "Advanced settings restored to defaults. Press Save to keep them.",
+    "description": "Status after Restore defaults in the Advanced section."
+  },
+  "status_noFolders": {
+    "message": "No folders found — check the “accountsRead” permission and reload the add-on.",
+    "description": "Status when the add-on finds no folder. Keep accountsRead: it is the name of a permission."
+  },
+
+  "popup_runOneRule": {
+    "message": "Run one rule",
+    "description": "Heading over the list of rules in the toolbar popup."
+  },
+  "popup_noRules": {
+    "message": "No saved rule is turned on.",
+    "description": "Shown in the toolbar popup when no rule can run."
+  },
+  "popup_openSettings": {
+    "message": "Open settings",
+    "description": "Button in the toolbar popup that opens the settings page."
+  },
+  "popup_runningAll": {
+    "message": "Running all rules…",
+    "description": "Status in the toolbar popup while all rules run."
+  },
+  "popup_runDone_one": {
+    "message": "Done. $1 message affected.",
+    "description": "Status in the toolbar popup after a run. $1 is the number of messages."
+  },
+  "popup_runDone_other": {
+    "message": "Done. $1 messages affected.",
+    "description": "Status in the toolbar popup after a run. $1 is the number of messages."
+  },
+  "popup_loadFailed": {
+    "message": "Could not load the rules: $1",
+    "description": "Status in the toolbar popup. $1 is the error message, in English."
+  },
+
+  "confirm_reading": {
+    "message": "Reading the selected messages…",
+    "description": "Shown while the Add spam domains window reads the selected messages."
+  },
+  "confirm_dontShowAgain": {
+    "message": "Don’t show this again",
+    "description": "Checkbox in the Add spam domains window: next time, add the domains without asking."
+  },
+  "confirm_cancel": {
+    "message": "Cancel",
+    "description": "Button that closes the Add spam domains window without changes."
+  },
+  "confirm_add": {
+    "message": "Add to filter",
+    "description": "Button that adds the checked domains to the spam rule."
+  },
+  "confirm_replyToTitle": {
+    "message": "Reply-To domains",
+    "description": "Heading of the group of domains found in the Reply-To header."
+  },
+  "confirm_replyToNote": {
+    "message": "Where replies would go. Harder to forge on bulk mail.",
+    "description": "Explanation under the Reply-To domains heading."
+  },
+  "confirm_fromTitle": {
+    "message": "From domains",
+    "description": "Heading of the group of domains found in the From header."
+  },
+  "confirm_fromNote": {
+    "message": "The visible sender, which can be forged to impersonate a brand. Check these before adding.",
+    "description": "Explanation under the From domains heading."
+  },
+  "confirm_domains_one": {
+    "message": "$1 domain",
+    "description": "Used in confirm_found. $1 is the number of domains."
+  },
+  "confirm_domains_other": {
+    "message": "$1 domains",
+    "description": "Used in confirm_found. $1 is the number of domains."
+  },
+  "confirm_selectedMessages_one": {
+    "message": "$1 selected message",
+    "description": "Used in confirm_found and confirm_noneNew. $1 is the number of messages."
+  },
+  "confirm_selectedMessages_other": {
+    "message": "$1 selected messages",
+    "description": "Used in confirm_found and confirm_noneNew. $1 is the number of messages."
+  },
+  "confirm_found": {
+    "message": "Found $1 in $2. Checked domains will be added to the “$3” rule, which moves matching mail to Trash on the normal schedule.",
+    "description": "Summary of the Add spam domains window. $1 is confirm_domains, $2 is confirm_selectedMessages, $3 is the rule name."
+  },
+  "confirm_noneNew": {
+    "message": "No new domains to add from $1.",
+    "description": "Summary of the Add spam domains window. $1 is confirm_selectedMessages."
+  },
+  "confirm_skippedProviders_one": {
+    "message": "Skipped $1 well-known provider domain ($2). These are never blocked, to protect legitimate mail.",
+    "description": "Note in the Add spam domains window. $1 is the number of domains, $2 the domains."
+  },
+  "confirm_skippedProviders_other": {
+    "message": "Skipped $1 well-known provider domains ($2). These are never blocked, to protect legitimate mail.",
+    "description": "Note in the Add spam domains window. $1 is the number of domains, $2 the domains."
+  },
+  "confirm_unreadable_one": {
+    "message": "$1 message could not be read.",
+    "description": "Note in the Add spam domains window. $1 is the number of messages."
+  },
+  "confirm_unreadable_other": {
+    "message": "$1 messages could not be read.",
+    "description": "Note in the Add spam domains window. $1 is the number of messages."
+  },
+  "confirm_expired": {
+    "message": "This confirmation has expired. Please run the action again.",
+    "description": "Shown when the Add spam domains window opens too late."
+  },
+  "confirm_updateFailed": {
+    "message": "Could not update the filter: $1",
+    "description": "Shown in the Add spam domains window. $1 is the error message, in English."
+  },
+  "confirm_readFailed": {
+    "message": "Could not read the selection: $1",
+    "description": "Shown in the Add spam domains window. $1 is the error message, in English."
   }
 }

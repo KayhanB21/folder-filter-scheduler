@@ -8,20 +8,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Folder Filter Scheduler</title>
+    <title data-i18n="extensionName">Folder Filter Scheduler</title>
     <link rel="stylesheet" href="../options/options.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body class="popup-body">
-    <button id="run-all" type="button" class="primary">Run all rules now</button>
+    <button id="run-all" type="button" class="primary" data-i18n="common_runAllRulesNow">Run all rules now</button>
 
-    <h2>Run one rule</h2>
+    <h2 data-i18n="popup_runOneRule">Run one rule</h2>
     <div id="rule-list" class="rule-list"></div>
-    <p id="no-rules" class="popup-note" hidden>No saved rule is turned on.</p>
+    <p id="no-rules" class="popup-note" hidden data-i18n="popup_noRules">No saved rule is turned on.</p>
 
     <p id="status" class="popup-note" role="status"></p>
 
-    <button id="open-options" type="button">Open settings</button>
+    <button id="open-options" type="button" data-i18n="popup_openSettings">Open settings</button>
 
     <script type="module" src="popup.js"></script>
   </body>
