@@ -4,7 +4,7 @@
     "description": "Name of the extension."
   },
   "extensionDescription": {
-    "message": "Run message-filter rules on any folder on a schedule — the modern successor to Auto Filter Timer.",
+    "message": "Run filter rules on any folder on a schedule, not just the Inbox. Match by sender, subject, address book, or SPF, DKIM, and DMARC.",
     "description": "Short description shown in the add-ons manager."
   }
 }

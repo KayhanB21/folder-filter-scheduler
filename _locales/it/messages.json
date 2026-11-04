@@ -4,7 +4,7 @@
     "description": "Name of the extension."
   },
   "extensionDescription": {
-    "message": "Esegui regole di filtro dei messaggi su qualsiasi cartella in modo pianificato: il successore moderno di Auto Filter Timer.",
+    "message": "Regole di filtro pianificate su ogni cartella, non solo nella posta in arrivo. Per mittente, oggetto, rubrica o SPF, DKIM e DMARC.",
     "description": "Short description shown in the add-ons manager."
   }
 }

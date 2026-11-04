@@ -4,7 +4,7 @@
     "description": "Name of the extension."
   },
   "extensionDescription": {
-    "message": "메시지 필터 규칙을 모든 폴더에서 예약 실행 — Auto Filter Timer의 현대적 후속작.",
+    "message": "받은편지함뿐 아니라 모든 폴더에서 필터 규칙을 예약 실행합니다. 보낸 사람, 제목, 주소록 또는 SPF, DKIM, DMARC로 판별합니다.",
     "description": "Short description shown in the add-ons manager."
   }
 }

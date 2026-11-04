@@ -4,7 +4,7 @@
     "description": "Name of the extension."
   },
   "extensionDescription": {
-    "message": "Exécutez des règles de filtrage sur n'importe quel dossier selon un horaire — le successeur moderne d'Auto Filter Timer.",
+    "message": "Filtres planifiés sur tout dossier, pas seulement la boîte de réception. Par expéditeur, sujet, contacts ou SPF, DKIM et DMARC.",
     "description": "Short description shown in the add-ons manager."
   }
 }

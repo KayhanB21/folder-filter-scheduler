@@ -1,0 +1,10 @@
+{
+  "en-us": "Run message-filter rules on any folder, not just the Inbox. Match by sender, subject, age, address book, or SPF, DKIM, and DMARC results, then tag, move, copy, mark, or delete. Runs on a timer and on new mail. Successor to Auto Filter Timer.",
+  "de": "Filterregeln auf jedem Ordner ausführen, nicht nur im Posteingang. Nach Absender, Betreff, Alter, Adressbuch oder SPF, DKIM und DMARC filtern, dann Schlagwörter setzen, verschieben, kopieren, markieren oder löschen. Nachfolger von Auto Filter Timer.",
+  "es": "Ejecuta reglas de filtrado en cualquier carpeta, no solo en la bandeja de entrada. Filtra por remitente, asunto, antigüedad, libreta de direcciones o SPF, DKIM y DMARC, y etiqueta, mueve, copia, marca o elimina. Sucesor de Auto Filter Timer.",
+  "fr": "Filtrez tout dossier, pas seulement la boîte de réception. Par expéditeur, sujet, ancienneté, carnet d'adresses ou SPF, DKIM et DMARC, puis étiquetez, déplacez, copiez, marquez ou supprimez. Successeur d'Auto Filter Timer.",
+  "it": "Esegui regole di filtro su qualsiasi cartella, non solo nella posta in arrivo. Filtra per mittente, oggetto, età, rubrica o SPF, DKIM e DMARC, poi etichetta, sposta, copia, contrassegna o elimina. Successore di Auto Filter Timer.",
+  "ja": "受信トレイだけでなく、任意のフォルダーでメッセージフィルターのルールを実行します。差出人、件名、経過日数、アドレス帳、SPF・DKIM・DMARC の結果で判定し、タグ付け、移動、コピー、マーク、削除を行います。タイマーと新着メールで実行。Auto Filter Timer の後継です。",
+  "ko": "받은편지함뿐 아니라 모든 폴더에서 메시지 필터 규칙을 실행합니다. 보낸 사람, 제목, 경과 일수, 주소록 또는 SPF, DKIM, DMARC 결과로 판별한 뒤 태그 지정, 이동, 복사, 표시 또는 삭제합니다. 타이머와 새 메일 도착 시 실행됩니다. Auto Filter Timer의 후속작입니다.",
+  "zh-cn": "在任意文件夹（不仅是收件箱）上运行邮件过滤规则。按发件人、主题、邮件天数、通讯录或 SPF、DKIM、DMARC 结果匹配，然后添加标签、移动、复制、标记或删除。按定时器运行，也在新邮件到达时运行。Auto Filter Timer 的继任者。"
+}

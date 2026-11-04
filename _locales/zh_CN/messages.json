@@ -4,7 +4,7 @@
     "description": "Name of the extension."
   },
   "extensionDescription": {
-    "message": "按计划在任意文件夹上运行邮件过滤规则——Auto Filter Timer 的现代继任者。",
+    "message": "按计划在任意文件夹（不仅是收件箱）上运行过滤规则。按发件人、主题、通讯录或 SPF、DKIM、DMARC 匹配。",
     "description": "Short description shown in the add-ons manager."
   }
 }

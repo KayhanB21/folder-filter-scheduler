@@ -4,7 +4,7 @@
     "description": "Name of the extension."
   },
   "extensionDescription": {
-    "message": "メッセージフィルターのルールを任意のフォルダーでスケジュール実行 — Auto Filter Timer の最新の後継。",
+    "message": "受信トレイだけでなく、任意のフォルダーでフィルタールールをスケジュール実行。差出人、件名、アドレス帳、SPF・DKIM・DMARC で判定します。",
     "description": "Short description shown in the add-ons manager."
   }
 }
