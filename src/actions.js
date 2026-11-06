@@ -32,10 +32,17 @@ import { t } from './i18n.js';
  */
 export const BATCH_SIZE = 200;
 
-/** Call `fn` on `ids` in groups of `BATCH_SIZE`, each after the one before. */
-async function inBatches(ids, fn) {
+/**
+ * Call `fn` on `ids` in groups of `BATCH_SIZE`, each after the one before.
+ *
+ * `onProgress(done, total)` follows each group, but only when there is more
+ * than one: a log line per group then shows where a call that never answers
+ * stopped, and a small action adds no lines at all.
+ */
+async function inBatches(ids, fn, onProgress) {
   for (let i = 0; i < ids.length; i += BATCH_SIZE) {
     await fn(ids.slice(i, i + BATCH_SIZE));
+    if (ids.length > BATCH_SIZE) await onProgress?.(Math.min(i + BATCH_SIZE, ids.length), ids.length);
   }
 }
 
@@ -63,7 +70,8 @@ export const ACTIONS = [
     needsFolder: false,
     terminal: true,
     get hint() { return t('action_trashHint'); },
-    apply: (messenger, ids) => inBatches(ids, (batch) => messenger.messages.delete(batch, false)),
+    apply: (messenger, ids, _action, onProgress) =>
+      inBatches(ids, (batch) => messenger.messages.delete(batch, false), onProgress),
   },
   {
     id: 'move',
@@ -71,7 +79,8 @@ export const ACTIONS = [
     needsFolder: true,
     terminal: true,
     get hint() { return t('action_moveHint'); },
-    apply: (messenger, ids, action) => inBatches(ids, (batch) => messenger.messages.move(batch, action.folderId)),
+    apply: (messenger, ids, action, onProgress) =>
+      inBatches(ids, (batch) => messenger.messages.move(batch, action.folderId), onProgress),
   },
   {
     id: 'archive',
@@ -79,14 +88,16 @@ export const ACTIONS = [
     needsFolder: false,
     terminal: true,
     get hint() { return t('action_archiveHint'); },
-    apply: (messenger, ids) => inBatches(ids, (batch) => messenger.messages.archive(batch)),
+    apply: (messenger, ids, _action, onProgress) =>
+      inBatches(ids, (batch) => messenger.messages.archive(batch), onProgress),
   },
   {
     id: 'copy',
     get label() { return t('action_copy'); },
     needsFolder: true,
     get hint() { return t('action_copyHint'); },
-    apply: (messenger, ids, action) => inBatches(ids, (batch) => messenger.messages.copy(batch, action.folderId)),
+    apply: (messenger, ids, action, onProgress) =>
+      inBatches(ids, (batch) => messenger.messages.copy(batch, action.folderId), onProgress),
   },
   {
     id: 'tag',
@@ -144,7 +155,8 @@ export const ACTIONS = [
     terminal: true,
     danger: true,
     get hint() { return t('action_deletePermanentlyHint'); },
-    apply: (messenger, ids) => inBatches(ids, (batch) => messenger.messages.delete(batch, true)),
+    apply: (messenger, ids, _action, onProgress) =>
+      inBatches(ids, (batch) => messenger.messages.delete(batch, true), onProgress),
   },
 ];
 
@@ -178,8 +190,13 @@ export function orderActions(actions) {
   return [...list.filter((a) => !isTerminalAction(a)), ...list.filter(isTerminalAction)];
 }
 
-/** Execute a configured action against the matched message ids. No-op on empty input. */
-export async function runAction(messenger, ids, action) {
+/**
+ * Execute a configured action against the matched message ids. No-op on empty input.
+ *
+ * `onProgress(done, total)` is told about each group of a batched action. See
+ * `inBatches`.
+ */
+export async function runAction(messenger, ids, action, onProgress) {
   if (!ids || ids.length === 0) return;
   const def = ACTIONS_BY_ID[action?.type];
   if (!def) throw new Error(`Unknown action: ${action?.type}`);
@@ -189,20 +206,21 @@ export async function runAction(messenger, ids, action) {
   if (def.needsTag && !action.tagKey) {
     throw new Error(`Action "${def.id}" requires a tag`);
   }
-  await def.apply(messenger, ids, action);
+  await def.apply(messenger, ids, action, onProgress);
 }
 
 /**
  * Run every action of a rule against the same matched ids, terminal action last.
  *
  * Sequential on purpose: "tag, then move" has to finish tagging before the
- * message leaves the folder.
+ * message leaves the folder. `onProgress(action, done, total)` names the
+ * action each group belongs to.
  */
-export async function runActions(messenger, ids, actions) {
+export async function runActions(messenger, ids, actions, onProgress) {
   if (!ids || ids.length === 0) return;
   const ordered = orderActions(actions);
   if (ordered.length === 0) throw new Error('Rule has no action');
   for (const action of ordered) {
-    await runAction(messenger, ids, action);
+    await runAction(messenger, ids, action, (done, total) => onProgress?.(action, done, total));
   }
 }

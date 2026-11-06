@@ -245,3 +245,19 @@ test('a failed batch stops the action, so the rule reports the error', async () 
   await assert.rejects(runAction(m, ids, { type: 'archive' }), /MessageArchiver/);
   assert.equal(calls, 2);
 });
+
+test('a batched action reports each group, and a small one reports nothing', async () => {
+  const progress = [];
+  const onProgress = (action, done, total) => progress.push([action.type, done, total]);
+  const tag = { type: 'tag', tagKey: '$label1' };
+  await runActions(fakeMessenger(), [1, 2], [tag, { type: 'archive' }], onProgress);
+  assert.deepEqual(progress, []);
+
+  const ids = Array.from({ length: BATCH_SIZE * 2 + 9 }, (_, i) => i + 1);
+  await runActions(fakeMessenger(), ids, [tag, { type: 'archive' }], onProgress);
+  assert.deepEqual(progress, [
+    ['archive', BATCH_SIZE, ids.length],
+    ['archive', BATCH_SIZE * 2, ids.length],
+    ['archive', ids.length, ids.length],
+  ]);
+});
