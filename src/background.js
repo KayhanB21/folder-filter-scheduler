@@ -514,7 +514,12 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
     }
     try {
       matched += matchedIds.length;
-      await runActions(messenger, matchedIds, actionsOf(rule));
+      // Saved at once, like a header timeout: if a group never answers, the
+      // last line saved shows where the action stopped.
+      await runActions(messenger, matchedIds, actionsOf(rule), (action, done, total) => {
+        log(`rule "${rule.name}": ${action.type} ${done} of ${total}`);
+        return flushLog();
+      });
       affected += matchedIds.length;
     } catch (e) {
       warn(`action failed for rule "${rule.name}"`, e);
