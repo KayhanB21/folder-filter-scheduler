@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ACTIONS, ACTIONS_BY_ID, actionsOf, orderActions, runAction, runActions } from '../src/actions.js';
+import { ACTIONS, ACTIONS_BY_ID, BATCH_SIZE, actionsOf, orderActions, runAction, runActions } from '../src/actions.js';
 
 /**
  * A messenger double that records the calls each action makes.
@@ -192,4 +192,56 @@ test('each mark action sets its own state, on or off', async () => {
     await runAction(m, [7], { type });
     assert.deepEqual(m.calls, [{ name: 'update', args: [7, change] }], type);
   }
+});
+
+test('a large archive goes to Thunderbird in batches, one after another', async () => {
+  const ids = Array.from({ length: 2609 }, (_, i) => i + 1);
+  let running = 0;
+  let overlapped = false;
+  const sizes = [];
+  const m = {
+    messages: {
+      archive: async (batch) => {
+        if (running > 0) overlapped = true;
+        running += 1;
+        sizes.push(batch.length);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        running -= 1;
+      },
+    },
+  };
+  await runAction(m, ids, { type: 'archive' });
+  assert.equal(sizes.length, Math.ceil(2609 / BATCH_SIZE));
+  assert.ok(sizes.every((n) => n <= BATCH_SIZE));
+  assert.equal(sizes.reduce((a, b) => a + b, 0), 2609);
+  assert.equal(overlapped, false);
+});
+
+test('move, copy, trash, and permanent delete are batched too', async () => {
+  const ids = Array.from({ length: BATCH_SIZE + 1 }, (_, i) => i + 1);
+  for (const [type, name, extra] of [
+    ['move', 'move', { folderId: 'f' }],
+    ['copy', 'copy', { folderId: 'f' }],
+    ['trash', 'delete', {}],
+    ['deletePermanently', 'delete', {}],
+  ]) {
+    const m = fakeMessenger();
+    await runAction(m, ids, { type, ...extra });
+    assert.deepEqual(m.calls.map((c) => [c.name, c.args[0].length]), [[name, BATCH_SIZE], [name, 1]], type);
+  }
+});
+
+test('a failed batch stops the action, so the rule reports the error', async () => {
+  const ids = Array.from({ length: BATCH_SIZE * 3 }, (_, i) => i + 1);
+  let calls = 0;
+  const m = {
+    messages: {
+      archive: async () => {
+        calls += 1;
+        if (calls === 2) throw new Error('Can only have one MessageArchiver running at once');
+      },
+    },
+  };
+  await assert.rejects(runAction(m, ids, { type: 'archive' }), /MessageArchiver/);
+  assert.equal(calls, 2);
 });

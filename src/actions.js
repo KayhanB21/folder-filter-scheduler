@@ -23,6 +23,23 @@
 import { t } from './i18n.js';
 
 /**
+ * How many messages one move, copy, archive, or delete call hands Thunderbird.
+ *
+ * A single archive of about 2600 messages finished its work but never
+ * answered, so the run waited and the rules after it never ran. Smaller calls,
+ * one after another, also keep a second archive from starting while the first
+ * is still busy: Thunderbird allows only one at a time.
+ */
+export const BATCH_SIZE = 200;
+
+/** Call `fn` on `ids` in groups of `BATCH_SIZE`, each after the one before. */
+async function inBatches(ids, fn) {
+  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+    await fn(ids.slice(i, i + BATCH_SIZE));
+  }
+}
+
+/**
  * Add a tag without disturbing the ones already on the message.
  *
  * `messages.update` replaces the whole tag array, so each message is read back
@@ -46,7 +63,7 @@ export const ACTIONS = [
     needsFolder: false,
     terminal: true,
     get hint() { return t('action_trashHint'); },
-    apply: (messenger, ids) => messenger.messages.delete(ids, false),
+    apply: (messenger, ids) => inBatches(ids, (batch) => messenger.messages.delete(batch, false)),
   },
   {
     id: 'move',
@@ -54,7 +71,7 @@ export const ACTIONS = [
     needsFolder: true,
     terminal: true,
     get hint() { return t('action_moveHint'); },
-    apply: (messenger, ids, action) => messenger.messages.move(ids, action.folderId),
+    apply: (messenger, ids, action) => inBatches(ids, (batch) => messenger.messages.move(batch, action.folderId)),
   },
   {
     id: 'archive',
@@ -62,14 +79,14 @@ export const ACTIONS = [
     needsFolder: false,
     terminal: true,
     get hint() { return t('action_archiveHint'); },
-    apply: (messenger, ids) => messenger.messages.archive(ids),
+    apply: (messenger, ids) => inBatches(ids, (batch) => messenger.messages.archive(batch)),
   },
   {
     id: 'copy',
     get label() { return t('action_copy'); },
     needsFolder: true,
     get hint() { return t('action_copyHint'); },
-    apply: (messenger, ids, action) => messenger.messages.copy(ids, action.folderId),
+    apply: (messenger, ids, action) => inBatches(ids, (batch) => messenger.messages.copy(batch, action.folderId)),
   },
   {
     id: 'tag',
@@ -127,7 +144,7 @@ export const ACTIONS = [
     terminal: true,
     danger: true,
     get hint() { return t('action_deletePermanentlyHint'); },
-    apply: (messenger, ids) => messenger.messages.delete(ids, true),
+    apply: (messenger, ids) => inBatches(ids, (batch) => messenger.messages.delete(batch, true)),
   },
 ];
 

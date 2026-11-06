@@ -18,6 +18,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   **Properties** checkbox in **Common problems**, use Thunderbird's wording
   for each language.
 
+### Fixed
+- **A rule that archives thousands of messages no longer stops the run.**
+  Move, copy, archive, and delete hand Thunderbird at most 200 messages per
+  call, one call after another. One archive of about 2600 messages finished
+  but never answered, so the rules after it never ran until the next run.
+
 ## [0.4.1]
 
 ### Added
