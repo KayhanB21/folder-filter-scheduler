@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.2]
+
 ### Added
 - **The interface is ready for translation.** Every text on the settings page,
   the toolbar popup, the Add spam domains window, and the right-click menu
