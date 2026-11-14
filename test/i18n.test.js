@@ -66,6 +66,16 @@ test('every English message tells the translator its context', () => {
   }
 });
 
+test('no message puts a value right after another value', () => {
+  // `$1$2` reads as a placeholder named `1` followed by `2`, so Thunderbird
+  // can drop the first value. Put a space or a word between the two.
+  for (const locale of LOCALES) {
+    for (const [key, entry] of Object.entries(catalog(locale))) {
+      assert.doesNotMatch(entry.message, /\$[1-9]\$/, `${locale}: ${key}`);
+    }
+  }
+});
+
 test('every key in a translation exists in English', () => {
   for (const locale of LOCALES.filter((l) => l !== 'en')) {
     for (const key of Object.keys(catalog(locale))) {

@@ -936,11 +936,11 @@
     "description": "A turned-around operator in the one-line summary of a folded rule: \"from not contains “x”\". $1 is the operator."
   },
   "summary_text": {
-    "message": "$1$2「$3」",
+    "message": "$1 $2「$3」",
     "description": "A condition in the summary of a folded rule. $1 is the field, $2 the operator, $3 the value typed. Use the quotation marks of your language."
   },
   "summary_age_other": {
-    "message": "$1$2 $3 日",
+    "message": "$1 $2 $3 日",
     "description": "An age condition in the summary of a folded rule: \"age older than 30 days\". $1 is the field, $2 the operator, $3 the number of days."
   },
   "summary_hasTag": {
