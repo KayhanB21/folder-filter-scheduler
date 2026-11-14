@@ -6,7 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.5.0]
+## [0.4.2]
 
 ### Added
 - **The interface is ready for translation.** Every text on the settings page,
