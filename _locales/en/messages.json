@@ -599,6 +599,10 @@
     "message": "subject",
     "description": "Condition field: the Subject header."
   },
+  "field_body": {
+    "message": "body",
+    "description": "Condition field: the text of the message, not its headers."
+  },
   "field_reply_to": {
     "message": "reply-to",
     "description": "Condition field: the Reply-To header. You can keep the header name."
@@ -854,6 +858,10 @@
   "cond_priorityHint": {
     "message": "To read the priority, the add-on downloads the headers of each message, so this check is slower than the others. A message with no priority counts as Normal.",
     "description": "Explanation under a priority condition. Normal is the priority priority_normal."
+  },
+  "cond_bodyHint": {
+    "message": "To read the text of a message, the add-on downloads the whole message, so this check is slower than the others. It reads the text only when the rule's other conditions can't decide. Line breaks count as spaces.",
+    "description": "Explanation under a body condition."
   },
   "cond_authHint": {
     "message": "Checks whether the sender is who the From address claims. To check, the add-on downloads each full message the rule looks at, once, and keeps the result. SPF comes from the <code>Authentication-Results</code> header your mail provider adds. The add-on verifies DKIM itself and works out DMARC from both. If a check can't finish, for example because the DNS server doesn't answer, the condition doesn't match. The add-on tries again for 24 hours. See <b>Advanced</b> for the settings.",

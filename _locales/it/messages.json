@@ -451,6 +451,9 @@
   "field_subject": {
     "message": "oggetto"
   },
+  "field_body": {
+    "message": "corpo"
+  },
   "field_reply_to": {
     "message": "reply-to"
   },
@@ -642,6 +645,9 @@
   },
   "cond_priorityHint": {
     "message": "Per leggere la priorità, il componente aggiuntivo scarica le intestazioni di ogni messaggio, quindi questa verifica è più lenta delle altre. Un messaggio senza priorità conta come Normale."
+  },
+  "cond_bodyHint": {
+    "message": "Per leggere il testo di un messaggio, il componente aggiuntivo scarica il messaggio intero, quindi questa verifica è più lenta delle altre. Legge il testo solo quando le altre condizioni della regola non bastano a decidere. Gli a capo contano come spazi."
   },
   "cond_authHint": {
     "message": "Verifica se il mittente è chi dichiara l'indirizzo Da. Per farlo, il componente aggiuntivo scarica per intero, una sola volta, ogni messaggio esaminato dalla regola e conserva il risultato. SPF proviene dall'intestazione <code>Authentication-Results</code> aggiunta dal tuo provider di posta. Il componente aggiuntivo verifica DKIM da sé e ricava DMARC da entrambi. Se una verifica non può completarsi, ad esempio perché il server DNS non risponde, la condizione non corrisponde. Il componente aggiuntivo riprova per 24 ore. Le impostazioni si trovano in <b>Avanzate</b>."

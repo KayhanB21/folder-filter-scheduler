@@ -451,6 +451,9 @@
   "field_subject": {
     "message": "asunto"
   },
+  "field_body": {
+    "message": "cuerpo"
+  },
   "field_reply_to": {
     "message": "responder a"
   },
@@ -642,6 +645,9 @@
   },
   "cond_priorityHint": {
     "message": "Para leer la prioridad, el complemento descarga las cabeceras de cada mensaje, así que esta comprobación es más lenta que las demás. Un mensaje sin prioridad cuenta como Normal."
+  },
+  "cond_bodyHint": {
+    "message": "Para leer el texto de un mensaje, el complemento descarga el mensaje completo, así que esta comprobación es más lenta que las demás. Solo lee el texto cuando las otras condiciones de la regla no deciden. Los saltos de línea cuentan como espacios."
   },
   "cond_authHint": {
     "message": "Comprueba si el remitente es quien dice ser la dirección De. Para ello, el complemento descarga una vez cada mensaje completo que examina la regla y guarda el resultado. SPF se toma de la cabecera <code>Authentication-Results</code> que añade su proveedor de correo. El complemento verifica DKIM por su cuenta y deduce DMARC de ambos. Si una comprobación no termina, por ejemplo porque el servidor DNS no responde, la condición no coincide. El complemento lo reintenta durante 24 horas. Consulte la configuración en <b>Avanzado</b>."

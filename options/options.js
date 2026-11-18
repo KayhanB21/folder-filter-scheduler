@@ -17,6 +17,7 @@ import {
   PRIORITY_IS,
   PRIORITY_LEVELS,
   AUTH_FIELD,
+  BODY_FIELD,
   AUTH_PASSES,
   AUTH_METHODS,
   ageDays,
@@ -817,6 +818,7 @@ function renderCondition(container, cond = {}) {
     );
     $('.cond-priority', node).classList.toggle('hidden', !isPriority);
     $('.cond-priority-hint', node).classList.toggle('hidden', !isPriority);
+    $('.cond-body-hint', node).classList.toggle('hidden', field !== BODY_FIELD);
     $('.cond-auth', node).classList.toggle('hidden', !isAuth);
     $('.cond-auth-hint', node).classList.toggle('hidden', !isAuth);
     node.syncDns();

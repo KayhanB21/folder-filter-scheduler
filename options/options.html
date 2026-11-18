@@ -421,6 +421,12 @@
           so this check is slower than the others. A message with no priority
           counts as Normal.
         </p>
+        <!-- Shown only for the body field. -->
+        <p class="cond-body-hint cond-hint hidden" data-i18n="cond_bodyHint">
+          To read the text of a message, the add-on downloads the whole message,
+          so this check is slower than the others. It reads the text only when
+          the rule's other conditions can't decide. Line breaks count as spaces.
+        </p>
         <!-- Shown only for the authentication field. -->
         <p class="cond-auth-hint cond-hint hidden" data-i18n-rich="cond_authHint">
           Checks whether the sender is who the From address claims. To check, the

@@ -611,3 +611,22 @@ test('an authentication condition survives a round trip and fingerprints by meth
   const spf = { ...rule, conditions: [{ ...rule.conditions[0], value: 'spf' }] };
   assert.notEqual(ruleFingerprint(rule), ruleFingerprint(spf));
 });
+
+// --- Body condition ----------------------------------------------------------
+
+test('import accepts a body condition with a string operator', () => {
+  const { rules, problems } = sanitizeImport(withConditions([{ field: 'body', operator: 'contains', value: 'Dear friend' }]));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].conditions, [{ operator: 'contains', negate: false, field: 'body', value: 'Dear friend' }]);
+});
+
+test('import rejects a body condition with a set operator, another field, or no value', () => {
+  const { rules, problems } = sanitizeImport(withConditions([
+    { field: 'body', operator: 'domainInList', domains: ['evil.com'] },
+    { field: 'body', operator: 'inAddressBook', addressBookId: 'all' },
+    { fields: ['body', 'subject'], operator: 'contains', value: 'x' },
+    { field: 'body', operator: 'contains', value: '' },
+  ]));
+  assert.equal(rules.length, 0);
+  assert.equal(problems.length, 5);
+});

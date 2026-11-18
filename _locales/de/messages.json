@@ -451,6 +451,9 @@
   "field_subject": {
     "message": "Betreff"
   },
+  "field_body": {
+    "message": "Nachrichtentext"
+  },
   "field_reply_to": {
     "message": "Antwort an"
   },
@@ -642,6 +645,9 @@
   },
   "cond_priorityHint": {
     "message": "Um die Priorität zu lesen, lädt das Add-on die Header jeder Nachricht herunter. Diese Prüfung ist daher langsamer als die anderen. Eine Nachricht ohne Priorität zählt als Normal."
+  },
+  "cond_bodyHint": {
+    "message": "Um den Text einer Nachricht zu lesen, lädt das Add-on die ganze Nachricht herunter. Diese Prüfung ist daher langsamer als die anderen. Das Add-on liest den Text nur, wenn die anderen Bedingungen der Regel nicht entscheiden. Zeilenumbrüche zählen als Leerzeichen."
   },
   "cond_authHint": {
     "message": "Prüft, ob der Absender ist, wer die Von-Adresse behauptet. Dafür lädt das Add-on jede vollständige Nachricht, die die Regel prüft, einmal herunter und speichert das Ergebnis. SPF stammt aus dem <code>Authentication-Results</code>-Header, den Ihr E-Mail-Anbieter hinzufügt. Das Add-on prüft DKIM selbst und ermittelt DMARC aus beiden. Wenn eine Prüfung nicht abgeschlossen werden kann, etwa weil der DNS-Server nicht antwortet, trifft die Bedingung nicht zu. Das Add-on versucht es 24 Stunden lang erneut. Die Einstellungen finden Sie unter <b>Erweitert</b>."

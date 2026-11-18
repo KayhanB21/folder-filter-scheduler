@@ -16,7 +16,7 @@
  */
 
 import { ACTIONS_BY_ID, actionsOf, orderActions } from './actions.js';
-import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, STATE_FIELDS, STATE_OPERATORS, TAG_FIELD, HAS_TAG, PRIORITY_FIELD, PRIORITY_IS, PRIORITY_LEVELS, AUTH_FIELD, AUTH_PASSES, AUTH_METHODS, ageDays } from './matcher.js';
+import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, STATE_FIELDS, STATE_OPERATORS, TAG_FIELD, HAS_TAG, PRIORITY_FIELD, PRIORITY_IS, PRIORITY_LEVELS, AUTH_FIELD, AUTH_PASSES, AUTH_METHODS, BODY_FIELD, ageDays } from './matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 import { sanitizeAdvanced } from './settings.js';
@@ -199,19 +199,22 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
 
   // Read, star, junk, tag, priority, and auth are pseudo-fields too, each with
   // its own operators. One of them never shares a condition with another field.
+  // Body takes the string operators of a header, and never shares either.
   const [only] = fields;
   const stateField = fields.length === 1 && STATE_FIELDS.includes(only);
   const tagField = fields.length === 1 && only === TAG_FIELD;
   const priorityField = fields.length === 1 && only === PRIORITY_FIELD;
   const authField = fields.length === 1 && only === AUTH_FIELD;
-  const isPseudo = (f) => STATE_FIELDS.includes(f) || [TAG_FIELD, PRIORITY_FIELD, AUTH_FIELD].includes(f);
+  const bodyField = fields.length === 1 && only === BODY_FIELD;
+  const isPseudo = (f) => STATE_FIELDS.includes(f) || [TAG_FIELD, PRIORITY_FIELD, AUTH_FIELD, BODY_FIELD].includes(f);
   const mixed = fields.length > 1 && fields.some(isPseudo);
   if (
     mixed ||
     stateField !== (operator in STATE_OPERATORS) ||
     tagField !== (operator === HAS_TAG) ||
     priorityField !== (operator === PRIORITY_IS) ||
-    authField !== (operator === AUTH_PASSES)
+    authField !== (operator === AUTH_PASSES) ||
+    (bodyField && !Object.hasOwn(OPERATORS, operator))
   ) {
     problems.push(t('import_operatorMismatch', where, operator, fields.join(',')));
     return null;
