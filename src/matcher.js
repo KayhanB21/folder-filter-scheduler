@@ -12,8 +12,9 @@
  * A normalized message is `{ fields: { <lowercased-name>: string[] } }`, plus
  * `date`, `state` (read, star, junk), and `tags` for the conditions that are
  * not about a header, `headersRead`, true when the full headers were
- * downloaded and are in `fields`, and `auth`, the SPF, DKIM, and DMARC
- * results when a rule needs them.
+ * downloaded and are in `fields`, `auth`, the SPF, DKIM, and DMARC
+ * results when a rule needs them, and `body`, the message text as a string
+ * when a rule needs it.
  * Header-like fields ("from", "subject", "reply-to", "x-anything") map to the
  * raw header values exactly as Thunderbird's header APIs return them
  * (lowercased keys, array values because a header may legally repeat).
@@ -124,11 +125,20 @@ export const AUTH_FIELD = 'auth';
 export const AUTH_PASSES = 'authPasses';
 export const AUTH_METHODS = Object.freeze(['spf', 'dkim', 'dmarc']);
 
+/**
+ * The body pseudo-field: the text of the message. It takes the string
+ * operators, like a header. background.js reads the body only for a message
+ * that the rule's other conditions leave undecided, and puts it in
+ * `message.body`. Shape: `{ field: 'body', operator, value, negate }`.
+ */
+export const BODY_FIELD = 'body';
+
 export const FIELDS = Object.freeze([
   'from',
   'to',
   'cc',
   'subject',
+  BODY_FIELD,
   'reply-to',
   'list-id',
   'sender',
@@ -173,6 +183,10 @@ export function isPriorityCondition(condition) {
 
 export function isAuthCondition(condition) {
   return foldCase(condition?.field) === AUTH_FIELD;
+}
+
+export function isBodyCondition(condition) {
+  return foldCase(condition?.field) === BODY_FIELD;
 }
 
 /**
@@ -242,6 +256,8 @@ export function requiresFullMessage(rule) {
   return (rule?.conditions ?? []).some((c) => {
     // The raw download covers it, see requiresRaw.
     if (isAuthCondition(c)) return false;
+    // The body read covers it, see requiresBody.
+    if (isBodyCondition(c)) return false;
     // A condition naming no field at all is treated as expensive, erring toward
     // fetching rather than silently evaluating against nothing.
     const fields = fieldsOf(c);
@@ -255,6 +271,11 @@ export function requiresFullMessage(rule) {
  */
 export function requiresRaw(rule) {
   return (rule?.conditions ?? []).some(isAuthCondition);
+}
+
+/** True when a rule checks the message body, so the engine might read it. */
+export function requiresBody(rule) {
+  return (rule?.conditions ?? []).some(isBodyCondition);
 }
 
 function valuesFor(message, field) {
@@ -399,6 +420,26 @@ function evaluateAuthCondition(message, condition) {
   return condition.negate ? !satisfied : satisfied;
 }
 
+/** Line breaks and runs of spaces as one space, so a phrase matches across a wrapped line. */
+const collapseSpace = (s) => (s ?? '').toString().replace(/\s+/g, ' ').trim();
+
+/**
+ * Evaluate a body condition. NEVER matches, negated or not, when the body was
+ * not read: "body does not contain X" on a rule that deletes would otherwise
+ * act on mail it never read.
+ */
+function evaluateBodyCondition(message, condition) {
+  if (typeof message?.body !== 'string') return false;
+  const predicate = OPERATORS[condition.operator];
+  if (!predicate) throw new Error(`Unknown body operator: ${condition.operator}`);
+
+  // A regex keeps the case of its pattern, as in evaluateCondition.
+  const regex = condition.operator === 'matchesRegex';
+  const fold = regex ? collapseSpace : (s) => foldCase(collapseSpace(s));
+  const satisfied = predicate(fold(message.body), fold(condition.value));
+  return condition.negate ? !satisfied : satisfied;
+}
+
 function evaluateNameCondition(message, condition) {
   const anySatisfied = fieldsOf(condition)
     .flatMap((field) => valuesFor(message, field))
@@ -413,6 +454,7 @@ export function evaluateCondition(message, condition, { now = new Date(), addres
   if (isTagCondition(condition)) return evaluateTagCondition(message, condition);
   if (isPriorityCondition(condition)) return evaluatePriorityCondition(message, condition);
   if (isAuthCondition(condition)) return evaluateAuthCondition(message, condition);
+  if (isBodyCondition(condition)) return evaluateBodyCondition(message, condition);
   if (condition.operator === IN_ADDRESS_BOOK) {
     return evaluateAddressBookCondition(message, condition, addressBooks);
   }
@@ -445,4 +487,23 @@ export function evaluateRule(message, rule, options = {}) {
 
   const results = conditions.map((c) => evaluateCondition(message, c, options));
   return rule.match === 'all' ? results.every(Boolean) : results.some(Boolean);
+}
+
+/**
+ * The result of a rule from its conditions other than the body, or null when
+ * only the body can decide it. Lets the engine skip the body read: an "all"
+ * rule with one false condition is false, and an "any" rule with one true
+ * condition is true, whatever the body says.
+ */
+export function decideWithoutBody(message, rule, options = {}) {
+  const conditions = rule && Array.isArray(rule.conditions) ? rule.conditions : [];
+  if (conditions.length === 0) return false;
+
+  const others = conditions.filter((c) => !isBodyCondition(c)).map((c) => evaluateCondition(message, c, options));
+  if (rule.match === 'all') {
+    if (others.some((r) => !r)) return false;
+  } else if (others.some(Boolean)) {
+    return true;
+  }
+  return conditions.some(isBodyCondition) ? null : evaluateRule(message, rule, options);
 }

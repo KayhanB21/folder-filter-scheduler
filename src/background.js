@@ -2,7 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { evaluateRule, requiresFullMessage, requiresRaw, addressBookIdsOf, FIELDS, DOMAIN_IN_LIST } from './matcher.js';
+import {
+  evaluateRule,
+  decideWithoutBody,
+  requiresFullMessage,
+  requiresRaw,
+  requiresBody,
+  addressBookIdsOf,
+  FIELDS,
+  DOMAIN_IN_LIST,
+} from './matcher.js';
 import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
@@ -10,6 +19,7 @@ import { planScan, queryBoundsFor, stampScan } from './scan.js';
 import { ADVANCED_DEFAULTS, AUTH_DOH_SERVERS, alarmNeedsReset, dohOrigin, sanitizeAdvanced, trustedServerList } from './settings.js';
 import { createRunner } from './runner.js';
 import { createHeaderReads } from './headers.js';
+import { createBodyReads } from './body.js';
 import { createAuthReads } from './auth/reads.js';
 import { AUTH_CACHE_KEY } from './auth/cache.js';
 import { OWN_BLOCKED, OWN_OFF, OWN_ON } from './auth/check.js';
@@ -304,6 +314,23 @@ async function newHeaderReads() {
   });
 }
 
+/**
+ * The body reads of one run, for the body condition. Same time limit as a
+ * header read. See body.js.
+ */
+function newBodyReads() {
+  return createBodyReads({
+    listInlineTextParts: (id) => messenger.messages.listInlineTextParts(id),
+    toPlainText: (html) => messenger.messengerUtilities.convertToPlainText(html),
+    timeoutMs: HEADER_TIMEOUT_MS,
+    limit: HEADER_TIMEOUT_LIMIT,
+    onTimeout: (message) => {
+      warn(message);
+      return flushLog();
+    },
+  });
+}
+
 // --- SPF, DKIM, and DMARC ----------------------------------------------------
 
 async function hasOrigin(origin) {
@@ -480,11 +507,29 @@ async function loadAllFolders(rules) {
   }
 }
 
+/**
+ * The body of one message, or null when the message must be left out of the
+ * run. A read that fails for a reason other than a timeout leaves the message
+ * out too, and counts as skipped, so the watermark holds.
+ */
+async function readBody(bodyReads, messageId) {
+  try {
+    return await bodyReads.read(messageId);
+  } catch (e) {
+    warn('body read failed', messageId, e);
+    bodyReads.skipped += 1;
+    return null;
+  }
+}
+
 /** Run one rule across all its source folders. Returns count of affected messages. */
-async function runRule(rule, folderIds, runState, manual, addressBooks, settings, headerReads, authReads, quiet) {
+async function runRule(
+  rule, folderIds, runState, manual, addressBooks, settings, headerReads, authReads, bodyReads, quiet,
+) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
   const ruleAuthReads = requiresRaw(rule) ? authReads : null;
+  const needsBody = requiresBody(rule);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
   const startedAt = new Date();
   const plan = planScan(runState[rule.id], { manual, now: startedAt, settings });
@@ -495,7 +540,9 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   let matched = 0;
   let scanFailed = false;
   let authPending = 0;
+  let bodiesRead = 0;
   const skippedBefore = headerReads.skipped;
+  const bodySkippedBefore = bodyReads.skipped;
 
   for (const folderId of folderIds) {
     const matchedIds = [];
@@ -505,7 +552,19 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
         const message = await normalize(header, fetchFull, headerReads, ruleAuthReads);
         if (!message) continue;
         if (message.authPending) authPending += 1;
-        if (evaluateRule(message, rule, { now: startedAt, addressBooks })) matchedIds.push(header.id);
+        const options = { now: startedAt, addressBooks };
+        if (needsBody) {
+          // The other conditions decide most messages, and those skip the read.
+          const decided = decideWithoutBody(message, rule, options);
+          if (decided !== null) {
+            if (decided) matchedIds.push(header.id);
+            continue;
+          }
+          message.body = await readBody(bodyReads, header.id);
+          if (message.body === null) continue;
+          bodiesRead += 1;
+        }
+        if (evaluateRule(message, rule, options)) matchedIds.push(header.id);
       }
     } catch (e) {
       warn(`scan failed for folder ${folderId} in rule "${rule.name}"`, e);
@@ -531,6 +590,9 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
   // clean and the next run reads it again.
   const skipped = headerReads.skipped - skippedBefore;
   if (skipped > 0) scanFailed = true;
+  // The same for a message whose body did not arrive.
+  const bodySkipped = bodyReads.skipped - bodySkippedBefore;
+  if (bodySkipped > 0) scanFailed = true;
   // The same for a message whose SPF, DKIM, and DMARC check waits for a retry.
   // This is not an error, so the log line doesn't say WITH ERRORS.
   const holdWatermark = scanFailed || authPending > 0;
@@ -548,6 +610,8 @@ async function runRule(rule, folderIds, runState, manual, addressBooks, settings
     quiet && affected === 0 && !scanFailed,
     `rule "${rule.name}": ${kind} scan (${range}), ${scanned} scanned, ` +
       `${skipped > 0 ? `${skipped} skipped (headers unread), ` : ''}` +
+      `${needsBody ? `${bodiesRead} bodies read, ` : ''}` +
+      `${bodySkipped > 0 ? `${bodySkipped} skipped (body unread), ` : ''}` +
       `${authPending > 0 ? `${authPending} waiting for an auth check, ` : ''}${matched} matched, ` +
       `${affected} actioned, ${Date.now() - startedAt.getTime()} ms${scanFailed ? ', WITH ERRORS' : ''}`,
   );
@@ -617,12 +681,14 @@ async function runAllRules(
   const headerReads = await newHeaderReads();
   // Shared too, so the download budget covers the whole run.
   const authReads = selected.some(requiresRaw) ? await newAuthReads(advanced) : null;
+  // Shared too: see HEADER_TIMEOUT_LIMIT.
+  const bodyReads = newBodyReads();
   let total = 0;
 
   for (const rule of selected) {
     total += await runRule(
       rule, scanned.get(rule), runState, isManual(rule), addressBooks, advanced, headerReads,
-      authReads, quietRule(rule),
+      authReads, bodyReads, quietRule(rule),
     );
   }
 

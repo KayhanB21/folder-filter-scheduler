@@ -36,7 +36,7 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 
 ## Features
 
-- **Conditions** on `from`, `to`, `cc`, `subject`, `reply-to`, `list-id`, `sender`
+- **Conditions** on `from`, `to`, `cc`, `subject`, `body`, `reply-to`, `list-id`, `sender`
   with `contains` / `is` / `starts with` / `ends with` / `matches regex`, each
   optionally negated, combined with AND or OR.
 - **Age conditions**: `age` · `older than` / `newer than` · N days, for rules like
@@ -168,6 +168,12 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
   The `priority` field checks for Highest, High, Normal, Low, or Lowest. To
   read it, the add-on downloads the headers of each message, so it is slower
   than the other fields. A message with no priority counts as Normal.
+  The `body` field checks the text of the message with the same choices as
+  `subject`. To read it, the add-on downloads the whole message, so it is the
+  slowest field. It reads the text only when the rule's other conditions can't
+  decide. A plain-text part is used when the message has one; otherwise the
+  HTML part is turned into text. Line breaks count as spaces, so a phrase
+  matches when the sender wraps it across two lines.
   Choosing `name shows a different address` needs no value. It matches when the
   sender name contains an email address from a different domain than the real
   address, as in `"Lena <lena@yahoo.com>" <someone@sina.com>`. Spam does this

@@ -421,6 +421,9 @@
   "field_subject": {
     "message": "主题"
   },
+  "field_body": {
+    "message": "正文"
+  },
   "field_reply_to": {
     "message": "Reply-To"
   },
@@ -612,6 +615,9 @@
   },
   "cond_priorityHint": {
     "message": "为了读取优先级，本附加组件会下载每封邮件的邮件头，因此这项检查比其他检查慢。没有优先级的邮件视为“普通”。"
+  },
+  "cond_bodyHint": {
+    "message": "为了读取邮件正文，本附加组件会下载整封邮件，因此这项检查比其他检查慢。只有当规则的其他条件无法判断时，它才会读取正文。换行视为空格。"
   },
   "cond_authHint": {
     "message": "检查发件人是否确为发件人地址所声称的身份。为进行检查，本附加组件会下载规则检查的每封完整邮件（仅一次），并保存结果。SPF 来自邮件服务商添加的 <code>Authentication-Results</code> 邮件头。本附加组件自行验证 DKIM，并根据两者推算 DMARC。如果某项检查无法完成（例如 DNS 服务器无响应），则条件不匹配。本附加组件会在 24 小时内重试。相关设置请参阅<b>高级</b>。"

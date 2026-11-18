@@ -481,6 +481,9 @@
   "field_subject": {
     "message": "sujet"
   },
+  "field_body": {
+    "message": "corps"
+  },
   "field_reply_to": {
     "message": "reply-to"
   },
@@ -672,6 +675,9 @@
   },
   "cond_priorityHint": {
     "message": "Pour lire la priorité, le module télécharge les en-têtes de chaque message ; cette vérification est donc plus lente que les autres. Un message sans priorité compte comme Normale."
+  },
+  "cond_bodyHint": {
+    "message": "Pour lire le texte d'un message, le module télécharge le message entier ; cette vérification est donc plus lente que les autres. Il lit le texte uniquement quand les autres conditions de la règle ne suffisent pas à décider. Les sauts de ligne comptent comme des espaces."
   },
   "cond_authHint": {
     "message": "Vérifie si l’expéditeur est bien celui que prétend l’adresse De. Pour cela, le module télécharge une fois chaque message complet examiné par la règle et conserve le résultat. SPF provient de l’en-tête <code>Authentication-Results</code> ajouté par votre fournisseur de messagerie. Le module vérifie lui-même DKIM et en déduit DMARC à partir des deux. Si une vérification ne peut pas aboutir, par exemple parce que le serveur DNS ne répond pas, la condition ne correspond pas. Le module réessaie pendant 24 heures. Voir <b>Avancé</b> pour les paramètres."

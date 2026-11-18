@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Body condition** (#38). The `body` field checks the text of a message with
+  `contains`, `is`, `starts with`, `ends with`, or `matches regex`, and can be
+  negated. To read the text, the add-on downloads the whole message, so it
+  reads the text only when the rule's other conditions can't decide. A
+  message whose text doesn't arrive within 7 seconds is left out of the run
+  and checked again on the next one. Line breaks count as spaces.
+
 ## [0.4.2]
 
 ### Added
