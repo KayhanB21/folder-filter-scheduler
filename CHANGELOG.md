@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.3]
+
 ### Added
 - **Body condition** (#38). The `body` field checks the text of a message with
   `contains`, `is`, `starts with`, `ends with`, or `matches regex`, and can be
