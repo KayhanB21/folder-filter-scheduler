@@ -13,8 +13,8 @@
  * `date`, `state` (read, star, junk), and `tags` for the conditions that are
  * not about a header, `headersRead`, true when the full headers were
  * downloaded and are in `fields`, `auth`, the SPF, DKIM, and DMARC
- * results when a rule needs them, and `body`, the message text as a string
- * when a rule needs it.
+ * results when a rule needs them, and `body`, the text of each text part of
+ * the message as a string array when a rule needs it.
  * Header-like fields ("from", "subject", "reply-to", "x-anything") map to the
  * raw header values exactly as Thunderbird's header APIs return them
  * (lowercased keys, array values because a header may legally repeat).
@@ -424,19 +424,23 @@ function evaluateAuthCondition(message, condition) {
 const collapseSpace = (s) => (s ?? '').toString().replace(/\s+/g, ' ').trim();
 
 /**
- * Evaluate a body condition. NEVER matches, negated or not, when the body was
+ * Evaluate a body condition. Each text part is a value, like a repeated
+ * header: a positive condition matches when any part satisfies it, a negated
+ * one only when none does. NEVER matches, negated or not, when the body was
  * not read: "body does not contain X" on a rule that deletes would otherwise
  * act on mail it never read.
  */
 function evaluateBodyCondition(message, condition) {
-  if (typeof message?.body !== 'string') return false;
+  if (!Array.isArray(message?.body)) return false;
   const predicate = OPERATORS[condition.operator];
   if (!predicate) throw new Error(`Unknown body operator: ${condition.operator}`);
 
   // A regex keeps the case of its pattern, as in evaluateCondition.
   const regex = condition.operator === 'matchesRegex';
   const fold = regex ? collapseSpace : (s) => foldCase(collapseSpace(s));
-  const satisfied = predicate(fold(message.body), fold(condition.value));
+  const needle = fold(condition.value);
+  const parts = message.body.length > 0 ? message.body : [''];
+  const satisfied = parts.some((part) => predicate(fold(part), needle));
   return condition.negate ? !satisfied : satisfied;
 }
 

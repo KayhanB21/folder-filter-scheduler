@@ -12,9 +12,10 @@ import { withTimeout } from './runner.js';
  *
  * `listInlineTextParts` returns the text parts of a message that Thunderbird
  * shows inline, already decoded from quoted-printable, base64, and the
- * message's character set. A plain-text part is used as it is. An HTML part is
- * used only when the message has no plain-text part, and `toPlainText` turns
- * it into text first, so a body condition never matches tag names or styles.
+ * message's character set. A plain-text part is used as it is. `toPlainText`
+ * turns an HTML part into text first, so a body condition never matches tag
+ * names or styles. Both kinds are read, as Thunderbird's own body search does:
+ * spam often puts other text, or none, in the plain-text part (#38).
  *
  * Reading a body costs a download on an IMAP folder that isn't stored for
  * offline use, so the runner reads it only for a message that the rule's
@@ -46,8 +47,8 @@ export function createBodyReads({ listInlineTextParts, toPlainText, timeoutMs, l
     },
 
     /**
-     * The body of one message as plain text, or null when the message must be
-     * left out of the run. An error other than a timeout is thrown.
+     * The text parts of one message as plain text, one string per part, or
+     * null when the message must be left out of the run. An error other than a timeout is thrown.
      *
      * @param {number} messageId
      */
@@ -75,14 +76,13 @@ export function createBodyReads({ listInlineTextParts, toPlainText, timeoutMs, l
 
 const isType = (part, type) => String(part?.contentType ?? '').toLowerCase().startsWith(type);
 
-/** The plain-text parts joined, or the HTML parts as text when there are none. */
+/** Every plain-text and HTML part as text, in message order. */
 async function bodyText(messageId, listInlineTextParts, toPlainText) {
   const parts = (await listInlineTextParts(messageId)) ?? [];
-  const plain = parts.filter((p) => isType(p, 'text/plain'));
-  if (plain.length > 0) return plain.map((p) => p.content ?? '').join('\n');
-
-  const html = parts.filter((p) => isType(p, 'text/html'));
   const texts = [];
-  for (const part of html) texts.push(await toPlainText(part.content ?? ''));
-  return texts.join('\n');
+  for (const part of parts) {
+    if (isType(part, 'text/plain')) texts.push(part.content ?? '');
+    else if (isType(part, 'text/html')) texts.push(await toPlainText(part.content ?? ''));
+  }
+  return texts;
 }

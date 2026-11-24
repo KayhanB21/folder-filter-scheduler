@@ -15,7 +15,7 @@ import {
 
 // --- Matching ----------------------------------------------------------------
 
-const withBody = (body, fields = {}) => ({ fields, body });
+const withBody = (body, fields = {}) => ({ fields, body: typeof body === 'string' ? [body] : body });
 const PHRASE = { field: 'body', operator: 'contains', value: 'Dear friend, i would' };
 
 test('a body condition matches a phrase in any case', () => {
@@ -89,8 +89,23 @@ test('a rule without a body condition is decided as evaluateRule decides it', ()
 
 test('a decision with the body agrees with the full rule', () => {
   const rule = { match: 'all', conditions: [FROM_X, PHRASE] };
-  assert.equal(evaluateRule({ ...fromX, body: 'Dear friend, I would' }, rule), true);
-  assert.equal(evaluateRule({ ...fromX, body: 'Hello' }, rule), false);
+  assert.equal(evaluateRule({ ...fromX, body: ['Dear friend, I would'] }, rule), true);
+  assert.equal(evaluateRule({ ...fromX, body: ['Hello'] }, rule), false);
+});
+
+// The spam in #38 had other text in its plain-text part than in its HTML part.
+test('a body condition matches when any part matches', () => {
+  const parts = ['Click here', 'Prezado(a) ana@example.com, informamos'];
+  const prezado = { field: 'body', operator: 'contains', value: 'Prezado(a) ana@example.com' };
+  assert.equal(evaluateCondition(withBody(parts), prezado), true);
+  assert.equal(evaluateCondition(withBody(parts), { ...prezado, negate: true }), false);
+  const starts = { field: 'body', operator: 'startsWith', value: 'prezado' };
+  assert.equal(evaluateCondition(withBody(parts), starts), true);
+});
+
+test('a message with no text parts counts as one empty part', () => {
+  assert.equal(evaluateCondition(withBody([]), PHRASE), false);
+  assert.equal(evaluateCondition(withBody([]), { ...PHRASE, negate: true }), true);
 });
 
 // --- Reading -------------------------------------------------------------------
@@ -109,25 +124,26 @@ function setup({ parts, limit = 2, toPlainText = async (html) => `TEXT(${html})`
   return { reads, logged };
 }
 
-test('the plain-text parts are joined and the HTML part is ignored', async () => {
+test('every plain-text and HTML part is read, in message order', async () => {
   const { reads } = setup({
     parts: [
       { contentType: 'text/plain', content: 'one' },
       { contentType: 'text/html', content: '<p>html</p>' },
       { contentType: 'TEXT/PLAIN; charset=utf-8', content: 'two' },
+      { contentType: 'text/calendar', content: 'BEGIN:VCALENDAR' },
     ],
   });
-  assert.equal(await reads.read(1), 'one\ntwo');
+  assert.deepEqual(await reads.read(1), ['one', 'TEXT(<p>html</p>)', 'two']);
 });
 
 test('an HTML-only message is turned into text', async () => {
   const { reads } = setup({ parts: [{ contentType: 'text/html', content: '<b>hi</b>' }] });
-  assert.equal(await reads.read(1), 'TEXT(<b>hi</b>)');
+  assert.deepEqual(await reads.read(1), ['TEXT(<b>hi</b>)']);
 });
 
-test('a message with no text parts has an empty body', async () => {
+test('a message with no text parts has no body parts', async () => {
   const { reads } = setup({ parts: [] });
-  assert.equal(await reads.read(1), '');
+  assert.deepEqual(await reads.read(1), []);
 });
 
 test('a read with no answer leaves the message out, and reading stops at the limit', async () => {

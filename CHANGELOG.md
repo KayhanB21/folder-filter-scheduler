@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- **A body condition checks the HTML part too** (#38). It read only the
+  plain-text part when a message had one, and spam often puts other text there.
+  It now checks every plain-text and HTML part, as Thunderbird's own body
+  search does. A condition matches when any part matches, and a negated one
+  only when no part does.
+
 ## [0.4.3]
 
 ### Added

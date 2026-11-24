@@ -171,8 +171,8 @@ Find **Folder Filter Scheduler** and click the **wrench / options** button:
   The `body` field checks the text of the message with the same choices as
   `subject`. To read it, the add-on downloads the whole message, so it is the
   slowest field. It reads the text only when the rule's other conditions can't
-  decide. A plain-text part is used when the message has one; otherwise the
-  HTML part is turned into text. Line breaks count as spaces, so a phrase
+  decide. It checks both the plain-text part and the HTML part, turned into
+  text, as Thunderbird's own body search does. Line breaks count as spaces, so a phrase
   matches when the sender wraps it across two lines.
   Choosing `name shows a different address` needs no value. It matches when the
   sender name contains an email address from a different domain than the real
