@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.4]
+
 ### Fixed
 - **A body condition checks the HTML part too** (#38). It read only the
   plain-text part when a message had one, and spam often puts other text there.
