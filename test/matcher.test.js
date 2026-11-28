@@ -675,3 +675,34 @@ test('an authentication condition with an unknown method never matches', () => {
   }
   assert.throws(() => evaluateCondition(message, { field: 'auth', operator: 'contains', value: 'dkim' }));
 });
+
+// --- Unread headers safety guard ---------------------------------------------
+
+test('non-cheap header conditions never match when headersRead is explicitly false', () => {
+  const unread = { fields: { from: ['alice@example.com'] }, headersRead: false };
+  const conditions = [
+    { field: 'reply-to', operator: 'contains', value: 'spammer' },
+    { field: 'list-id', operator: 'matchesRegex', value: 'news' },
+    { field: 'sender', operator: 'is', value: 'a@b.com' },
+    { field: 'reply-to', operator: DOMAIN_IN_LIST, domains: ['evil.com'] },
+    { fields: ['reply-to', 'from'], operator: DOMAIN_IN_LIST, domains: ['example.com'] },
+    { field: 'reply-to', operator: IN_ADDRESS_BOOK, addressBookId: 'all' },
+    { field: 'reply-to', operator: NAME_SHOWS_OTHER_ADDRESS },
+  ];
+  for (const cond of conditions) {
+    for (const negate of [false, true]) {
+      assert.equal(
+        evaluateCondition(unread, { ...cond, negate }, { addressBooks: books }),
+        false,
+        `${cond.field ?? cond.fields} ${cond.operator} negate=${negate}`,
+      );
+    }
+  }
+
+  // Cheap indexed fields still evaluate normally when full headers were not fetched.
+  assert.equal(evaluateCondition(unread, { field: 'from', operator: 'contains', value: 'alice' }), true);
+  assert.equal(evaluateCondition(unread, { field: 'from', operator: 'contains', value: 'bob', negate: true }), true);
+  assert.equal(evaluateCondition(unread, { field: 'from', operator: IN_ADDRESS_BOOK, addressBookId: 'all' }, { addressBooks: books }), true);
+  // Unknown operators still throw rather than returning false silently.
+  assert.throws(() => evaluateCondition(unread, { field: 'reply-to', operator: 'bogus', value: 'x' }));
+});

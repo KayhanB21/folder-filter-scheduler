@@ -18,8 +18,9 @@ import { actionsOf, runActions } from './actions.js';
 import { planScan, queryBoundsFor, stampScan } from './scan.js';
 import { ADVANCED_DEFAULTS, AUTH_DOH_SERVERS, alarmNeedsReset, dohOrigin, sanitizeAdvanced, trustedServerList } from './settings.js';
 import { createRunner } from './runner.js';
-import { createHeaderReads } from './headers.js';
+import { createHeaderReads, readHeadersOrSkip } from './headers.js';
 import { createBodyReads } from './body.js';
+import { COPY_HISTORY_KEY, createCopyHistory } from './copied.js';
 import { createAuthReads } from './auth/reads.js';
 import { AUTH_CACHE_KEY } from './auth/cache.js';
 import { OWN_BLOCKED, OWN_OFF, OWN_ON } from './auth/check.js';
@@ -207,6 +208,33 @@ async function loadRunState() {
 
 async function saveRunState(runState) {
   await messenger.storage.local.set({ runState });
+}
+
+/**
+ * Load per-rule copy history for deduplicating non-terminal copy rules across
+ * overlap, catch-up, age, and manual scans. Pruned against the full rule list
+ * so removed rules and changed destinations are cleaned up automatically.
+ */
+async function loadCopyHistory(rules) {
+  const stored = await messenger.storage.local
+    .get({ [COPY_HISTORY_KEY]: {} })
+    .catch((e) => {
+      warn('could not load copy history', e);
+      return {};
+    });
+  return createCopyHistory({ stored: stored?.[COPY_HISTORY_KEY] ?? {}, rules });
+}
+
+/** Save copy history when changed; safe to call both per batch and at run end. */
+async function persistCopyHistory(copyHistory) {
+  if (!copyHistory?.isDirty()) return;
+  const version = copyHistory.version;
+  try {
+    await messenger.storage.local.set({ [COPY_HISTORY_KEY]: copyHistory.snapshot() });
+    copyHistory.markSaved(version);
+  } catch (e) {
+    warn('could not save copy history', e);
+  }
 }
 
 /**
@@ -426,22 +454,23 @@ async function normalize(messageHeader, fetchFull, headerReads, authReads) {
     (fields[key] ??= []).push(String(value));
   };
 
-  // A message whose headers cannot be read is left out of the run. Matching it
-  // on the indexed fields alone is unsafe: "Reply-To does not contain X" is
-  // true for a missing header, and a rule that deletes would then act on mail
-  // it never read.
+  // A message whose headers cannot be read is left out of the run, whether the
+  // read timed out or threw an error. Matching it on the indexed fields alone
+  // is unsafe: "Reply-To does not contain X" is true for a missing header, and
+  // a rule that deletes would then act on mail it never read.
   let headersRead = false;
   if (fetchFull) {
-    try {
-      const headers = await headerReads.read(messageHeader.id, messageHeader.folder?.accountId);
-      if (!headers) return null;
-      for (const [name, values] of Object.entries(headers)) {
-        for (const v of values ?? []) push(name, v);
-      }
-      headersRead = true;
-    } catch (e) {
-      warn('header read failed', messageHeader.id, e);
+    const headers = await readHeadersOrSkip(
+      headerReads,
+      messageHeader.id,
+      messageHeader.folder?.accountId,
+      (e) => warn('header read failed', messageHeader.id, e),
+    );
+    if (!headers) return null;
+    for (const [name, values] of Object.entries(headers)) {
+      for (const v of values ?? []) push(name, v);
     }
+    headersRead = true;
   }
 
   // Cheap fields from the indexed header — the only source when fetchFull is
@@ -524,7 +553,7 @@ async function readBody(bodyReads, messageId) {
 
 /** Run one rule across all its source folders. Returns count of affected messages. */
 async function runRule(
-  rule, folderIds, runState, manual, addressBooks, settings, headerReads, authReads, bodyReads, quiet,
+  rule, folderIds, runState, manual, addressBooks, settings, headerReads, authReads, bodyReads, copyHistory, quiet,
 ) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
@@ -538,6 +567,7 @@ async function runRule(
   let affected = 0;
   let scanned = 0;
   let matched = 0;
+  let alreadyCopied = 0;
   let scanFailed = false;
   let authPending = 0;
   let bodiesRead = 0;
@@ -546,6 +576,11 @@ async function runRule(
 
   for (const folderId of folderIds) {
     const matchedIds = [];
+    const matchedHeaders = new Map();
+    const recordMatch = (header) => {
+      matchedIds.push(header.id);
+      matchedHeaders.set(header.id, header);
+    };
     try {
       for await (const header of messagesInFolder(folderId, bounds)) {
         scanned += 1;
@@ -557,14 +592,14 @@ async function runRule(
           // The other conditions decide most messages, and those skip the read.
           const decided = decideWithoutBody(message, rule, options);
           if (decided !== null) {
-            if (decided) matchedIds.push(header.id);
+            if (decided) recordMatch(header);
             continue;
           }
           message.body = await readBody(bodyReads, header.id);
           if (message.body === null) continue;
           bodiesRead += 1;
         }
-        if (evaluateRule(message, rule, options)) matchedIds.push(header.id);
+        if (evaluateRule(message, rule, options)) recordMatch(header);
       }
     } catch (e) {
       warn(`scan failed for folder ${folderId} in rule "${rule.name}"`, e);
@@ -573,13 +608,40 @@ async function runRule(
     }
     try {
       matched += matchedIds.length;
+      const copyKeysByAction = new Map();
+      const skippedCopyIds = new Set();
+      const copiedIds = new Set();
       // Saved at once, like a header timeout: if a group never answers, the
       // last line saved shows where the action stopped.
-      await runActions(messenger, matchedIds, actionsOf(rule), (action, done, total) => {
-        log(`rule "${rule.name}": ${action.type} ${done} of ${total}`);
-        return flushLog();
+      const result = await runActions(messenger, matchedIds, actionsOf(rule), {
+        headers: matchedHeaders,
+        filterIds: async (action, candidateIds) => {
+          if (action.type !== 'copy' || !rule.id || !copyHistory) return candidateIds;
+          const { toCopy, skipped, keysById } = await copyHistory.filterUncopied(
+            rule.id,
+            action.folderId,
+            candidateIds,
+            matchedHeaders,
+          );
+          copyKeysByAction.set(action, keysById);
+          for (const id of skipped) skippedCopyIds.add(id);
+          for (const id of toCopy) copiedIds.add(id);
+          return toCopy;
+        },
+        onBatch: async (action, batchIds) => {
+          if (action.type !== 'copy' || !rule.id || !copyHistory) return;
+          copyHistory.recordCopied(rule.id, action.folderId, batchIds, copyKeysByAction.get(action));
+          await persistCopyHistory(copyHistory);
+        },
+        onProgress: (action, done, total) => {
+          log(`rule "${rule.name}": ${action.type} ${done} of ${total}`);
+          return flushLog();
+        },
       });
-      affected += matchedIds.length;
+      for (const id of skippedCopyIds) {
+        if (!copiedIds.has(id)) alreadyCopied += 1;
+      }
+      affected += result.affected;
     } catch (e) {
       warn(`action failed for rule "${rule.name}"`, e);
       scanFailed = true;
@@ -613,6 +675,7 @@ async function runRule(
       `${needsBody ? `${bodiesRead} bodies read, ` : ''}` +
       `${bodySkipped > 0 ? `${bodySkipped} skipped (body unread), ` : ''}` +
       `${authPending > 0 ? `${authPending} waiting for an auth check, ` : ''}${matched} matched, ` +
+      `${alreadyCopied > 0 ? `${alreadyCopied} already copied, ` : ''}` +
       `${affected} actioned, ${Date.now() - startedAt.getTime()} ms${scanFailed ? ', WITH ERRORS' : ''}`,
   );
   return affected;
@@ -683,13 +746,20 @@ async function runAllRules(
   const authReads = selected.some(requiresRaw) ? await newAuthReads(advanced) : null;
   // Shared too: see HEADER_TIMEOUT_LIMIT.
   const bodyReads = newBodyReads();
+  // Pruned against the full rule list (not `selected`), so a single-rule or
+  // new-mail run never drops another rule's copy history.
+  const copyHistory = await loadCopyHistory(rules);
   let total = 0;
 
-  for (const rule of selected) {
-    total += await runRule(
-      rule, scanned.get(rule), runState, isManual(rule), addressBooks, advanced, headerReads,
-      authReads, bodyReads, quietRule(rule),
-    );
+  try {
+    for (const rule of selected) {
+      total += await runRule(
+        rule, scanned.get(rule), runState, isManual(rule), addressBooks, advanced, headerReads,
+        authReads, bodyReads, copyHistory, quietRule(rule),
+      );
+    }
+  } finally {
+    await persistCopyHistory(copyHistory);
   }
 
   await saveRunState(runState);

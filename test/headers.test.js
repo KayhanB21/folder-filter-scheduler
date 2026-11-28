@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHeaderReads } from '../src/headers.js';
+import { createHeaderReads, readHeadersOrSkip } from '../src/headers.js';
 
 const never = () => new Promise(() => {});
 const answers = (headers) => async () => ({ headers });
@@ -163,4 +163,41 @@ test('the caller\'s set of known accounts is copied, not shared', async () => {
   });
   await reads.read(1, 'a');
   assert.equal(known.size, 0);
+});
+
+test('readHeadersOrSkip returns null and counts the message as skipped when a read throws', async () => {
+  const errors = [];
+  const { reads } = setup({
+    getHeaders: async () => { throw new Error('IMAP connection reset'); },
+    getFull: answers(HEADERS),
+  });
+  assert.equal(await readHeadersOrSkip(reads, 1, 'acct', (e) => errors.push(e.message)), null);
+  assert.deepEqual(errors, ['IMAP connection reset']);
+  assert.equal(reads.skipped, 1);
+});
+
+test('readHeadersOrSkip does not double-count skipped on a timeout', async () => {
+  const errors = [];
+  const { reads } = setup({ getHeaders: never, getFull: never });
+  assert.equal(await readHeadersOrSkip(reads, 1, 'acct', (e) => errors.push(e)), null);
+  assert.deepEqual(errors, []);
+  assert.equal(reads.skipped, 1);
+});
+
+test('readHeadersOrSkip returns headers on success and skips once if fallback getFull throws', async () => {
+  const ok = setup({ getHeaders: answers(HEADERS), getFull: answers({}) });
+  assert.deepEqual(await readHeadersOrSkip(ok.reads, 1, 'acct'), HEADERS);
+  assert.equal(ok.reads.skipped, 0);
+
+  const errors = [];
+  const fallbackThrows = setup({
+    getHeaders: never,
+    getFull: async () => { throw new Error('offline'); },
+  });
+  assert.equal(
+    await readHeadersOrSkip(fallbackThrows.reads, 1, 'acct', (e) => errors.push(e.message)),
+    null,
+  );
+  assert.deepEqual(errors, ['offline']);
+  assert.equal(fallbackThrows.reads.skipped, 1);
 });
