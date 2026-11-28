@@ -1592,5 +1592,143 @@
   },
   "status_draftCreated": {
     "message": "選択したメッセージからルールの下書きを作成しました — 操作を選んで保存を押してください。"
+  },
+  "options_filterRules": {
+    "message": "ルールを絞り込み…"
+  },
+  "options_filterNoMatches": {
+    "message": "一致するルールがありません"
+  },
+  "options_filterShowing": {
+    "message": "$2 件中 $1 件のルールを表示"
+  },
+  "rule_moveUp": {
+    "message": "ルールを上へ移動"
+  },
+  "rule_moveDown": {
+    "message": "ルールを下へ移動"
+  },
+  "rule_duplicate": {
+    "message": "複製"
+  },
+  "rule_duplicateTitle": {
+    "message": "このルールのコピーを作成"
+  },
+  "rule_copyName": {
+    "message": "$1 (コピー)"
+  },
+  "rule_test": {
+    "message": "テスト"
+  },
+  "rule_testTitle": {
+    "message": "メールを移動・タグ付け・削除せずに一致するメッセージをプレビュー"
+  },
+  "rule_stopProcessing": {
+    "message": "一致したメッセージには後続のルールを適用しない"
+  },
+  "summary_stopProcessing": {
+    "message": "後続ルールを停止"
+  },
+  "meta_justNow": {
+    "message": "たった今"
+  },
+  "meta_minutesAgo_one": {
+    "message": "$1 分前"
+  },
+  "meta_minutesAgo_other": {
+    "message": "$1 分前"
+  },
+  "meta_hoursAgo_one": {
+    "message": "$1 時間前"
+  },
+  "meta_hoursAgo_other": {
+    "message": "$1 時間前"
+  },
+  "meta_daysAgo_one": {
+    "message": "$1 日前"
+  },
+  "meta_daysAgo_other": {
+    "message": "$1 日前"
+  },
+  "meta_lastRan": {
+    "message": "前回実行: $1"
+  },
+  "meta_neverRan": {
+    "message": "未実行"
+  },
+  "meta_matched_one": {
+    "message": "$1 件一致"
+  },
+  "meta_matched_other": {
+    "message": "$1 件一致"
+  },
+  "meta_actioned_one": {
+    "message": "$1 件処理"
+  },
+  "meta_actioned_other": {
+    "message": "$1 件処理"
+  },
+  "meta_warnErrors": {
+    "message": "前回の実行でエラーが発生しました"
+  },
+  "meta_warnBookAccess": {
+    "message": "アドレス帳へのアクセスが必要です"
+  },
+  "meta_warnDnsAccess": {
+    "message": "DNS サーバーへのアクセスが必要です"
+  },
+  "test_close": {
+    "message": "プレビューを閉じる"
+  },
+  "test_running": {
+    "message": "テスト中… (メールは変更されません)"
+  },
+  "test_summary_one": {
+    "message": "テスト結果: $2 件中 $1 件が一致します (メールは変更されていません)"
+  },
+  "test_summary_other": {
+    "message": "テスト結果: $2 件中 $1 件が一致します (メールは変更されていません)"
+  },
+  "test_truncated": {
+    "message": "最初の $1 件を表示しています。"
+  },
+  "test_skippedHeaders_one": {
+    "message": "$1 件スキップ (ヘッダー未読)。"
+  },
+  "test_skippedHeaders_other": {
+    "message": "$1 件スキップ (ヘッダー未読)。"
+  },
+  "test_skippedBodies_one": {
+    "message": "$1 件スキップ (本文未読)。"
+  },
+  "test_skippedBodies_other": {
+    "message": "$1 件スキップ (本文未読)。"
+  },
+  "test_authPending_one": {
+    "message": "$1 件が認証チェック待ちです。"
+  },
+  "test_authPending_other": {
+    "message": "$1 件が認証チェック待ちです。"
+  },
+  "test_scanErrors": {
+    "message": "一部のフォルダーをスキャンできませんでした。"
+  },
+  "test_noMatches": {
+    "message": "一致するメッセージはありません — 移動・タグ付け・削除は行われません。"
+  },
+  "test_noSubject": {
+    "message": "(件名なし)"
+  },
+  "test_failed": {
+    "message": "テストに失敗しました: $1"
+  },
+  "status_testNoFolder": {
+    "message": "テストする前に「$1」のフォルダーを 1 つ以上選択してください。"
+  },
+  "status_orderChanged": {
+    "message": "ルールの順序を変更しました — 保存を押して確定してください。"
+  },
+  "status_ruleDuplicated": {
+    "message": "「$1」として複製しました — 内容を確認して保存を押してください。"
   }
 }

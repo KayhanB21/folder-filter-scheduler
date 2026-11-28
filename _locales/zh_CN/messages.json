@@ -1224,5 +1224,143 @@
   },
   "status_draftCreated": {
     "message": "已根据所选邮件创建规则草稿 — 请选择操作并点击保存。"
+  },
+  "options_filterRules": {
+    "message": "筛选规则…"
+  },
+  "options_filterNoMatches": {
+    "message": "没有匹配的规则"
+  },
+  "options_filterShowing": {
+    "message": "显示 $1 / $2 条规则"
+  },
+  "rule_moveUp": {
+    "message": "上移规则"
+  },
+  "rule_moveDown": {
+    "message": "下移规则"
+  },
+  "rule_duplicate": {
+    "message": "复制"
+  },
+  "rule_duplicateTitle": {
+    "message": "创建此规则的副本"
+  },
+  "rule_copyName": {
+    "message": "$1（副本）"
+  },
+  "rule_test": {
+    "message": "测试"
+  },
+  "rule_testTitle": {
+    "message": "预览匹配的邮件，不会移动、标记或删除任何邮件"
+  },
+  "rule_stopProcessing": {
+    "message": "对匹配的邮件停止执行后续规则"
+  },
+  "summary_stopProcessing": {
+    "message": "停止后续规则"
+  },
+  "meta_justNow": {
+    "message": "刚刚"
+  },
+  "meta_minutesAgo_one": {
+    "message": "$1 分钟前"
+  },
+  "meta_minutesAgo_other": {
+    "message": "$1 分钟前"
+  },
+  "meta_hoursAgo_one": {
+    "message": "$1 小时前"
+  },
+  "meta_hoursAgo_other": {
+    "message": "$1 小时前"
+  },
+  "meta_daysAgo_one": {
+    "message": "$1 天前"
+  },
+  "meta_daysAgo_other": {
+    "message": "$1 天前"
+  },
+  "meta_lastRan": {
+    "message": "上次运行：$1"
+  },
+  "meta_neverRan": {
+    "message": "尚未运行"
+  },
+  "meta_matched_one": {
+    "message": "匹配 $1 封"
+  },
+  "meta_matched_other": {
+    "message": "匹配 $1 封"
+  },
+  "meta_actioned_one": {
+    "message": "处理 $1 封"
+  },
+  "meta_actioned_other": {
+    "message": "处理 $1 封"
+  },
+  "meta_warnErrors": {
+    "message": "上次运行出现错误"
+  },
+  "meta_warnBookAccess": {
+    "message": "需要通讯录权限"
+  },
+  "meta_warnDnsAccess": {
+    "message": "需要 DNS 服务器权限"
+  },
+  "test_close": {
+    "message": "关闭预览"
+  },
+  "test_running": {
+    "message": "正在测试…（不会更改任何邮件）"
+  },
+  "test_summary_one": {
+    "message": "试运行：将匹配 $1 / $2 封邮件（未更改任何邮件）"
+  },
+  "test_summary_other": {
+    "message": "试运行：将匹配 $1 / $2 封邮件（未更改任何邮件）"
+  },
+  "test_truncated": {
+    "message": "仅显示前 $1 封匹配邮件。"
+  },
+  "test_skippedHeaders_one": {
+    "message": "跳过 $1 封邮件（未能读取邮件头）。"
+  },
+  "test_skippedHeaders_other": {
+    "message": "跳过 $1 封邮件（未能读取邮件头）。"
+  },
+  "test_skippedBodies_one": {
+    "message": "跳过 $1 封邮件（未能读取正文）。"
+  },
+  "test_skippedBodies_other": {
+    "message": "跳过 $1 封邮件（未能读取正文）。"
+  },
+  "test_authPending_one": {
+    "message": "$1 封邮件正在等待身份验证检查。"
+  },
+  "test_authPending_other": {
+    "message": "$1 封邮件正在等待身份验证检查。"
+  },
+  "test_scanErrors": {
+    "message": "部分文件夹无法扫描。"
+  },
+  "test_noMatches": {
+    "message": "没有匹配的邮件 — 不会移动、标记或删除任何邮件。"
+  },
+  "test_noSubject": {
+    "message": "（无主题）"
+  },
+  "test_failed": {
+    "message": "测试失败：$1"
+  },
+  "status_testNoFolder": {
+    "message": "测试前请为“$1”至少选择一个文件夹。"
+  },
+  "status_orderChanged": {
+    "message": "规则顺序已更改 — 请点击保存以保留新顺序。"
+  },
+  "status_ruleDuplicated": {
+    "message": "已复制为“$1” — 请检查并点击保存。"
   }
 }

@@ -150,6 +150,9 @@ function describeRule(rule, runState, { includeValues, generatedAt, offsetMinute
   for (const a of orderActions(actionsOf(rule))) {
     lines.push(`    then: ${describeAction(a, { includeValues })}`);
   }
+  if (rule.stopProcessing === true) {
+    lines.push('    stop later rules: yes');
+  }
   if (rule.schedule?.enabled === true) {
     const cron = scheduleOf(rule);
     // The next run is worked out here because the log leaves routine runs on
@@ -164,7 +167,10 @@ function describeRule(rule, runState, { includeValues, generatedAt, offsetMinute
   const state = runState?.[rule.id];
   const lastRun = state?.lastRunAt ? formatLocalTime(state.lastRunAt, offsetMinutes) : 'never';
   const lastCatchUp = state?.lastCatchUpAt ? formatLocalTime(state.lastCatchUpAt, offsetMinutes) : 'never';
-  lines.push(`    last run: ${lastRun}; last catch-up: ${lastCatchUp}`);
+  const statusNote = state?.lastStatus
+    ? `; last outcome: ${state.lastStatus.matched} matched, ${state.lastStatus.affected} actioned${state.lastStatus.error ? ' (with errors)' : ''}`
+    : '';
+  lines.push(`    last run: ${lastRun}; last catch-up: ${lastCatchUp}${statusNote}`);
   return lines;
 }
 

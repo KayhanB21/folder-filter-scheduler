@@ -204,3 +204,18 @@ condition="AND (subject,contains,casino)"
   assert.equal(second.duplicates.length, 1);
   assert.equal(second.duplicates[0].matches, 'Kill spam');
 });
+
+test('importThunderbirdFilters maps Stop execution to stopProcessing: true cleanly', () => {
+  const dat = `
+version="9"
+name="VIP Alerts"
+action="Mark flagged"
+action="Stop execution"
+condition="AND (from,contains,ceo@company.example)"
+`;
+  const res = importThunderbirdFilters(dat, { knownFolders: KNOWN_FOLDERS });
+  assert.deepEqual(res.problems, []);
+  assert.equal(res.rules.length, 1);
+  assert.equal(res.rules[0].stopProcessing, true);
+  assert.deepEqual(res.rules[0].actions, [{ type: 'markFlagged' }]);
+});

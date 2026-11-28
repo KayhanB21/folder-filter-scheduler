@@ -61,6 +61,16 @@
 
     <section class="rules-bar">
       <button id="toggle-all" type="button" data-i18n="options_collapseAll">Collapse all</button>
+      <input
+        id="rule-filter"
+        class="rule-filter"
+        type="search"
+        placeholder="Filter rules…"
+        aria-label="Filter rules"
+        data-i18n-placeholder="options_filterRules"
+        data-i18n-aria-label="options_filterRules"
+      />
+      <span id="rule-filter-count" class="rule-filter-count" aria-live="polite"></span>
       <span class="spacer"></span>
       <button id="export" type="button" data-i18n="options_export">Export…</button>
       <button id="import" type="button" title="Import rules (.json) or Thunderbird msgFilterRules.dat" data-i18n="options_import" data-i18n-title="options_importTitle">Import…</button>
@@ -261,11 +271,31 @@
           <button class="rule-collapse" type="button" aria-expanded="true" title="Collapse or expand this rule" data-i18n-title="rule_collapseTitle">▾</button>
           <input class="rule-name" type="text" placeholder="Rule name" data-i18n-placeholder="rule_namePlaceholder" />
           <label class="toggle" data-i18n="rule_enabled"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
+          <span class="rule-order-btns">
+            <button class="move-up rule-icon-btn" type="button" title="Move rule up" aria-label="Move rule up" data-i18n-title="rule_moveUp" data-i18n-aria-label="rule_moveUp">↑</button>
+            <button class="move-down rule-icon-btn" type="button" title="Move rule down" aria-label="Move rule down" data-i18n-title="rule_moveDown" data-i18n-aria-label="rule_moveDown">↓</button>
+          </span>
+          <button class="dup-rule" type="button" title="Create a copy of this rule" data-i18n="rule_duplicate" data-i18n-title="rule_duplicateTitle">Duplicate</button>
+          <button class="test-rule" type="button" title="Preview which messages match without moving, tagging, or deleting anything" data-i18n="rule_test" data-i18n-title="rule_testTitle">Test</button>
           <button class="run-rule" type="button" title="Run only this rule now, on every message in its folders" data-i18n="rule_run" data-i18n-title="rule_runTitle">Run</button>
           <button class="del-rule danger" type="button" data-i18n="rule_delete">Delete</button>
         </div>
+        <!-- Quiet status line: last run time, matched count, and any warnings. Visible even when collapsed. -->
+        <p class="rule-meta">
+          <span class="rule-meta-text"></span>
+          <span class="rule-meta-warn hidden"></span>
+        </p>
         <!-- One-line digest, shown in place of the body while collapsed. -->
         <p class="rule-summary"></p>
+        <!-- Dry-run preview results (shown after pressing Test). -->
+        <div class="test-results hidden" aria-live="polite">
+          <div class="test-results-head">
+            <span class="test-results-summary"></span>
+            <button class="test-results-close" type="button" title="Close preview" aria-label="Close preview" data-i18n-title="test_close" data-i18n-aria-label="test_close">×</button>
+          </div>
+          <p class="test-results-note hidden"></p>
+          <ul class="test-results-list"></ul>
+        </div>
 
         <div class="rule-body">
         <div class="row">
@@ -300,6 +330,13 @@
 
         <div class="actions"></div>
         <button class="add-action" type="button" data-i18n="rule_addAction">+ Add action</button>
+
+        <div class="row stop-row">
+          <span class="lbl"></span>
+          <label class="toggle" data-i18n="rule_stopProcessing">
+            <input class="rule-stop" type="checkbox" /> Stop running later rules on matched messages
+          </label>
+        </div>
 
         <!-- Off by default: a rule runs on the timer at the top of the page. -->
         <div class="row schedule">

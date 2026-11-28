@@ -465,15 +465,20 @@ function convertClause(clause, where, problems) {
 function convertActions(rawActions, where, knownFolders, problems) {
   if (!Array.isArray(rawActions) || rawActions.length === 0) {
     problems.push(t('import_noAction', where));
-    return null;
+    return { actions: null, stopProcessing: false };
   }
 
   const mapped = [];
+  let stopProcessing = false;
   for (const raw of rawActions) {
     const kind = String(raw?.type ?? '').trim();
     const value = String(raw?.value ?? '').trim();
     const lower = kind.toLowerCase();
 
+    if (lower === 'stop execution') {
+      stopProcessing = true;
+      continue;
+    }
     if (lower === 'move to folder' || lower === 'copy to folder') {
       const type = lower === 'move to folder' ? 'move' : 'copy';
       const folder = resolveThunderbirdFolderUri(value, knownFolders);
@@ -529,9 +534,9 @@ function convertActions(rawActions, where, knownFolders, problems) {
 
   if (actions.length === 0) {
     problems.push(t('import_noUsableAction', where));
-    return null;
+    return { actions: null, stopProcessing };
   }
-  return actions;
+  return { actions, stopProcessing };
 }
 
 /**
@@ -567,7 +572,7 @@ export function importThunderbirdFilters(text, { knownFolders = [], existingRule
     const name = String(filter.name ?? '').trim();
     const where = name ? t('import_whereNamedRule', i + 1, name) : t('import_whereRule', i + 1);
 
-    const actions = convertActions(filter.actions, where, knownFolders, problems);
+    const { actions, stopProcessing } = convertActions(filter.actions, where, knownFolders, problems);
     const condParsed = parseThunderbirdCondition(filter.condition);
 
     if (condParsed.mode === 'ALL') {
@@ -600,6 +605,7 @@ export function importThunderbirdFilters(text, { knownFolders = [], existingRule
       // which folder(s) to watch on the options page before saving.
       folderIds: [],
       includeSubfolders: false,
+      ...(stopProcessing ? { stopProcessing: true } : {}),
       conditions,
       actions,
     };

@@ -1738,5 +1738,189 @@
   "status_draftCreated": {
     "message": "Draft rule created from the selected message — pick an action and press Save.",
     "description": "Status shown on the options page when opened via Create rule from this message."
+  },
+  "options_filterRules": {
+    "message": "Filter rules…",
+    "description": "Placeholder and label for the search box above the rules list."
+  },
+  "options_filterNoMatches": {
+    "message": "No rules match",
+    "description": "Shown next to the rule filter box when no rule matches the search."
+  },
+  "options_filterShowing": {
+    "message": "Showing $1 of $2 rules",
+    "description": "Shown next to the rule filter box. $1 is matching rule count, $2 is total rule count."
+  },
+  "rule_moveUp": {
+    "message": "Move rule up",
+    "description": "Tooltip and accessible label for the button that moves a rule earlier in execution order."
+  },
+  "rule_moveDown": {
+    "message": "Move rule down",
+    "description": "Tooltip and accessible label for the button that moves a rule later in execution order."
+  },
+  "rule_duplicate": {
+    "message": "Duplicate",
+    "description": "Button on a rule card that creates an unsaved copy of the rule."
+  },
+  "rule_duplicateTitle": {
+    "message": "Create a copy of this rule",
+    "description": "Tooltip on the Duplicate button of a rule card."
+  },
+  "rule_copyName": {
+    "message": "$1 (copy)",
+    "description": "Default name for a duplicated rule. $1 is the original rule name."
+  },
+  "rule_test": {
+    "message": "Test",
+    "description": "Button on a rule card that runs a dry run without modifying any messages."
+  },
+  "rule_testTitle": {
+    "message": "Preview which messages match without moving, tagging, or deleting anything",
+    "description": "Tooltip on the Test button of a rule card."
+  },
+  "rule_stopProcessing": {
+    "message": "Stop running later rules on matched messages",
+    "description": "Checkbox on a rule card that stops subsequent rules in the same run from acting on messages matched by this rule."
+  },
+  "summary_stopProcessing": {
+    "message": "stop later rules",
+    "description": "Shown in a collapsed rule summary when the rule stops later rules from running on matched messages."
+  },
+  "meta_justNow": {
+    "message": "just now",
+    "description": "Relative time for a rule that ran less than a minute ago, used inside meta_lastRan."
+  },
+  "meta_minutesAgo_one": {
+    "message": "$1 min ago",
+    "description": "Relative time in minutes, used inside meta_lastRan. $1 is the number of minutes."
+  },
+  "meta_minutesAgo_other": {
+    "message": "$1 min ago",
+    "description": "Relative time in minutes, used inside meta_lastRan. $1 is the number of minutes."
+  },
+  "meta_hoursAgo_one": {
+    "message": "$1 hr ago",
+    "description": "Relative time in hours, used inside meta_lastRan. $1 is the number of hours."
+  },
+  "meta_hoursAgo_other": {
+    "message": "$1 hr ago",
+    "description": "Relative time in hours, used inside meta_lastRan. $1 is the number of hours."
+  },
+  "meta_daysAgo_one": {
+    "message": "$1 day ago",
+    "description": "Relative time in days, used inside meta_lastRan. $1 is the number of days."
+  },
+  "meta_daysAgo_other": {
+    "message": "$1 days ago",
+    "description": "Relative time in days, used inside meta_lastRan. $1 is the number of days."
+  },
+  "meta_lastRan": {
+    "message": "Last ran $1",
+    "description": "Status line on a rule card. $1 is a relative time such as \"8 min ago\" or \"just now\"."
+  },
+  "meta_neverRan": {
+    "message": "Never run yet",
+    "description": "Status line on a rule card that has not run yet."
+  },
+  "meta_matched_one": {
+    "message": "$1 matched",
+    "description": "Matched message count on a rule card status line. $1 is the count."
+  },
+  "meta_matched_other": {
+    "message": "$1 matched",
+    "description": "Matched message count on a rule card status line. $1 is the count."
+  },
+  "meta_actioned_one": {
+    "message": "$1 actioned",
+    "description": "Actioned message count on a rule card status line when it differs from matched count. $1 is the count."
+  },
+  "meta_actioned_other": {
+    "message": "$1 actioned",
+    "description": "Actioned message count on a rule card status line when it differs from matched count. $1 is the count."
+  },
+  "meta_warnErrors": {
+    "message": "Last run had errors",
+    "description": "Warning badge on a rule card when the most recent run failed or skipped unreadable messages."
+  },
+  "meta_warnBookAccess": {
+    "message": "Address book access needed",
+    "description": "Warning badge on a rule card when an address-book condition lacks permission."
+  },
+  "meta_warnDnsAccess": {
+    "message": "DNS server access needed",
+    "description": "Warning badge on a rule card when an authentication condition lacks DNS host permission."
+  },
+  "test_close": {
+    "message": "Close preview",
+    "description": "Tooltip and label on the close button of the dry-run preview panel."
+  },
+  "test_running": {
+    "message": "Testing… (no mail will be changed)",
+    "description": "Shown inside the dry-run preview panel while scanning."
+  },
+  "test_summary_one": {
+    "message": "Dry run: would match $1 of $2 messages (no mail was changed)",
+    "description": "Header of the dry-run preview panel. $1 is matched count, $2 is scanned count."
+  },
+  "test_summary_other": {
+    "message": "Dry run: would match $1 of $2 messages (no mail was changed)",
+    "description": "Header of the dry-run preview panel. $1 is matched count, $2 is scanned count."
+  },
+  "test_truncated": {
+    "message": "Showing the first $1 matches.",
+    "description": "Note in the dry-run preview panel when more messages matched than are listed. $1 is the cap."
+  },
+  "test_skippedHeaders_one": {
+    "message": "$1 message skipped (headers unread).",
+    "description": "Warning in dry-run preview when a message header could not be read. $1 is count."
+  },
+  "test_skippedHeaders_other": {
+    "message": "$1 messages skipped (headers unread).",
+    "description": "Warning in dry-run preview when message headers could not be read. $1 is count."
+  },
+  "test_skippedBodies_one": {
+    "message": "$1 message skipped (body unread).",
+    "description": "Warning in dry-run preview when a message body could not be read. $1 is count."
+  },
+  "test_skippedBodies_other": {
+    "message": "$1 messages skipped (body unread).",
+    "description": "Warning in dry-run preview when message bodies could not be read. $1 is count."
+  },
+  "test_authPending_one": {
+    "message": "$1 message waiting for an auth check.",
+    "description": "Note in dry-run preview when a DKIM/DMARC check could not complete yet. $1 is count."
+  },
+  "test_authPending_other": {
+    "message": "$1 messages waiting for an auth check.",
+    "description": "Note in dry-run preview when DKIM/DMARC checks could not complete yet. $1 is count."
+  },
+  "test_scanErrors": {
+    "message": "Some folders could not be scanned.",
+    "description": "Warning in dry-run preview when scanning one or more folders threw an error."
+  },
+  "test_noMatches": {
+    "message": "No messages matched — nothing would be moved, tagged, or deleted.",
+    "description": "Shown in dry-run preview when zero messages matched."
+  },
+  "test_noSubject": {
+    "message": "(no subject)",
+    "description": "Placeholder subject for a matched message with an empty Subject header in the dry-run preview."
+  },
+  "test_failed": {
+    "message": "Test failed: $1",
+    "description": "Error shown in dry-run preview when the test could not run. $1 is the error message."
+  },
+  "status_testNoFolder": {
+    "message": "Choose at least one folder for “$1” before testing it.",
+    "description": "Status when the user clicks Test on a rule with no folders selected. $1 is the rule name."
+  },
+  "status_orderChanged": {
+    "message": "Rule order changed — press Save to keep the new order.",
+    "description": "Status after moving a rule up or down."
+  },
+  "status_ruleDuplicated": {
+    "message": "Duplicated as “$1” — review it and press Save.",
+    "description": "Status after duplicating a rule. $1 is the copy name."
   }
 }

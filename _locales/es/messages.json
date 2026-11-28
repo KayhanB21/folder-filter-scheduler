@@ -1305,5 +1305,143 @@
   },
   "status_draftCreated": {
     "message": "Borrador de regla creado a partir del mensaje seleccionado: elija una acción y pulse Guardar."
+  },
+  "options_filterRules": {
+    "message": "Filtrar reglas…"
+  },
+  "options_filterNoMatches": {
+    "message": "Ninguna regla coincide"
+  },
+  "options_filterShowing": {
+    "message": "Mostrando $1 de $2 reglas"
+  },
+  "rule_moveUp": {
+    "message": "Subir regla"
+  },
+  "rule_moveDown": {
+    "message": "Bajar regla"
+  },
+  "rule_duplicate": {
+    "message": "Duplicar"
+  },
+  "rule_duplicateTitle": {
+    "message": "Crear una copia de esta regla"
+  },
+  "rule_copyName": {
+    "message": "$1 (copia)"
+  },
+  "rule_test": {
+    "message": "Probar"
+  },
+  "rule_testTitle": {
+    "message": "Previsualizar qué mensajes coinciden sin mover, etiquetar ni eliminar nada"
+  },
+  "rule_stopProcessing": {
+    "message": "Detener reglas posteriores en los mensajes coincidentes"
+  },
+  "summary_stopProcessing": {
+    "message": "detener reglas posteriores"
+  },
+  "meta_justNow": {
+    "message": "justo ahora"
+  },
+  "meta_minutesAgo_one": {
+    "message": "hace $1 min"
+  },
+  "meta_minutesAgo_other": {
+    "message": "hace $1 min"
+  },
+  "meta_hoursAgo_one": {
+    "message": "hace $1 h"
+  },
+  "meta_hoursAgo_other": {
+    "message": "hace $1 h"
+  },
+  "meta_daysAgo_one": {
+    "message": "hace $1 día"
+  },
+  "meta_daysAgo_other": {
+    "message": "hace $1 días"
+  },
+  "meta_lastRan": {
+    "message": "Última ejecución $1"
+  },
+  "meta_neverRan": {
+    "message": "Aún no se ha ejecutado"
+  },
+  "meta_matched_one": {
+    "message": "$1 coincidencia"
+  },
+  "meta_matched_other": {
+    "message": "$1 coincidencias"
+  },
+  "meta_actioned_one": {
+    "message": "$1 procesado"
+  },
+  "meta_actioned_other": {
+    "message": "$1 procesados"
+  },
+  "meta_warnErrors": {
+    "message": "La última ejecución tuvo errores"
+  },
+  "meta_warnBookAccess": {
+    "message": "Se necesita acceso a la libreta de direcciones"
+  },
+  "meta_warnDnsAccess": {
+    "message": "Se necesita acceso al servidor DNS"
+  },
+  "test_close": {
+    "message": "Cerrar vista previa"
+  },
+  "test_running": {
+    "message": "Probando… (no se modificará ningún correo)"
+  },
+  "test_summary_one": {
+    "message": "Prueba: coincidiría $1 de $2 mensajes (no se cambió ningún correo)"
+  },
+  "test_summary_other": {
+    "message": "Prueba: coincidirían $1 de $2 mensajes (no se cambió ningún correo)"
+  },
+  "test_truncated": {
+    "message": "Mostrando las primeras $1 coincidencias."
+  },
+  "test_skippedHeaders_one": {
+    "message": "$1 mensaje omitido (encabezados sin leer)."
+  },
+  "test_skippedHeaders_other": {
+    "message": "$1 mensajes omitidos (encabezados sin leer)."
+  },
+  "test_skippedBodies_one": {
+    "message": "$1 mensaje omitido (cuerpo sin leer)."
+  },
+  "test_skippedBodies_other": {
+    "message": "$1 mensajes omitidos (cuerpo sin leer)."
+  },
+  "test_authPending_one": {
+    "message": "$1 mensaje esperando comprobación de autenticación."
+  },
+  "test_authPending_other": {
+    "message": "$1 mensajes esperando comprobación de autenticación."
+  },
+  "test_scanErrors": {
+    "message": "No se pudieron analizar algunas carpetas."
+  },
+  "test_noMatches": {
+    "message": "No coincidió ningún mensaje: no se movería, etiquetaría ni eliminaría nada."
+  },
+  "test_noSubject": {
+    "message": "(sin asunto)"
+  },
+  "test_failed": {
+    "message": "Error al probar: $1"
+  },
+  "status_testNoFolder": {
+    "message": "Elija al menos una carpeta para «$1» antes de probarla."
+  },
+  "status_orderChanged": {
+    "message": "Orden de reglas cambiado: pulse Guardar para conservarlo."
+  },
+  "status_ruleDuplicated": {
+    "message": "Duplicada como «$1»: revísela y pulse Guardar."
   }
 }
