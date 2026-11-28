@@ -58,7 +58,8 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   [DKIM Verifier](https://github.com/lieser/dkim_verifier) (MIT license).
 - **Diagnostics**: a report you can copy or save from the options page, with
   your Thunderbird version, the shape of each rule, and what recent runs did.
-  Addresses, domains, patterns and folder names are left out unless you opt in.
+  Addresses, domains, patterns, folder names and rule names are left out unless
+  you opt in.
 - **Actions**: move to Trash, archive with each account's own archive
   settings, move/copy to a chosen folder (**including a folder
   in a different account**, for example Yahoo Bulk → Outlook Trash), add, remove, or
@@ -352,7 +353,9 @@ report** or **Save report…**. Paste it into your email or a
 [GitHub issue](https://github.com/KayhanB21/folder-filter-scheduler/issues). The
 report shows every scheduled and manual run of the last few hours: which scan
 ran, over what date range, how many messages were scanned and matched, and any
-errors. It is plain text and shown in full before you send it.
+errors. It also shows how long each run took, how much of that time went to
+header and body reads, and which account gave no answer to a read. It is plain
+text and shown in full before you send it.
 
 ## Develop
 

@@ -62,7 +62,19 @@ export function createHeaderReads({
   const cache = new Map();
   const failed = new Set();
   let spentMs = 0;
+  let slowestMs = 0;
   let budgetExceeded = false;
+  /** Add the time of one call to the run total. Returns the time of the call. */
+  const spend = (start) => {
+    const ms = Math.max(0, now() - start);
+    spentMs += ms;
+    return ms;
+  };
+  /** Count a call that returned an answer. */
+  const answered = (ms) => {
+    reads.fresh += 1;
+    slowestMs = Math.max(slowestMs, ms);
+  };
   const seconds = timeoutMs / 1000;
   // `getFull` returns a message part whose `headers` property is the
   // dictionary. `getHeaders` returns the dictionary itself, so a property
@@ -70,6 +82,8 @@ export function createHeaderReads({
   // wrote, and reading it as the dictionary would drop every real header.
   const headersOfPart = (raw) => raw?.headers ?? raw ?? {};
   const isTimeout = (e) => e?.name === 'TimeoutError';
+  // An account id is a key such as "account3", so the log can name it.
+  const onAccount = (accountId) => (accountId ? ` on account ${accountId}` : '');
 
   const remainingBudget = () => Math.max(0, budgetMs - spentMs);
 
@@ -92,6 +106,12 @@ export function createHeaderReads({
     skipped: 0,
     /** Requests satisfied from this run's in-memory cache. */
     cached: 0,
+    /** Calls to Thunderbird that returned an answer. */
+    fresh: 0,
+    /** The longest of those calls, in milliseconds. */
+    get slowestMs() {
+      return slowestMs;
+    },
     /** Total milliseconds spent inside fresh Thunderbird header calls this run. */
     get spentMs() {
       return spentMs;
@@ -135,11 +155,11 @@ export function createHeaderReads({
         const callStart = now();
         try {
           const headers = (await withTimeout(getHeaders(messageId), callLimit)) ?? {};
-          spentMs += Math.max(0, now() - callStart);
+          answered(spend(callStart));
           cache.set(messageId, headers);
           return headers;
         } catch (e) {
-          spentMs += Math.max(0, now() - callStart);
+          spend(callStart);
           if (!isTimeout(e)) throw e;
           // If the timeout fired solely because the remaining run budget ran out,
           // stop cleanly without blaming `getHeaders` or switching the account.
@@ -153,7 +173,7 @@ export function createHeaderReads({
           // stand for every such message in later runs.
           if (accountId) await onSwitch(accountId);
           await onTimeout(
-            `header read gave no answer after ${seconds} s, reading whole messages on this account instead`,
+            `header read gave no answer after ${seconds} s${onAccount(accountId)}, reading whole messages on this account instead`,
           );
           if (reads.stopped) {
             failed.add(messageId);
@@ -171,12 +191,12 @@ export function createHeaderReads({
       const fullStart = now();
       try {
         const headers = headersOfPart(await withTimeout(getFull(messageId), fullLimit));
-        spentMs += Math.max(0, now() - fullStart);
+        answered(spend(fullStart));
         if (waited) reads.timeouts -= 1;
         cache.set(messageId, headers);
         return headers;
       } catch (e) {
-        spentMs += Math.max(0, now() - fullStart);
+        spend(fullStart);
         if (!isTimeout(e)) throw e;
         if (fullLimit < timeoutMs || remainingBudget() <= 0) {
           return hitBudget();
@@ -185,7 +205,7 @@ export function createHeaderReads({
         reads.skipped += 1;
         failed.add(messageId);
         await onTimeout(
-          `whole-message read gave no answer after ${seconds} s` +
+          `whole-message read gave no answer after ${seconds} s${onAccount(accountId)}` +
             (reads.stopped ? `; ${limit} reads gave no answer, no more header reads this run` : ''),
         );
         return null;

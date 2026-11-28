@@ -53,7 +53,19 @@ export function createBodyReads({
   const cache = new Map();
   const failed = new Set();
   let spentMs = 0;
+  let slowestMs = 0;
   let budgetExceeded = false;
+  /** Add the time of one call to the run total. Returns the time of the call. */
+  const spend = (start) => {
+    const ms = Math.max(0, now() - start);
+    spentMs += ms;
+    return ms;
+  };
+  /** Count a call that returned an answer. */
+  const answered = (ms) => {
+    reads.fresh += 1;
+    slowestMs = Math.max(slowestMs, ms);
+  };
   const seconds = timeoutMs / 1000;
 
   const remainingBudget = () => Math.max(0, budgetMs - spentMs);
@@ -77,6 +89,12 @@ export function createBodyReads({
     skipped: 0,
     /** Requests satisfied from this run's in-memory cache. */
     cached: 0,
+    /** Calls to Thunderbird that returned an answer. */
+    fresh: 0,
+    /** The longest of those calls, in milliseconds. */
+    get slowestMs() {
+      return slowestMs;
+    },
     /** Total milliseconds spent inside fresh Thunderbird body calls this run. */
     get spentMs() {
       return spentMs;
@@ -116,11 +134,11 @@ export function createBodyReads({
       const callStart = now();
       try {
         const texts = await withTimeout(bodyText(messageId, listInlineTextParts, toPlainText), callLimit);
-        spentMs += Math.max(0, now() - callStart);
+        answered(spend(callStart));
         cache.set(messageId, texts);
         return texts;
       } catch (e) {
-        spentMs += Math.max(0, now() - callStart);
+        spend(callStart);
         if (e?.name !== 'TimeoutError') throw e;
         if (callLimit < timeoutMs || remainingBudget() <= 0) {
           return hitBudget();

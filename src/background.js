@@ -13,7 +13,16 @@ import {
   DOMAIN_IN_LIST,
 } from './matcher.js';
 import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
-import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
+import {
+  LOG_CAP,
+  appendEntries,
+  buildReport,
+  describeReads,
+  folderRef,
+  makeEntry,
+  revealText,
+  ruleRef,
+} from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
 import {
   SCAN_KINDS,
@@ -96,6 +105,12 @@ const HEADER_TIMEOUT_LIMIT = 2;
 /** Total wall-clock budget for header/body downloads in one run, matching RAW_BUDGET_MS. */
 const HEADER_BUDGET_MS = 20_000;
 const BODY_BUDGET_MS = 20_000;
+/**
+ * A run that takes this long gets a warning in the log. The read budgets end
+ * a run of header and body reads after about 20 seconds each, so a run past
+ * this mark spent its time elsewhere: folder queries, actions, or a login.
+ */
+const SLOW_RUN_MS = 30_000;
 /** Short timeout when peeking at a single right-clicked message for "Create rule…". */
 const DRAFT_HEADER_TIMEOUT_MS = 3_000;
 const PENDING_DRAFT_KEY = 'pendingDraftRule';
@@ -129,7 +144,9 @@ const HARVEST_RULE_NAME = 'Spam domains';
  * send a diagnostics report without opening the developer tools. Entries are
  * batched and written on a short debounce, and flushed at the end of every run.
  * Callers must never log addresses, domains, or subjects: the log ends up in
- * shared reports. Rule names, counts, ids, and timestamps are fine.
+ * shared reports. Counts, ids, and timestamps are fine. A rule name or a
+ * folder id goes through `ruleRef` or `folderRef`, so that a report without
+ * values hides it. See diagnostics.js.
  */
 const pendingLog = [];
 let flushTimer = null;
@@ -155,12 +172,14 @@ function flushLog() {
   return flushChain;
 }
 
+/** The console is local, so it shows names. It never shows the marks. */
+const forConsole = (args) => args.map((arg) => (typeof arg === 'string' ? revealText(arg, true) : arg));
 const log = (...args) => {
-  console.log('[FolderFilterScheduler]', ...args);
+  console.log('[FolderFilterScheduler]', ...forConsole(args));
   record('info', args);
 };
 const warn = (...args) => {
-  console.warn('[FolderFilterScheduler]', ...args);
+  console.warn('[FolderFilterScheduler]', ...forConsole(args));
   record('warn', args);
 };
 
@@ -171,7 +190,7 @@ const warn = (...args) => {
  * the entries a report is for. Runs that change mail or fail are never quiet.
  */
 const logUnless = (quiet, ...args) => {
-  if (quiet) console.log('[FolderFilterScheduler]', ...args);
+  if (quiet) console.log('[FolderFilterScheduler]', ...forConsole(args));
   else log(...args);
 };
 
@@ -262,7 +281,7 @@ async function hasMessageInFolder(folderId, header) {
     }
     return false;
   } catch (e) {
-    warn(`copy destination lookup failed for folder ${folderId}`, e);
+    warn(`copy destination lookup failed for folder ${folderRef(folderId)}`, e);
     return false;
   }
 }
@@ -281,16 +300,15 @@ async function loadCopyHistory(rules) {
     failed = true;
     return {};
   });
-  const ruleNames = new Map((rules ?? []).filter((r) => r?.id).map((r) => [r.id, r.name || r.id]));
+  const rulesById = new Map((rules ?? []).filter((r) => r?.id).map((r) => [r.id, r]));
   const { stored, shardKeys, hasLegacy, overflowed, hadOverflowKey } = loadStoredCopyHistory(all);
   const tracker = createCopyHistory({
     stored,
     overflowed,
     rules,
     onOverflow: (ruleId) => {
-      const name = ruleNames.get(ruleId) ?? ruleId;
       log(
-        `copy history for rule "${name}" reached ${COPY_CAP_PER_TARGET} messages; ` +
+        `copy history for rule ${ruleRef(rulesById.get(ruleId) ?? { id: ruleId, name: ruleId })} reached ${COPY_CAP_PER_TARGET} messages; ` +
           'older messages will be checked in the destination folder before copying',
       );
     },
@@ -393,7 +411,7 @@ async function syncCronAlarms(rules, advanced) {
     messenger.alarms.create(name, { when: next.getTime() });
     logUnless(
       !advanced.logScheduleRuns,
-      `rule "${rule.name}": own schedule (${cron.expression}), next run ${next.toISOString()}`,
+      `rule ${ruleRef(rule)}: own schedule (${cron.expression}), next run ${next.toISOString()}`,
     );
   }
 }
@@ -705,6 +723,17 @@ async function matchesStoppingRule(stopRule, header, { now, addressBooks, header
   return message.authPending ? null : false;
 }
 
+/**
+ * The part of a rule's time that went to header and body reads, for its log
+ * line. What remains of the total is the folder queries and the actions.
+ */
+function readTime(headerMs, bodyMs) {
+  const parts = [];
+  if (headerMs > 0) parts.push(`header reads ${Math.round(headerMs)} ms`);
+  if (bodyMs > 0) parts.push(`body reads ${Math.round(bodyMs)} ms`);
+  return parts.length ? ` (${parts.join(', ')})` : '';
+}
+
 /** Run one rule across all its source folders. Returns count of affected messages. */
 async function runRule(
   rule,
@@ -726,7 +755,7 @@ async function runRule(
   if (copyStore?.failed && rule.id && actionsOf(rule).some((a) => a.type === 'copy')) {
     // Skipped whole: running the other actions would, for a rule that copies
     // and then moves, move the mail without the copy. The watermark holds.
-    warn(`rule "${rule.name}" skipped: its copy history could not be loaded`);
+    warn(`rule ${ruleRef(rule)} skipped: its copy history could not be loaded`);
     runState[rule.id] = recordRuleRun(runState[rule.id], { at: new Date(), error: true });
     return 0;
   }
@@ -775,6 +804,10 @@ async function runRule(
   let guardUndecided = 0;
   const skippedBefore = headerReads.skipped;
   const bodySkippedBefore = bodyReads.skipped;
+  // The reads are shared by the run, so the log line of this rule shows only
+  // the time this rule added.
+  const headerMsBefore = headerReads.spentMs;
+  const bodyMsBefore = bodyReads.spentMs;
   const protectUnreadable = (id) => {
     if (rule.stopProcessing === true && stoppedMessages) stoppedMessages.add(id);
   };
@@ -837,7 +870,7 @@ async function runRule(
         if (evaluateRule(message, rule, options)) await recordMatch(header);
       }
     } catch (e) {
-      warn(`scan failed for folder ${folderId} in rule "${rule.name}"`, e);
+      warn(`scan failed for folder ${folderRef(folderId)} in rule ${ruleRef(rule)}`, e);
       // Matches collected before the scan threw never received their actions,
       // so remove them from resume progress to ensure the next run retries them.
       for (const id of matchedIds) evaluatedIds.delete(id);
@@ -888,13 +921,13 @@ async function runRule(
           await persistCopyHistory(copyStore, { force: left <= 0 });
         },
         onProgress: (action, done, total) => {
-          log(`rule "${rule.name}": ${action.type} ${done} of ${total}`);
+          log(`rule ${ruleRef(rule)}: ${action.type} ${done} of ${total}`);
           return flushLog();
         },
       });
       if (result.errors?.length > 0) {
         warn(
-          `rule "${rule.name}": ${result.errors.length} message update(s) failed`,
+          `rule ${ruleRef(rule)}: ${result.errors.length} message update(s) failed`,
           result.errors[0].error,
         );
         for (const err of result.errors) evaluatedIds.delete(err.id);
@@ -905,7 +938,7 @@ async function runRule(
       }
       affected += result.affected;
     } catch (e) {
-      warn(`action failed for rule "${rule.name}"`, e);
+      warn(`action failed for rule ${ruleRef(rule)}`, e);
       for (const id of matchedIds) evaluatedIds.delete(id);
       scanFailed = true;
     }
@@ -965,7 +998,7 @@ async function runRule(
   ].filter(Boolean).join(' ');
   logUnless(
     quiet && affected === 0 && !scanFailed,
-    `rule "${rule.name}": ${kind} scan (${range}), ${scanned} scanned, ` +
+    `rule ${ruleRef(rule)}: ${kind} scan (${range}), ${scanned} scanned, ` +
       `${skipped > 0 ? `${skipped} skipped (headers unread), ` : ''}` +
       `${needsBody ? `${bodiesRead} bodies read, ` : ''}` +
       `${bodySkipped > 0 ? `${bodySkipped} skipped (body unread), ` : ''}` +
@@ -973,7 +1006,9 @@ async function runRule(
       `${guarded > 0 ? `${guarded} left to an earlier stopping rule, ` : ''}` +
       `${guardUndecided > 0 ? `${guardUndecided} waiting for an earlier stopping rule, ` : ''}` +
       `${alreadyCopied > 0 ? `${alreadyCopied} already copied, ` : ''}` +
-      `${affected} actioned, ${Date.now() - startedAt.getTime()} ms${scanFailed ? ', WITH ERRORS' : ''}`,
+      `${affected} actioned, ${Date.now() - startedAt.getTime()} ms` +
+      `${readTime(headerReads.spentMs - headerMsBefore, bodyReads.spentMs - bodyMsBefore)}` +
+      `${scanFailed ? ', WITH ERRORS' : ''}`,
   );
   return affected;
 }
@@ -995,6 +1030,7 @@ async function runAllRules(
   reason = 'manual',
   { folderIds = null, ruleIds = null, background = false } = {},
 ) {
+  const runStartedAt = Date.now();
   // Taken before the first await, so an alarm that fires during this run adds
   // to a fresh set and is served by the run queued behind this one.
   const due = new Set(dueCronRules);
@@ -1044,7 +1080,7 @@ async function runAllRules(
     rules,
     foldersOf: (rule) => scanned.get(rule) ?? [],
     evaluate: (stopRule, header) => matchesStoppingRule(stopRule, header, guardContext),
-    onError: (stopRule, e) => warn(`stop check failed for rule "${stopRule.name}"`, e),
+    onError: (stopRule, e) => warn(`stop check failed for rule ${ruleRef(stopRule)}`, e),
   });
   const guardRules = new Set(selected.flatMap((rule) => stopGuard.guardsAcross(rule, scanned.get(rule))));
   const evaluated = [...new Set([...selected, ...guardRules])];
@@ -1092,11 +1128,14 @@ async function runAllRules(
 
   await saveRunState(runState);
   if (authReads) await finishAuthReads(authReads, quietRun);
-  logUnless(
-    quietRun && total === 0,
+  const runMs = Date.now() - runStartedAt;
+  const summary =
     `run (${reason}) complete: ${total} message(s) affected across ` +
-      `${selected.length} of ${rules.length} rule(s)`,
-  );
+    `${selected.length} of ${rules.length} rule(s) in ${runMs} ms` +
+    `${describeReads('header reads', headerReads)}${describeReads('body reads', bodyReads)}`;
+  // A slow run is never quiet: it is what a report is for.
+  if (runMs >= SLOW_RUN_MS) warn(`slow ${summary}`);
+  else logUnless(quietRun && total === 0, summary);
   await flushLog();
   return total;
 }
@@ -1626,7 +1665,7 @@ async function testRuleDryRun(rule) {
         if (evaluateRule(message, rule, options)) recordMatch(header);
       }
     } catch (e) {
-      warn(`dry run failed for folder ${folderId} in rule "${rule.name ?? ''}"`, e);
+      warn(`dry run failed for folder ${folderRef(folderId)} in rule ${ruleRef(rule)}`, e);
       scanFailed = true;
     }
   }
@@ -1635,7 +1674,7 @@ async function testRuleDryRun(rule) {
   // pressing Test must never trigger a background run of saved rules.
   if (authReads) await finishAuthReads(authReads, true, { scheduleRetry: false });
   log(
-    `dry run "${rule.name ?? ''}": ${scanned} scanned, ${matched} would match, ${Date.now() - startedAt.getTime()} ms` +
+    `dry run ${ruleRef(rule)}: ${scanned} scanned, ${matched} would match, ${Date.now() - startedAt.getTime()} ms` +
       (scanFailed ? ', WITH ERRORS' : ''),
   );
   await flushLog();

@@ -80,10 +80,10 @@
     "message": "Diagnose"
   },
   "diag_hint": {
-    "message": "Wenn etwas nicht wie erwartet funktioniert, senden Sie diesen Bericht mit Ihrer Nachricht. Er enthält Ihre Thunderbird-Version, den Aufbau jeder Regel und was die letzten Durchläufe getan haben. Adressen, Domains, Muster und Ordnernamen fehlen, außer Sie setzen das Häkchen unten. Was Sie hier sehen, ist genau das, was geteilt wird."
+    "message": "Wenn etwas nicht wie erwartet funktioniert, senden Sie diesen Bericht mit Ihrer Nachricht. Er enthält Ihre Thunderbird-Version, den Aufbau jeder Regel und was die letzten Durchläufe getan haben. Adressen, Domains, Muster, Ordnernamen und Regelnamen fehlen, außer Sie setzen das Häkchen unten. Was Sie hier sehen, ist genau das, was geteilt wird."
   },
   "diag_includeValues": {
-    "message": "Regelwerte einschließen (Adressen, Domains, Muster, Ordner)"
+    "message": "Regelwerte einschließen (Adressen, Domains, Muster, Ordner, Regelnamen)"
   },
   "diag_copy": {
     "message": "Bericht kopieren"
@@ -1473,5 +1473,41 @@
   },
   "folders_missing": {
     "message": "Nicht gefundene Ordner"
+  },
+  "action_typeLabel": {
+    "message": "Aktion"
+  },
+  "action_folderLabel": {
+    "message": "Zielordner"
+  },
+  "action_remove": {
+    "message": "Diese Aktion entfernen"
+  },
+  "cond_fieldLabel": {
+    "message": "Feld"
+  },
+  "cond_operatorLabel": {
+    "message": "Operator"
+  },
+  "cond_bookLabel": {
+    "message": "Adressbuch"
+  },
+  "cond_remove": {
+    "message": "Diese Bedingung entfernen"
+  },
+  "cond_domainsLabel": {
+    "message": "Domains, eine pro Zeile"
+  },
+  "status_importSettings": {
+    "message": "Die Datei hat auch diese Einstellungen ersetzt: $1. Prüfen Sie sie vor dem Speichern."
+  },
+  "import_settingInterval": {
+    "message": "Ausführungsintervall"
+  },
+  "import_settingAdvanced": {
+    "message": "erweiterte Einstellungen"
+  },
+  "import_settingAllowlist": {
+    "message": "geschützte Domains"
   }
 }

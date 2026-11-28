@@ -80,10 +80,10 @@
     "message": "Diagnóstico"
   },
   "diag_hint": {
-    "message": "Si algo no funciona como espera, envíe este informe junto con su mensaje. Incluye su versión de Thunderbird, la estructura de cada regla y lo que hicieron las últimas ejecuciones. Las direcciones, dominios, patrones y nombres de carpeta no se incluyen, salvo que marque la casilla de abajo. Lo que ve aquí es exactamente lo que se compartirá."
+    "message": "Si algo no funciona como espera, envíe este informe junto con su mensaje. Incluye su versión de Thunderbird, la estructura de cada regla y lo que hicieron las últimas ejecuciones. Las direcciones, dominios, patrones, nombres de carpeta y nombres de regla no se incluyen, salvo que marque la casilla de abajo. Lo que ve aquí es exactamente lo que se compartirá."
   },
   "diag_includeValues": {
-    "message": "Incluir los valores de las reglas (direcciones, dominios, patrones, carpetas)"
+    "message": "Incluir los valores de las reglas (direcciones, dominios, patrones, carpetas, nombres de regla)"
   },
   "diag_copy": {
     "message": "Copiar informe"
@@ -1473,5 +1473,41 @@
   },
   "folders_missing": {
     "message": "Carpetas no encontradas"
+  },
+  "action_typeLabel": {
+    "message": "Acción"
+  },
+  "action_folderLabel": {
+    "message": "Carpeta de destino"
+  },
+  "action_remove": {
+    "message": "Quitar esta acción"
+  },
+  "cond_fieldLabel": {
+    "message": "Campo"
+  },
+  "cond_operatorLabel": {
+    "message": "Operador"
+  },
+  "cond_bookLabel": {
+    "message": "Libreta de direcciones"
+  },
+  "cond_remove": {
+    "message": "Quitar esta condición"
+  },
+  "cond_domainsLabel": {
+    "message": "Dominios, uno por línea"
+  },
+  "status_importSettings": {
+    "message": "El archivo también reemplazó estos ajustes: $1. Revíselos antes de guardar."
+  },
+  "import_settingInterval": {
+    "message": "intervalo de ejecución"
+  },
+  "import_settingAdvanced": {
+    "message": "ajustes avanzados"
+  },
+  "import_settingAllowlist": {
+    "message": "dominios protegidos"
   }
 }

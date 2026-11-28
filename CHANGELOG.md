@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0]
 
 ### Added
 - **Test a rule before you save it.** Each rule card has a **Test** button
@@ -64,7 +64,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Narrower queries for rules that require all conditions.** Thunderbird
   filters by read status, star, and required tags before the add-on checks
   each message.
-
 - **A text condition with a blank value never matches.** Every text contains
   the empty text, so `contains` with an empty value box matched every message,
   and a rule that matches any condition then acted on the whole folder. A
@@ -77,6 +76,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **An import skips a rule that loses an action.** When an action can't be
   imported and the rest of the rule still moves or deletes mail, the import
   skips the rule and says so. It reports a regex that isn't valid.
+- **An import names the settings it replaces.** A JSON backup also holds the
+  run interval, the Advanced settings, and the protected domains. The import
+  replaced them without a message. It replaces only a setting that differs
+  from the page, and the status lists each one, so you can check it before
+  you save.
+- **The diagnostics report hides rule names.** A rule made with **Create rule
+  from this message…** is named after the sender or the subject, so a rule
+  name can hold an address. Without **Include rule values**, the report shows
+  each rule as its position and the first 8 characters of its id, and the log
+  lines show the same id. It hides the folder in a log line about a failed
+  scan too. This also holds for log lines written by an earlier version.
+- **The diagnostics log shows where a run spends its time.** The line that
+  ends a run gives the run time, the number of header and body reads, their
+  total time, the slowest read, and how many reads got no answer or were
+  skipped. The line of each rule gives its read time. A read that gets no
+  answer names the account. A run of 30 seconds or longer is logged as a
+  warning, also for a rule on its own schedule.
 
 ### Fixed
 - **A header line named `Headers` doesn't hide the other headers.** A
@@ -91,6 +107,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the destination of a move or copy action, and **Save** stored it. The page
   also dropped a missing source folder. Such a folder is listed under
   **Folders not found**, and **Save** keeps it until you choose another.
+- **Every control on the options page has a name for screen readers.** 19
+  controls had none, among them the field, operator, and value of a condition,
+  the action list, and the **×** buttons.
 - **Subfolders of a Trash folder are left out.** A rule that includes
   subfolders skipped a Trash folder nested under its folder, but scanned the
   folders inside that Trash.

@@ -55,7 +55,7 @@
         Domains here are skipped when adding spam domains from the message list, so a
         mistaken selection cannot block a major provider. One domain per line.
       </p>
-      <textarea id="allowlist" rows="6" spellcheck="false"></textarea>
+      <textarea id="allowlist" rows="6" spellcheck="false" aria-label="Protected domains (never blocked)" data-i18n-aria-label="allowlist_title"></textarea>
       <button id="reset-allowlist" type="button" data-i18n="common_restoreDefaults">Restore defaults</button>
     </details>
 
@@ -85,14 +85,15 @@
       <p class="allowlist-hint" data-i18n="diag_hint">
         If something does not behave as expected, send this report along with your message. It
         lists your Thunderbird version, the shape of each rule, and what recent runs did.
-        Addresses, domains, patterns and folder names are left out unless you tick the box below.
+        Addresses, domains, patterns, folder names and rule names are left out unless you tick the
+        box below.
         What you see here is exactly what will be shared.
       </p>
       <label class="toggle" data-i18n="diag_includeValues">
         <input id="diag-values" type="checkbox" /> Include rule values (addresses, domains,
-        patterns, folders)
+        patterns, folders, rule names)
       </label>
-      <textarea id="diag-report" rows="14" readonly spellcheck="false"></textarea>
+      <textarea id="diag-report" rows="14" readonly spellcheck="false" aria-label="Diagnostics" data-i18n-aria-label="diag_title"></textarea>
       <div class="diag-actions">
         <button id="diag-copy" type="button" data-i18n="diag_copy">Copy report</button>
         <button id="diag-save" type="button" data-i18n="diag_save">Save report…</button>
@@ -269,7 +270,7 @@
         <input class="rule-id" type="hidden" />
         <div class="rule-head">
           <button class="rule-collapse" type="button" aria-expanded="true" title="Collapse or expand this rule" data-i18n-title="rule_collapseTitle">▾</button>
-          <input class="rule-name" type="text" placeholder="Rule name" data-i18n-placeholder="rule_namePlaceholder" />
+          <input class="rule-name" type="text" placeholder="Rule name" aria-label="Rule name" data-i18n-placeholder="rule_namePlaceholder" data-i18n-aria-label="rule_namePlaceholder" />
           <label class="toggle" data-i18n="rule_enabled"><input class="rule-enabled" type="checkbox" checked /> enabled</label>
           <span class="rule-order-btns">
             <button class="move-up rule-icon-btn" type="button" title="Move rule up" aria-label="Move rule up" data-i18n-title="rule_moveUp" data-i18n-aria-label="rule_moveUp">↑</button>
@@ -319,7 +320,7 @@
 
         <div class="row">
           <span class="lbl" data-i18n="rule_match">Match</span>
-          <select class="rule-match">
+          <select class="rule-match" aria-label="Match" data-i18n-aria-label="rule_match">
             <option value="any" data-i18n="rule_matchAny">any of the conditions (OR)</option>
             <option value="all" data-i18n="rule_matchAll">all of the conditions (AND)</option>
           </select>
@@ -368,20 +369,20 @@
       <div class="action">
         <span class="lbl" data-i18n="action_then">Then</span>
         <!-- Options are rendered from src/actions.js (single source of truth). -->
-        <select class="action-type"></select>
-        <select class="action-folder hidden"></select>
+        <select class="action-type" aria-label="Action" data-i18n-aria-label="action_typeLabel"></select>
+        <select class="action-folder hidden" aria-label="Destination folder" data-i18n-aria-label="action_folderLabel"></select>
         <!-- Shown only for the tag action. Without access, the button asks for
              the optional messagesTagsList permission instead. -->
-        <select class="action-tag hidden"></select>
+        <select class="action-tag hidden" aria-label="tag" data-i18n-aria-label="field_tag"></select>
         <button class="action-tag-grant hidden" type="button" data-i18n="common_allowTagAccess">Allow tag access…</button>
-        <button class="del-action danger" type="button">×</button>
+        <button class="del-action danger" type="button" aria-label="Remove this action" data-i18n-aria-label="action_remove">×</button>
         <p class="action-hint"></p>
       </div>
     </template>
 
     <template id="condition-template">
       <div class="condition">
-        <select class="cond-field"></select>
+        <select class="cond-field" aria-label="Field" data-i18n-aria-label="cond_fieldLabel"></select>
         <!-- Shown only when "Custom header…" is chosen in the field list. -->
         <input
           class="cond-custom-header hidden"
@@ -393,7 +394,7 @@
           data-i18n-placeholder="cond_customHeaderPlaceholder"
           data-i18n-aria-label="cond_customHeaderLabel"
         />
-        <select class="cond-op">
+        <select class="cond-op" aria-label="Operator" data-i18n-aria-label="cond_operatorLabel">
           <option value="contains" data-i18n="op_contains">contains</option>
           <option value="is" data-i18n="op_is">is</option>
           <option value="startsWith" data-i18n="op_startsWith">starts with</option>
@@ -421,26 +422,26 @@
           <option value="authPasses" data-i18n="op_authPasses">passes</option>
         </select>
         <label class="toggle" data-i18n="cond_not"><input class="cond-negate" type="checkbox" /> not</label>
-        <input class="cond-value" type="text" placeholder="value" data-i18n-placeholder="cond_valuePlaceholder" />
+        <input class="cond-value" type="text" placeholder="value" aria-label="value" data-i18n-placeholder="cond_valuePlaceholder" data-i18n-aria-label="cond_valuePlaceholder" />
         <!-- Shown only for the age field: a whole number of days. -->
-        <input class="cond-days hidden" type="number" min="1" step="1" placeholder="30" />
+        <input class="cond-days hidden" type="number" min="1" step="1" placeholder="30" aria-label="days" data-i18n-aria-label="cond_daysUnit" />
         <span class="cond-days-unit hidden" data-i18n="cond_daysUnit">days</span>
         <!-- Shown only for the size field: a positive number in KB or MB. -->
-        <input class="cond-size hidden" type="number" min="0.1" step="any" placeholder="5" />
+        <input class="cond-size hidden" type="number" min="0.1" step="any" placeholder="5" aria-label="size" data-i18n-aria-label="field_size" />
         <select class="cond-size-unit hidden" aria-label="Size unit" data-i18n-aria-label="cond_sizeUnitLabel">
           <option value="KB">KB</option>
           <option value="MB">MB</option>
         </select>
         <!-- Shown only for the inAddressBook operator. Without access, the
              button asks for the optional addressBooks permission instead. -->
-        <select class="cond-book hidden"></select>
+        <select class="cond-book hidden" aria-label="Address book" data-i18n-aria-label="cond_bookLabel"></select>
         <button class="cond-book-grant hidden" type="button" data-i18n="cond_allowBookAccess">Allow address book access…</button>
         <!-- Shown only for the tag field. Without access, the button asks for
              the optional messagesTagsList permission instead. -->
-        <select class="cond-tag hidden"></select>
+        <select class="cond-tag hidden" aria-label="tag" data-i18n-aria-label="field_tag"></select>
         <button class="cond-tag-grant hidden" type="button" data-i18n="common_allowTagAccess">Allow tag access…</button>
         <!-- Shown only for the priority field. -->
-        <select class="cond-priority hidden">
+        <select class="cond-priority hidden" aria-label="priority" data-i18n-aria-label="field_priority">
           <option value="highest" data-i18n="priority_highest">Highest</option>
           <option value="high" data-i18n="priority_high">High</option>
           <option value="normal" data-i18n="priority_normal">Normal</option>
@@ -448,20 +449,22 @@
           <option value="lowest" data-i18n="priority_lowest">Lowest</option>
         </select>
         <!-- Shown only for the authentication field. -->
-        <select class="cond-auth hidden">
+        <select class="cond-auth hidden" aria-label="authentication" data-i18n-aria-label="field_auth">
           <option value="spf">SPF</option>
           <option value="dkim">DKIM</option>
           <option value="dmarc">DMARC</option>
         </select>
         <button class="cond-auth-grant hidden" type="button" data-i18n="cond_allowDnsAccess">Allow DNS server access…</button>
-        <button class="del-cond danger" type="button">×</button>
+        <button class="del-cond danger" type="button" aria-label="Remove this condition" data-i18n-aria-label="cond_remove">×</button>
         <!-- Shown only for the domainInList operator: one domain per line. -->
         <textarea
           class="cond-domains hidden"
           rows="6"
           spellcheck="false"
           placeholder="One domain per line, e.g. evil.com&#10;Subdomains are matched automatically."
+          aria-label="Domains, one per line"
           data-i18n-placeholder="cond_domainsPlaceholder"
+          data-i18n-aria-label="cond_domainsLabel"
         ></textarea>
         <!-- Shown only for the nameShowsOtherAddress operator. -->
         <p class="cond-hint hidden" data-i18n-rich="cond_nameHint">

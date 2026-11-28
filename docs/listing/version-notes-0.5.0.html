@@ -1,0 +1,19 @@
+Adds a Test button, import of Thunderbird's own filters, custom header and size conditions, and "Stop running later rules". Fixes several cases where a rule acted on mail it wasn't meant for.
+
+<ul>
+<li>New: Test on each rule shows which messages match, without moving, tagging, or deleting mail</li>
+<li>New: Import accepts Thunderbird's msgFilterRules.dat file as well as a JSON backup. It skips a filter when the conversion would change which mail the filter matches or where that mail goes, and says why</li>
+<li>New: "Stop running later rules on matched messages" keeps later rules from acting on a message that an earlier rule matches</li>
+<li>New: conditions for a custom header such as List-Unsubscribe, for message size, and for "to or cc". New actions remove one tag or clear all tags</li>
+<li>New: right-click a message and choose "Create rule from this message…" to start a rule from its List-Id, sender, or subject</li>
+<li>New: each rule card shows when the rule last ran and what it matched. You can reorder, duplicate, and search rules</li>
+<li>New: a backup works on another computer. The import reconnects each folder in the same account, and it names any settings it replaces</li>
+<li>Changed: a text condition with an empty value box never matches. It matched every message, so a rule that matches any condition acted on the whole folder</li>
+<li>Changed: header and body reads stop after 20 seconds in one run, and the next run continues where the last one stopped</li>
+<li>Changed: the diagnostics report hides rule names unless you include values, and the log shows how long each run and its reads took</li>
+<li>Fixed: after a folder was deleted or renamed, Save stored the first folder of the list as the destination of a move or copy action</li>
+<li>Fixed: a copy rule copied the same message again on each scan</li>
+<li>Fixed: after Thunderbird was closed for more than 30 days, a scheduled scan passed over the older mail</li>
+<li>Fixed: a header read that failed with an error let a negated header condition match mail it never read</li>
+<li>Fixed: every control on the options page has a name for screen readers</li>
+</ul>

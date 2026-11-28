@@ -10,10 +10,15 @@ import {
   buildReport,
   describeAction,
   describeCondition,
+  describeReads,
   diagnosticsFilename,
+  folderRef,
   formatEntry,
   formatLocalTime,
   makeEntry,
+  revealText,
+  ruleRef,
+  sensitive,
 } from '../src/diagnostics.js';
 
 const now = new Date('2026-09-11T08:30:00Z');
@@ -245,4 +250,82 @@ test('the report shows stopProcessing and last run outcome when present', () => 
   });
   assert.match(report, /stop later rules: yes/);
   assert.match(report, /last outcome: 4 matched, 3 actioned \(with errors\)/);
+});
+
+// A rule made from a message is named after its sender or its subject, so a
+// rule name is a value like an address.
+const namedRule = { id: 'bbbbbbbb-2222', name: 'boss@example.com "urgent"', enabled: true, conditions: [], actions: [] };
+const namedConfig = { ...config, rules: [...config.rules, namedRule] };
+
+test('the default report replaces each rule name with its position and id', () => {
+  const report = buildReport({ ...base, config: namedConfig });
+  assert.ok(!report.includes('Junk cleanup'), 'leaked a rule name');
+  assert.ok(!report.includes('boss@example.com'), 'leaked a rule name');
+  assert.match(report, /- rule 1 \[enabled\] id aaaaaaaa\n/);
+  assert.match(report, /- rule 2 \[enabled\] id bbbbbbbb\n/);
+  assert.match(report, /folders and rule names are hidden/);
+  // The log line of the rule carries the same id, so the two still link.
+  assert.match(report, /info rule \[aaaaaaaa\]: incremental scan, 3 scanned/);
+
+  const withValues = buildReport({ ...base, config: namedConfig, includeValues: true });
+  assert.match(withValues, /- "Junk cleanup" \[enabled\] id aaaaaaaa/);
+  assert.match(withValues, /info rule "Junk cleanup": incremental scan, 3 scanned/);
+});
+
+test('a marked log line hides the rule name and the folder, also for a deleted rule', () => {
+  const gone = { id: 'cccccccc-3333', name: 'From alice@example.com' };
+  const line = `scan failed for folder ${folderRef('account1://INBOX/Clients/Acme')} in rule ${ruleRef(gone)}`;
+  const entry = makeEntry('warn', [line, new Error('offline')], now);
+
+  const hidden = formatEntry(entry, 0, { rules: config.rules });
+  assert.equal(hidden, '2026-09-11 08:30:00 +00:00 WARN scan failed for folder (folder) in rule [cccccccc] Error: offline');
+  const shown = formatEntry(entry, 0, { includeValues: true });
+  assert.match(shown, /for folder account1:\/\/INBOX\/Clients\/Acme in rule "From alice@example\.com" Error: offline$/);
+
+  assert.equal(revealText(`dry run ${ruleRef({ name: 'Draft' })}: 3 scanned`, false), 'dry run [not saved]: 3 scanned');
+  // The marks never reach the console or a report.
+  assert.doesNotMatch(shown + hidden, /[\uE000-\uE002]/);
+});
+
+test('a mark inside a name cannot end the hidden part early', () => {
+  const tricky = { id: 'dddddddd', name: 'a\uE002 secret@example.com' };
+  assert.equal(revealText(`rule ${ruleRef(tricky)}: done`, false), 'rule [dddddddd]: done');
+  assert.equal(revealText(sensitive('x', 'y\uE000z'), false), 'yz');
+});
+
+test('a line cut inside a hidden part stays hidden', () => {
+  const long = { id: 'eeeeeeee', name: 'n'.repeat(600) };
+  const entry = makeEntry('info', [`rule ${ruleRef(long)}: full scan`], now);
+  const hidden = formatEntry(entry, 0);
+  assert.ok(!hidden.includes('nnn'), 'leaked a cut rule name');
+  assert.match(hidden, /info rule \(hidden\)$/);
+});
+
+test('a line written before the marks existed hides names and folders too', () => {
+  const old = (msg) => formatEntry({ t: now.toISOString(), level: 'info', msg }, 0, { rules: namedConfig.rules });
+  // A known rule keeps its link to the rule list.
+  assert.match(old('rule "Junk cleanup": incremental scan, 3 scanned'), /info rule \[aaaaaaaa\]: incremental scan, 3 scanned$/);
+  assert.match(old('action failed for rule "boss@example.com "urgent"" Error: x'), /for rule \[bbbbbbbb\] Error: x$/);
+  // A renamed or deleted rule has no id to show.
+  const lost = old('scan failed for folder account1://Clients/Acme Corp in rule "From carol@example.com" Error: x');
+  assert.ok(!lost.includes('carol') && !lost.includes('Acme'), lost);
+  assert.match(lost, /scan failed for folder \(folder\) in rule \[name hidden\]/);
+  assert.ok(!old('dry run "Re: salary "2026"": 4 scanned').includes('salary'));
+  assert.ok(!old('copy destination lookup failed for folder account1://Private/Tax Error: x').includes('Tax'));
+  // With values, an old line is printed as it was written.
+  const shown = formatEntry({ t: now.toISOString(), level: 'info', msg: 'rule "Junk cleanup": done' }, 0, { includeValues: true });
+  assert.match(shown, /rule "Junk cleanup": done$/);
+});
+
+test('describeReads sums up the reads of a run, and is empty without reads', () => {
+  assert.equal(describeReads('header reads', null), '');
+  assert.equal(describeReads('header reads', { fresh: 0, cached: 0, timeouts: 0, skipped: 0, spentMs: 0 }), '');
+  assert.equal(
+    describeReads('header reads', { fresh: 120, cached: 30, timeouts: 0, skipped: 0, spentMs: 4312.4, slowestMs: 911 }),
+    '; header reads: 120 in 4312 ms, slowest 911 ms, 30 from cache',
+  );
+  assert.equal(
+    describeReads('body reads', { fresh: 0, cached: 0, timeouts: 2, skipped: 40, spentMs: 14000, slowestMs: 0, budgetReached: true }),
+    '; body reads: 0 in 14000 ms, 2 with no answer, 40 skipped, time budget reached',
+  );
 });
