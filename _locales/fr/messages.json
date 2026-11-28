@@ -1386,5 +1386,143 @@
   },
   "status_draftCreated": {
     "message": "Brouillon de règle créé à partir du message sélectionné — choisissez une action puis cliquez sur Enregistrer."
+  },
+  "options_filterRules": {
+    "message": "Filtrer les règles…"
+  },
+  "options_filterNoMatches": {
+    "message": "Aucune règle correspondante"
+  },
+  "options_filterShowing": {
+    "message": "$1 sur $2 règles affichées"
+  },
+  "rule_moveUp": {
+    "message": "Monter la règle"
+  },
+  "rule_moveDown": {
+    "message": "Descendre la règle"
+  },
+  "rule_duplicate": {
+    "message": "Dupliquer"
+  },
+  "rule_duplicateTitle": {
+    "message": "Créer une copie de cette règle"
+  },
+  "rule_copyName": {
+    "message": "$1 (copie)"
+  },
+  "rule_test": {
+    "message": "Tester"
+  },
+  "rule_testTitle": {
+    "message": "Prévisualiser les messages correspondants sans rien déplacer, étiqueter ou supprimer"
+  },
+  "rule_stopProcessing": {
+    "message": "Arrêter l’exécution des règles suivantes pour les messages correspondants"
+  },
+  "summary_stopProcessing": {
+    "message": "arrêter les règles suivantes"
+  },
+  "meta_justNow": {
+    "message": "à l’instant"
+  },
+  "meta_minutesAgo_one": {
+    "message": "il y a $1 min"
+  },
+  "meta_minutesAgo_other": {
+    "message": "il y a $1 min"
+  },
+  "meta_hoursAgo_one": {
+    "message": "il y a $1 h"
+  },
+  "meta_hoursAgo_other": {
+    "message": "il y a $1 h"
+  },
+  "meta_daysAgo_one": {
+    "message": "il y a $1 jour"
+  },
+  "meta_daysAgo_other": {
+    "message": "il y a $1 jours"
+  },
+  "meta_lastRan": {
+    "message": "Dernière exécution $1"
+  },
+  "meta_neverRan": {
+    "message": "Jamais exécutée"
+  },
+  "meta_matched_one": {
+    "message": "$1 correspondance"
+  },
+  "meta_matched_other": {
+    "message": "$1 correspondances"
+  },
+  "meta_actioned_one": {
+    "message": "$1 traité"
+  },
+  "meta_actioned_other": {
+    "message": "$1 traités"
+  },
+  "meta_warnErrors": {
+    "message": "Dernière exécution avec erreurs"
+  },
+  "meta_warnBookAccess": {
+    "message": "Accès au carnet d’adresses requis"
+  },
+  "meta_warnDnsAccess": {
+    "message": "Accès au serveur DNS requis"
+  },
+  "test_close": {
+    "message": "Fermer l’aperçu"
+  },
+  "test_running": {
+    "message": "Test en cours… (aucun message ne sera modifié)"
+  },
+  "test_summary_one": {
+    "message": "Simulation : $1 sur $2 messages correspondrait (rien n’a été modifié)"
+  },
+  "test_summary_other": {
+    "message": "Simulation : $1 sur $2 messages correspondraient (rien n’a été modifié)"
+  },
+  "test_truncated": {
+    "message": "Affichage des $1 premières correspondances."
+  },
+  "test_skippedHeaders_one": {
+    "message": "$1 message ignoré (en-têtes non lus)."
+  },
+  "test_skippedHeaders_other": {
+    "message": "$1 messages ignorés (en-têtes non lus)."
+  },
+  "test_skippedBodies_one": {
+    "message": "$1 message ignoré (corps non lu)."
+  },
+  "test_skippedBodies_other": {
+    "message": "$1 messages ignorés (corps non lus)."
+  },
+  "test_authPending_one": {
+    "message": "$1 message en attente de vérification d’authentification."
+  },
+  "test_authPending_other": {
+    "message": "$1 messages en attente de vérification d’authentification."
+  },
+  "test_scanErrors": {
+    "message": "Certains dossiers n’ont pas pu être analysés."
+  },
+  "test_noMatches": {
+    "message": "Aucun message ne correspond — rien ne serait déplacé, étiqueté ou supprimé."
+  },
+  "test_noSubject": {
+    "message": "(sans sujet)"
+  },
+  "test_failed": {
+    "message": "Échec du test : $1"
+  },
+  "status_testNoFolder": {
+    "message": "Choisissez au moins un dossier pour « $1 » avant de la tester."
+  },
+  "status_orderChanged": {
+    "message": "Ordre des règles modifié — cliquez sur Enregistrer pour le conserver."
+  },
+  "status_ruleDuplicated": {
+    "message": "Dupliquée en « $1 » — vérifiez-la et cliquez sur Enregistrer."
   }
 }

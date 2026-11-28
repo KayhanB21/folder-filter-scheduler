@@ -125,6 +125,17 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   arrived since the last one, so a per-message header read stays affordable. A
   wider catch-up scan every 30 minutes picks up mail whose `Date` header lags
   its real arrival. **Run all rules now** always scans the whole folder.
+- **Test Rule (Dry Run) preview**: click **Test** on any rule card — even before
+  saving — to see how many messages would match and inspect matched subjects,
+  senders, and folders without moving, tagging, or deleting a single email.
+- **Per-rule status at a glance**: each card displays when it last ran and how
+  many messages matched (even when collapsed), plus an inline warning if the
+  last run had errors or needs an optional permission.
+- **Rule management at scale**: reorder rules top-to-bottom with **↑ / ↓**,
+  clone rules in one click with **Duplicate**, filter large rule sets with the
+  **Filter rules…** search bar, and tick **Stop running later rules on matched
+  messages** (also mapped automatically when importing Thunderbird's `Stop
+  execution` filter action).
 - **Run now** button for immediate, on-demand runs, and a **Run** button on each
   rule that runs only that rule.
 - **A schedule for each rule**, written as a cron expression such as

@@ -34,7 +34,8 @@ import { diagnosticsFilename } from '../src/diagnostics.js';
 import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } from '../src/actions.js';
 import { ADVANCED_DEFAULTS, dohOrigin, sanitizeAdvanced } from '../src/settings.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
-import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
+import { buildExport, duplicateRule, exportFilename, ruleMatchesSearch, sanitizeImport } from '../src/rules.js';
+import { relativeTimeParts } from '../src/scan.js';
 import { importThunderbirdFilters, isThunderbirdFilterFile } from '../src/tb-filters.js';
 import { collapsedTree, folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
 import { describeCron, nextRun, parseCron } from '../src/cron.js';
@@ -90,6 +91,7 @@ const statusEl = $('#status');
 
 let folders = []; // [{ id, label, accountId, accountName, path, name, depth }]
 let guides = new Map(); // folder id -> treeGuides() entry, rebuilt with `folders`
+let runState = {}; // rule id -> { lastRunAt, lastCatchUpAt, lastStatus }
 
 /**
  * Address-book access is an optional permission, asked for only when someone
@@ -146,6 +148,7 @@ function fillBookFieldSelect(select, current) {
 
 function refreshBookRows() {
   for (const row of rulesEl.querySelectorAll('.condition')) row.syncBooks?.();
+  refreshRuleStatuses();
 }
 
 function requestBookAccess() {
@@ -181,6 +184,7 @@ async function loadDnsAccess() {
 
 function refreshDnsRows() {
   for (const row of rulesEl.querySelectorAll('.condition')) row.syncDns?.();
+  refreshRuleStatuses();
 }
 
 function requestDnsAccess() {
@@ -245,6 +249,7 @@ function fillTagSelect(select, currentKey) {
 
 function refreshTagRows() {
   for (const row of rulesEl.querySelectorAll('.action, .condition')) row.syncTags?.();
+  refreshRuleStatuses();
 }
 
 function requestTagAccess() {
@@ -947,28 +952,294 @@ function renderAction(container, action = {}) {
   container.append(node);
 }
 
+/** Format a timestamp into a short relative phrase ("just now", "8 min ago", …). */
+function formatRelativeAge(timestamp) {
+  const parts = relativeTimeParts(timestamp);
+  if (!parts) return '';
+  if (parts.unit === 'justNow') return t('meta_justNow');
+  if (parts.unit === 'minutes') return plural('meta_minutesAgo', parts.value, parts.value);
+  if (parts.unit === 'hours') return plural('meta_hoursAgo', parts.value, parts.value);
+  return plural('meta_daysAgo', parts.value, parts.value);
+}
+
+/** Update the quiet status line + warning indicator on one rule card. */
+function refreshRuleStatus(node) {
+  const textEl = $('.rule-meta-text', node);
+  const warnEl = $('.rule-meta-warn', node);
+  if (!textEl || !warnEl) return;
+
+  const id = $('.rule-id', node).value;
+  const state = id ? runState?.[id] : null;
+  const status = state?.lastStatus;
+
+  if (status?.at) {
+    const when = formatRelativeAge(status.at);
+    const counts = [plural('meta_matched', status.matched, status.matched)];
+    if (status.affected !== status.matched) {
+      counts.push(plural('meta_actioned', status.affected, status.affected));
+    }
+    textEl.textContent = `${t('meta_lastRan', when)} · ${counts.join(' · ')}`;
+  } else if (state?.lastRunAt) {
+    textEl.textContent = t('meta_lastRan', formatRelativeAge(state.lastRunAt));
+  } else {
+    textEl.textContent = t('meta_neverRan');
+  }
+
+  const warnings = [];
+  if (status?.error) {
+    warnings.push(t('meta_warnErrors'));
+  }
+  const conds = [...node.querySelectorAll('.condition')];
+  if (!bookAccess && conds.some((c) => $('.cond-op', c).value === IN_ADDRESS_BOOK)) {
+    warnings.push(t('meta_warnBookAccess'));
+  }
+  if (
+    !dnsAccess &&
+    $('#adv-auth-own')?.checked &&
+    conds.some((c) => $('.cond-field', c).value === AUTH_FIELD && $('.cond-auth', c).value !== 'spf')
+  ) {
+    warnings.push(t('meta_warnDnsAccess'));
+  }
+  if (warnings.length > 0) {
+    warnEl.textContent = `⚠ ${warnings.join(' · ')}`;
+    warnEl.classList.remove('hidden');
+  } else {
+    warnEl.textContent = '';
+    warnEl.classList.add('hidden');
+  }
+}
+
+function refreshRuleStatuses() {
+  for (const node of rulesEl.querySelectorAll('.rule')) refreshRuleStatus(node);
+}
+
+async function reloadRunState() {
+  try {
+    const stored = await messenger.storage.local.get({ runState: {} });
+    runState = stored?.runState && typeof stored.runState === 'object' ? stored.runState : {};
+  } catch {
+    runState = {};
+  }
+  refreshRuleStatuses();
+}
+
+/** Enable/disable up/down buttons based on position and active rule search filter. */
+function syncOrderButtons() {
+  const filtering = ($('#rule-filter')?.value ?? '').trim() !== '';
+  const cards = [...rulesEl.querySelectorAll('.rule')];
+  cards.forEach((card, index) => {
+    const up = $('.move-up', card);
+    const down = $('.move-down', card);
+    if (up) up.disabled = filtering || index === 0;
+    if (down) down.disabled = filtering || index === cards.length - 1;
+  });
+}
+
+/** Filter visible rule cards by the search box at the top of the rules list. */
+function applyRuleFilter() {
+  const query = $('#rule-filter')?.value ?? '';
+  const filtering = query.trim() !== '';
+  const cards = [...rulesEl.querySelectorAll('.rule')];
+  const folderLabelsById = new Map(folders.map((f) => [f.id, f.label]));
+  const tagLabelsByKey = new Map(tags.map((item) => [item.key, item.tag]));
+
+  let shown = 0;
+  for (const card of cards) {
+    if (!filtering) {
+      card.classList.remove('filtered-out');
+      shown += 1;
+      continue;
+    }
+    const rule = collectRule(card);
+    const matches = ruleMatchesSearch(rule, query, {
+      folderLabelsById,
+      tagLabelsByKey,
+      extraText: ruleSummary(card),
+    });
+    card.classList.toggle('filtered-out', !matches);
+    if (matches) shown += 1;
+  }
+
+  const countEl = $('#rule-filter-count');
+  if (countEl) {
+    if (!filtering) countEl.textContent = '';
+    else if (shown === 0) countEl.textContent = t('options_filterNoMatches');
+    else countEl.textContent = t('options_filterShowing', shown, cards.length);
+  }
+  syncOrderButtons();
+}
+
+/** Run a side-effect-free dry run for one card (saved or unsaved) and render its preview. */
+async function testRuleCard(node) {
+  const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
+  const badCustom = [...node.querySelectorAll('.condition')].find(
+    (c) => $('.cond-field', c).value === CUSTOM_HEADER_OPTION && !normalizeHeaderName($('.cond-custom-header', c).value),
+  );
+  if (badCustom) {
+    setCollapsed(node, false);
+    $('.cond-custom-header', badCustom)?.focus();
+    flash(t('status_notSavedCustomHeader', name), true);
+    return;
+  }
+
+  const rule = collectRule(node);
+  if (rule.folderIds.length === 0) {
+    setCollapsed(node, false);
+    $('.folder-filter', node)?.focus();
+    flash(t('status_testNoFolder', name), true);
+    return;
+  }
+
+  const panel = $('.test-results', node);
+  const summaryEl = $('.test-results-summary', node);
+  const noteEl = $('.test-results-note', node);
+  const listEl = $('.test-results-list', node);
+  const btn = $('.test-rule', node);
+
+  panel.classList.remove('hidden', 'has-error');
+  noteEl.classList.add('hidden');
+  noteEl.classList.remove('warn');
+  noteEl.textContent = '';
+  listEl.innerHTML = '';
+  summaryEl.textContent = t('test_running');
+  btn.disabled = true;
+
+  try {
+    const res = await messenger.runtime.sendMessage({ command: 'testRule', rule });
+    if (!res?.ok) throw new Error(res?.error || 'Dry run failed');
+
+    summaryEl.textContent = plural('test_summary', res.matched, res.matched, res.scanned);
+
+    const notes = [];
+    let hasWarn = false;
+    if (res.truncated) notes.push(t('test_truncated', res.samples.length));
+    if (res.skippedHeaders > 0) {
+      notes.push(plural('test_skippedHeaders', res.skippedHeaders, res.skippedHeaders));
+      hasWarn = true;
+    }
+    if (res.skippedBodies > 0) {
+      notes.push(plural('test_skippedBodies', res.skippedBodies, res.skippedBodies));
+      hasWarn = true;
+    }
+    if (res.authPending > 0) {
+      notes.push(plural('test_authPending', res.authPending, res.authPending));
+    }
+    if (res.scanFailed && !hasWarn) {
+      notes.push(t('test_scanErrors'));
+      hasWarn = true;
+    }
+    if (res.matched === 0 && notes.length === 0) {
+      notes.push(t('test_noMatches'));
+    }
+    if (notes.length > 0) {
+      noteEl.textContent = notes.join(' ');
+      noteEl.classList.toggle('warn', hasWarn);
+      noteEl.classList.remove('hidden');
+    }
+    panel.classList.toggle('has-error', hasWarn);
+
+    const folderById = new Map(folders.map((f) => [f.id, f.label]));
+    for (const sample of res.samples ?? []) {
+      const li = document.createElement('li');
+      li.className = 'test-results-item';
+
+      const subj = document.createElement('span');
+      subj.className = 'test-sample-subject';
+      subj.textContent = sample.subject || t('test_noSubject');
+
+      const dateEl = document.createElement('span');
+      dateEl.className = 'test-sample-date';
+      if (sample.date) {
+        const parsed = new Date(sample.date);
+        if (!Number.isNaN(parsed.getTime())) {
+          dateEl.textContent = parsed.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+        }
+      }
+
+      const meta = document.createElement('div');
+      meta.className = 'test-sample-meta';
+      if (sample.from) {
+        const fromEl = document.createElement('span');
+        fromEl.className = 'test-sample-from';
+        fromEl.textContent = sample.from;
+        meta.append(fromEl);
+      }
+      const folderLabel = sample.folderId ? (folderById.get(sample.folderId) ?? sample.folderId) : '';
+      if (folderLabel) {
+        const folderEl = document.createElement('span');
+        folderEl.className = 'test-sample-folder';
+        folderEl.textContent = folderLabel;
+        meta.append(folderEl);
+      }
+
+      li.append(subj, dateEl, meta);
+      listEl.append(li);
+    }
+  } catch (e) {
+    panel.classList.add('has-error');
+    summaryEl.textContent = t('test_failed', e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 /**
  * `saved` is true only for a rule drawn from storage. The Run button runs the
  * stored rule, so a card that differs from it must be saved first: otherwise a
  * rule just switched from Delete to Tag would still delete.
  */
-function renderRule(rule = {}, saved = false) {
+function renderRule(rule = {}, saved = false, insertAfter = null) {
   const node = $('#rule-template').content.firstElementChild.cloneNode(true);
   if (!saved) node.dataset.unsaved = 'true';
   const markUnsaved = (event) => {
-    // The folder filter and the collapse arrow change the view, not the rule.
-    if (event.target.closest('.folder-filter, .rule-collapse, .run-rule')) return;
+    // View and preview controls do not change the rule.
+    if (
+      event.target.closest(
+        '.folder-filter, .rule-collapse, .run-rule, .test-rule, .test-results-close, .move-up, .move-down, .dup-rule',
+      )
+    ) {
+      return;
+    }
     if (event.type === 'click' && !event.target.closest('button')) return;
     node.dataset.unsaved = 'true';
+    refreshRuleStatus(node);
   };
   for (const type of ['input', 'change', 'click']) node.addEventListener(type, markUnsaved);
+  $('.test-rule', node).addEventListener('click', () => testRuleCard(node));
+  $('.test-results-close', node).addEventListener('click', () => {
+    $('.test-results', node).classList.add('hidden');
+  });
   $('.run-rule', node).addEventListener('click', () => runRuleNow(node));
+  $('.move-up', node).addEventListener('click', () => {
+    const prev = node.previousElementSibling;
+    if (!prev) return;
+    prev.before(node);
+    syncOrderButtons();
+    flash(t('status_orderChanged'));
+  });
+  $('.move-down', node).addEventListener('click', () => {
+    const next = node.nextElementSibling;
+    if (!next) return;
+    next.after(node);
+    syncOrderButtons();
+    flash(t('status_orderChanged'));
+  });
+  $('.dup-rule', node).addEventListener('click', () => {
+    const copy = duplicateRule(collectRule(node));
+    const card = renderRule(copy, false, node);
+    setCollapsed(card, false);
+    applyRuleFilter();
+    $('.rule-name', card).focus();
+    $('.rule-name', card).select();
+    flash(t('status_ruleDuplicated', copy.name));
+  });
   $('.rule-id', node).value = rule.id ?? crypto.randomUUID();
   $('.rule-name', node).value = rule.name ?? t('rule_newName');
   $('.rule-enabled', node).checked = rule.enabled !== false;
   $('.rule-match', node).value = rule.match ?? 'any';
   fillFolderSelect($('.rule-folders', node), rule.folderIds ?? []);
   $('.rule-subfolders', node).checked = rule.includeSubfolders === true;
+  $('.rule-stop', node).checked = rule.stopProcessing === true;
 
   const condContainer = $('.conditions', node);
   const conds = rule.conditions?.length ? rule.conditions : [{}];
@@ -996,6 +1267,7 @@ function renderRule(rule = {}, saved = false) {
     collapsed.delete($('.rule-id', node).value);
     saveCollapsed(collapsed);
     node.remove();
+    applyRuleFilter();
   });
 
   const collapseButton = $('.rule-collapse', node);
@@ -1003,7 +1275,10 @@ function renderRule(rule = {}, saved = false) {
     setCollapsed(node, !node.classList.contains('collapsed')),
   );
 
-  rulesEl.append(node);
+  if (insertAfter) insertAfter.after(node);
+  else rulesEl.append(node);
+  refreshRuleStatus(node);
+  syncOrderButtons();
   // Restore the remembered view state. A rule the user just added stays open.
   if (rule.id && collapsed.has(rule.id)) setCollapsed(node, true);
   return node;
@@ -1107,8 +1382,9 @@ function ruleSummary(node) {
 
   const cron = $('.rule-schedule-on', node).checked ? parseCron($('.rule-cron', node).value) : null;
   const when = cron?.ok ? ` · ${describeCron(cron)}` : '';
+  const stop = $('.rule-stop', node).checked ? ` · ${t('summary_stopProcessing')}` : '';
 
-  return `${what} → ${actions.join(' + ') || t('summary_noAction')} · ${where}${when}`;
+  return `${what} → ${actions.join(' + ') || t('summary_noAction')} · ${where}${stop}${when}`;
 }
 
 function setCollapsed(node, isCollapsed) {
@@ -1172,76 +1448,80 @@ function collectActions(node, ruleName, rejected) {
   return actions;
 }
 
+/** Read one rule card's DOM back into a rule object. */
+function collectRule(node, rejected = []) {
+  const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
+  const actions = collectActions(node, name, rejected);
+  return {
+    id: $('.rule-id', node).value || crypto.randomUUID(),
+    name,
+    enabled: $('.rule-enabled', node).checked,
+    match: $('.rule-match', node).value,
+    folderIds: [...$('.rule-folders', node).selectedOptions].map((o) => o.value),
+    includeSubfolders: $('.rule-subfolders', node).checked,
+    ...($('.rule-stop', node).checked ? { stopProcessing: true } : {}),
+    ...(scheduleFrom(node) ? { schedule: scheduleFrom(node) } : {}),
+    conditions: [...node.querySelectorAll('.condition')].map((c) => {
+      const operator = $('.cond-op', c).value;
+      const condition = {
+        field: $('.cond-field', c).value,
+        operator,
+        negate: $('.cond-negate', c).checked,
+      };
+      if (condition.field === AGE_FIELD) {
+        // A missing or zero day count is stored as-is and never matches (the
+        // matcher guards it); the user is told rather than silently fixed.
+        const raw = $('.cond-days', c).value.trim();
+        const days = ageDays({ days: raw });
+        condition.days = days ?? 0;
+        if (days === null) rejected.push(raw ? t('reject_ageDays', raw) : t('reject_ageDaysEmpty'));
+      } else if (condition.field === SIZE_FIELD) {
+        const raw = $('.cond-size', c).value.trim();
+        const amount = sizeAmount({ size: raw });
+        const unit = sizeUnit({ unit: $('.cond-size-unit', c).value }) ?? 'MB';
+        condition.size = amount ?? 0;
+        condition.unit = unit;
+        if (amount === null) rejected.push(raw ? t('reject_size', raw) : t('reject_sizeEmpty'));
+      } else if (condition.field === CUSTOM_HEADER_OPTION) {
+        const rawName = $('.cond-custom-header', c).value.trim();
+        const normalized = normalizeHeaderName(rawName);
+        condition.field = normalized ?? '';
+        if (!normalized) {
+          rejected.push(rawName ? t('reject_customHeader', rawName) : t('reject_customHeaderEmpty'));
+        }
+        condition.value = $('.cond-value', c).value;
+      } else if (STATE_FIELDS.includes(condition.field)) {
+        condition.negate = false;
+      } else if (condition.field === TAG_FIELD) {
+        // A missing tag is stored as-is and never matches (the matcher guards it).
+        condition.tagKey = c.dataset.tagKey || '';
+        if (!condition.tagKey) rejected.push(t('reject_tagConditionNoTag'));
+      } else if (condition.field === PRIORITY_FIELD) {
+        condition.value = $('.cond-priority', c).value;
+      } else if (condition.field === AUTH_FIELD) {
+        condition.value = $('.cond-auth', c).value;
+      } else if (operator === IN_ADDRESS_BOOK) {
+        condition.addressBookId = c.dataset.bookId || ALL_ADDRESS_BOOKS;
+      } else if (operator === DOMAIN_IN_LIST) {
+        condition.fields = $('.cond-field', c).value.split(',');
+        delete condition.field;
+        // parseDomainList drops anything malformed, so a stray blank line can
+        // never become an entry that matches every message.
+        const { domains, invalid } = parseDomainList($('.cond-domains', c).value);
+        condition.domains = domains;
+        rejected.push(...invalid);
+      } else if (operator !== NAME_SHOWS_OTHER_ADDRESS) {
+        condition.value = $('.cond-value', c).value;
+      }
+      return condition;
+    }),
+    actions,
+  };
+}
+
 /** Read the DOM back into a config object. */
 function collectConfig(rejected = []) {
-  const rules = [...rulesEl.querySelectorAll('.rule')].map((node) => {
-    const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
-    const actions = collectActions(node, name, rejected);
-    return {
-      id: $('.rule-id', node).value || crypto.randomUUID(),
-      name,
-      enabled: $('.rule-enabled', node).checked,
-      match: $('.rule-match', node).value,
-      folderIds: [...$('.rule-folders', node).selectedOptions].map((o) => o.value),
-      includeSubfolders: $('.rule-subfolders', node).checked,
-      ...(scheduleFrom(node) ? { schedule: scheduleFrom(node) } : {}),
-      conditions: [...node.querySelectorAll('.condition')].map((c) => {
-        const operator = $('.cond-op', c).value;
-        const condition = {
-          field: $('.cond-field', c).value,
-          operator,
-          negate: $('.cond-negate', c).checked,
-        };
-        if (condition.field === AGE_FIELD) {
-          // A missing or zero day count is stored as-is and never matches (the
-          // matcher guards it); the user is told rather than silently fixed.
-          const raw = $('.cond-days', c).value.trim();
-          const days = ageDays({ days: raw });
-          condition.days = days ?? 0;
-          if (days === null) rejected.push(raw ? t('reject_ageDays', raw) : t('reject_ageDaysEmpty'));
-        } else if (condition.field === SIZE_FIELD) {
-          const raw = $('.cond-size', c).value.trim();
-          const amount = sizeAmount({ size: raw });
-          const unit = sizeUnit({ unit: $('.cond-size-unit', c).value }) ?? 'MB';
-          condition.size = amount ?? 0;
-          condition.unit = unit;
-          if (amount === null) rejected.push(raw ? t('reject_size', raw) : t('reject_sizeEmpty'));
-        } else if (condition.field === CUSTOM_HEADER_OPTION) {
-          const rawName = $('.cond-custom-header', c).value.trim();
-          const normalized = normalizeHeaderName(rawName);
-          condition.field = normalized ?? '';
-          if (!normalized) {
-            rejected.push(rawName ? t('reject_customHeader', rawName) : t('reject_customHeaderEmpty'));
-          }
-          condition.value = $('.cond-value', c).value;
-        } else if (STATE_FIELDS.includes(condition.field)) {
-          condition.negate = false;
-        } else if (condition.field === TAG_FIELD) {
-          // A missing tag is stored as-is and never matches (the matcher guards it).
-          condition.tagKey = c.dataset.tagKey || '';
-          if (!condition.tagKey) rejected.push(t('reject_tagConditionNoTag'));
-        } else if (condition.field === PRIORITY_FIELD) {
-          condition.value = $('.cond-priority', c).value;
-        } else if (condition.field === AUTH_FIELD) {
-          condition.value = $('.cond-auth', c).value;
-        } else if (operator === IN_ADDRESS_BOOK) {
-          condition.addressBookId = c.dataset.bookId || ALL_ADDRESS_BOOKS;
-        } else if (operator === DOMAIN_IN_LIST) {
-          condition.fields = $('.cond-field', c).value.split(',');
-          delete condition.field;
-          // parseDomainList drops anything malformed, so a stray blank line can
-          // never become an entry that matches every message.
-          const { domains, invalid } = parseDomainList($('.cond-domains', c).value);
-          condition.domains = domains;
-          rejected.push(...invalid);
-        } else if (operator !== NAME_SHOWS_OTHER_ADDRESS) {
-          condition.value = $('.cond-value', c).value;
-        }
-        return condition;
-      }),
-      actions,
-    };
-  });
+  const rules = [...rulesEl.querySelectorAll('.rule')].map((node) => collectRule(node, rejected));
 
   const { domains: allowlist } = parseDomainList($('#allowlist').value);
   const advanced = sanitizeAdvanced(collectAdvanced());
@@ -1374,6 +1654,7 @@ async function save() {
   // Re-render so the user sees exactly what was stored, dropped lines included.
   rulesEl.innerHTML = '';
   for (const rule of collected.rules) renderRule(rule, true);
+  applyRuleFilter();
   $('#allowlist').value = collected.allowlist.join('\n');
   fillAdvanced(collected.advanced);
 
@@ -1551,6 +1832,7 @@ async function runNow() {
   try {
     const res = await messenger.runtime.sendMessage({ command: 'runNow' });
     const affected = res?.affected ?? 0;
+    await reloadRunState();
     flash(plural('status_runDone', affected, affected));
   } catch (e) {
     flash(t('status_runFailed', e.message), true);
@@ -1575,6 +1857,7 @@ async function runRuleNow(node) {
       ruleId: $('.rule-id', node).value,
     });
     const affected = res?.affected ?? 0;
+    await reloadRunState();
     flash(plural('status_ruleRunDone', affected, name, affected));
   } catch (e) {
     flash(t('status_runFailed', e.message), true);
@@ -1597,6 +1880,10 @@ function isBlankStarterCard(node) {
 function applyDraftRule(draftId, rule) {
   if (!rule || (draftId && seenDraftIds.has(draftId))) return;
   if (draftId) seenDraftIds.add(draftId);
+  if ($('#rule-filter')?.value) {
+    $('#rule-filter').value = '';
+    applyRuleFilter();
+  }
   const existingCards = [...rulesEl.querySelectorAll('.rule')];
   if (existingCards.length === 1 && isBlankStarterCard(existingCards[0])) {
     existingCards[0].remove();
@@ -1612,7 +1899,9 @@ async function init() {
   await loadFolders();
   await loadAddressBooks();
   await loadTags();
-  const { config } = await messenger.storage.local.get({ config: null });
+  const stored = await messenger.storage.local.get({ config: null, runState: {} });
+  const { config } = stored;
+  runState = stored?.runState && typeof stored.runState === 'object' ? stored.runState : {};
   // Before the rules, because an authentication row reads the own check
   // setting and the DNS server access.
   await fillAdvanced(sanitizeAdvanced(config?.advanced).settings);
@@ -1640,6 +1929,14 @@ async function init() {
     return undefined;
   });
 
+  // Update per-rule status lines live whenever a scheduled or new-mail run finishes.
+  messenger.storage?.onChanged?.addListener((changes, area) => {
+    if (area !== 'local' || !changes.runState) return;
+    const next = changes.runState.newValue;
+    runState = next && typeof next === 'object' ? next : {};
+    refreshRuleStatuses();
+  });
+
   $('#allowlist').value = (config?.allowlist ?? DEFAULT_ALLOWLIST).join('\n');
   $('#reset-allowlist').addEventListener('click', () => {
     $('#allowlist').value = [...DEFAULT_ALLOWLIST].join('\n');
@@ -1651,7 +1948,14 @@ async function init() {
     flash(t('status_advancedRestored'));
   });
 
-  $('#add-rule').addEventListener('click', () => renderRule({}));
+  $('#add-rule').addEventListener('click', () => {
+    if ($('#rule-filter').value) {
+      $('#rule-filter').value = '';
+      applyRuleFilter();
+    }
+    renderRule({});
+  });
+  $('#rule-filter').addEventListener('input', applyRuleFilter);
   $('#toggle-all').addEventListener('click', () =>
     setAllCollapsed(!allCollapsed),
   );

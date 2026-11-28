@@ -122,6 +122,8 @@ export function ruleFingerprint(rule) {
     folderIds: [...(rule?.folderIds ?? [])].map(String).sort(),
     // Only when set, so fingerprints of rules from before 0.3.5 do not change.
     ...(rule?.includeSubfolders === true ? { includeSubfolders: true } : {}),
+    // Only when set, so rules without stop-processing keep their prior fingerprint.
+    ...(rule?.stopProcessing === true ? { stopProcessing: true } : {}),
     match: rule?.match === 'all' ? 'all' : 'any',
     // Only when the schedule is on, so a rule without one, or with one turned
     // off, fingerprints as it did before 0.3.6. Two rules that differ only in
@@ -194,6 +196,7 @@ export function buildExport(config, { exportedAt = new Date(), folders } = {}) {
     match: rule.match === 'all' ? 'all' : 'any',
     folderIds: [...(rule.folderIds ?? [])],
     includeSubfolders: rule.includeSubfolders === true,
+    ...(rule.stopProcessing === true ? { stopProcessing: true } : {}),
     // Only when the rule has one, so files without schedules look as before.
     ...(rule.schedule ? { schedule: sanitizeSchedule(rule.schedule) } : {}),
     conditions: (rule.conditions ?? []).map((c) => ({ ...c })),
@@ -549,6 +552,7 @@ function sanitizeRule(raw, index, problems, folderContext, knownAddressBookIds) 
     match: raw?.match === 'all' ? 'all' : 'any',
     folderIds,
     includeSubfolders: raw?.includeSubfolders === true,
+    ...(raw?.stopProcessing === true ? { stopProcessing: true } : {}),
     ...(schedule && schedule.cron ? { schedule } : {}),
     conditions,
     actions,
@@ -644,4 +648,61 @@ export function sanitizeImport(
     remappedFolders: folderContext.remapped,
     problems,
   };
+}
+
+/**
+ * Create an unsaved duplicate of a rule with no `id` (so saving assigns a
+ * fresh identity and does not share run state with the original).
+ */
+export function duplicateRule(rule, copyName = (name) => t('rule_copyName', name)) {
+  const baseName = String(rule?.name ?? '').trim() || t('common_untitledRule');
+  return {
+    name: copyName(baseName),
+    enabled: rule?.enabled !== false,
+    match: rule?.match === 'all' ? 'all' : 'any',
+    folderIds: [...(rule?.folderIds ?? [])],
+    includeSubfolders: rule?.includeSubfolders === true,
+    ...(rule?.stopProcessing === true ? { stopProcessing: true } : {}),
+    ...(rule?.schedule ? { schedule: { ...rule.schedule } } : {}),
+    conditions: (rule?.conditions ?? []).map((c) => ({
+      ...c,
+      ...(Array.isArray(c?.fields) ? { fields: [...c.fields] } : {}),
+      ...(Array.isArray(c?.domains) ? { domains: [...c.domains] } : {}),
+    })),
+    actions: actionsOf(rule).map((a) => ({ ...a })),
+  };
+}
+
+/**
+ * Whether a rule matches the options-page search filter.
+ *
+ * Every whitespace-separated word must appear somewhere in the rule's name,
+ * condition fields/values/domains, action types/tags, or folder labels
+ * (case-insensitive).
+ */
+export function ruleMatchesSearch(rule, query, { folderLabelsById, tagLabelsByKey, extraText = '' } = {}) {
+  const words = String(query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+
+  const parts = [rule?.name ?? '', extraText];
+  for (const id of rule?.folderIds ?? []) {
+    parts.push(folderLabelsById?.get?.(id) ?? id);
+  }
+  for (const c of rule?.conditions ?? []) {
+    if (Array.isArray(c?.fields)) parts.push(...c.fields);
+    if (c?.field) parts.push(c.field);
+    if (c?.operator) parts.push(c.operator);
+    if (c?.value != null) parts.push(String(c.value));
+    if (Array.isArray(c?.domains)) parts.push(...c.domains);
+    if (c?.tagKey) parts.push(tagLabelsByKey?.get?.(c.tagKey) ?? c.tagKey);
+    if (c?.days != null) parts.push(String(c.days));
+    if (c?.size != null) parts.push(`${c.size} ${c.unit ?? ''}`);
+  }
+  for (const a of actionsOf(rule)) {
+    if (a?.type) parts.push(a.type, ACTIONS_BY_ID[a.type]?.label ?? '');
+    if (a?.folderId) parts.push(folderLabelsById?.get?.(a.folderId) ?? a.folderId);
+    if (a?.tagKey) parts.push(tagLabelsByKey?.get?.(a.tagKey) ?? a.tagKey);
+  }
+  const haystack = parts.join(' ').toLowerCase();
+  return words.every((w) => haystack.includes(w));
 }

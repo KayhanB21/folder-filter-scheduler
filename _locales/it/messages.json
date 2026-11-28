@@ -1305,5 +1305,143 @@
   },
   "status_draftCreated": {
     "message": "Bozza di regola creata dal messaggio selezionato — scegli un’azione e premi Salva."
+  },
+  "options_filterRules": {
+    "message": "Filtra regole…"
+  },
+  "options_filterNoMatches": {
+    "message": "Nessuna regola corrispondente"
+  },
+  "options_filterShowing": {
+    "message": "Mostrate $1 di $2 regole"
+  },
+  "rule_moveUp": {
+    "message": "Sposta regola su"
+  },
+  "rule_moveDown": {
+    "message": "Sposta regola giù"
+  },
+  "rule_duplicate": {
+    "message": "Duplica"
+  },
+  "rule_duplicateTitle": {
+    "message": "Crea una copia di questa regola"
+  },
+  "rule_copyName": {
+    "message": "$1 (copia)"
+  },
+  "rule_test": {
+    "message": "Testa"
+  },
+  "rule_testTitle": {
+    "message": "Anteprima dei messaggi corrispondenti senza spostare, etichettare o eliminare nulla"
+  },
+  "rule_stopProcessing": {
+    "message": "Interrompi le regole successive sui messaggi corrispondenti"
+  },
+  "summary_stopProcessing": {
+    "message": "ferma regole successive"
+  },
+  "meta_justNow": {
+    "message": "proprio ora"
+  },
+  "meta_minutesAgo_one": {
+    "message": "$1 min fa"
+  },
+  "meta_minutesAgo_other": {
+    "message": "$1 min fa"
+  },
+  "meta_hoursAgo_one": {
+    "message": "$1 ora fa"
+  },
+  "meta_hoursAgo_other": {
+    "message": "$1 ore fa"
+  },
+  "meta_daysAgo_one": {
+    "message": "$1 giorno fa"
+  },
+  "meta_daysAgo_other": {
+    "message": "$1 giorni fa"
+  },
+  "meta_lastRan": {
+    "message": "Ultima esecuzione $1"
+  },
+  "meta_neverRan": {
+    "message": "Mai eseguita"
+  },
+  "meta_matched_one": {
+    "message": "$1 corrispondente"
+  },
+  "meta_matched_other": {
+    "message": "$1 corrispondenti"
+  },
+  "meta_actioned_one": {
+    "message": "$1 elaborato"
+  },
+  "meta_actioned_other": {
+    "message": "$1 elaborati"
+  },
+  "meta_warnErrors": {
+    "message": "Ultima esecuzione con errori"
+  },
+  "meta_warnBookAccess": {
+    "message": "Accesso alla rubrica richiesto"
+  },
+  "meta_warnDnsAccess": {
+    "message": "Accesso al server DNS richiesto"
+  },
+  "test_close": {
+    "message": "Chiudi anteprima"
+  },
+  "test_running": {
+    "message": "Test in corso… (nessun messaggio verrà modificato)"
+  },
+  "test_summary_one": {
+    "message": "Simulazione: corrisponderebbe $1 di $2 messaggi (nessun messaggio modificato)"
+  },
+  "test_summary_other": {
+    "message": "Simulazione: corrisponderebbero $1 di $2 messaggi (nessun messaggio modificato)"
+  },
+  "test_truncated": {
+    "message": "Mostrate le prime $1 corrispondenze."
+  },
+  "test_skippedHeaders_one": {
+    "message": "$1 messaggio saltato (intestazioni non lette)."
+  },
+  "test_skippedHeaders_other": {
+    "message": "$1 messaggi saltati (intestazioni non lette)."
+  },
+  "test_skippedBodies_one": {
+    "message": "$1 messaggio saltato (corpo non letto)."
+  },
+  "test_skippedBodies_other": {
+    "message": "$1 messaggi saltati (corpo non letto)."
+  },
+  "test_authPending_one": {
+    "message": "$1 messaggio in attesa di controllo autenticazione."
+  },
+  "test_authPending_other": {
+    "message": "$1 messaggi in attesa di controllo autenticazione."
+  },
+  "test_scanErrors": {
+    "message": "Impossibile analizzare alcune cartelle."
+  },
+  "test_noMatches": {
+    "message": "Nessun messaggio corrispondente — nulla verrebbe spostato, etichettato o eliminato."
+  },
+  "test_noSubject": {
+    "message": "(nessun oggetto)"
+  },
+  "test_failed": {
+    "message": "Test non riuscito: $1"
+  },
+  "status_testNoFolder": {
+    "message": "Scegli almeno una cartella per «$1» prima di testarla."
+  },
+  "status_orderChanged": {
+    "message": "Ordine delle regole modificato — premi Salva per confermare."
+  },
+  "status_ruleDuplicated": {
+    "message": "Duplicata come «$1» — controllala e premi Salva."
   }
 }

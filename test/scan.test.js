@@ -9,7 +9,10 @@ import {
   CATCH_UP_LOOKBACK_DAYS,
   SCAN_KINDS,
   SCAN_OVERLAP_MINUTES,
+  dryRunSampleOf,
   planScan,
+  recordRuleRun,
+  relativeTimeParts,
   stampScan,
 } from '../src/scan.js';
 
@@ -253,4 +256,72 @@ test('queryFilterFor marks contradictory AND demands as impossible', () => {
     }),
     { impossible: true },
   );
+});
+
+// --- Per-rule run status, relative time, and dry-run samples ----------------
+
+test('recordRuleRun stores outcome without altering scan watermarks', () => {
+  const prior = { lastRunAt: '2026-09-09T11:00:00.000Z', lastCatchUpAt: '2026-09-09T10:30:00.000Z' };
+  const clean = recordRuleRun(prior, { at: now, scanned: 40, matched: 3, affected: 2, error: false });
+  assert.equal(clean.lastRunAt, prior.lastRunAt);
+  assert.equal(clean.lastCatchUpAt, prior.lastCatchUpAt);
+  assert.deepEqual(clean.lastStatus, {
+    at: now.toISOString(),
+    scanned: 40,
+    matched: 3,
+    affected: 2,
+    error: false,
+  });
+
+  const failed = recordRuleRun(undefined, {
+    at: now,
+    scanned: 10,
+    matched: 0,
+    affected: 0,
+    error: true,
+    skippedHeaders: 2,
+    skippedBodies: 1,
+    authPending: 3,
+  });
+  assert.equal(failed.lastRunAt, undefined);
+  assert.deepEqual(failed.lastStatus, {
+    at: now.toISOString(),
+    scanned: 10,
+    matched: 0,
+    affected: 0,
+    error: true,
+    skippedHeaders: 2,
+    skippedBodies: 1,
+    authPending: 3,
+  });
+});
+
+test('relativeTimeParts buckets elapsed durations cleanly', () => {
+  assert.deepEqual(relativeTimeParts(new Date(now.getTime() - 20_000), now), { unit: 'justNow', value: 0 });
+  assert.deepEqual(relativeTimeParts(minutesBefore(8), now), { unit: 'minutes', value: 8 });
+  assert.deepEqual(relativeTimeParts(minutesBefore(150), now), { unit: 'hours', value: 2 });
+  assert.deepEqual(relativeTimeParts(new Date(now.getTime() - 3 * DAY), now), { unit: 'days', value: 3 });
+  assert.equal(relativeTimeParts('garbage', now), null);
+});
+
+test('dryRunSampleOf compacts header fields and trims long text', () => {
+  const sample = dryRunSampleOf(
+    {
+      id: 42,
+      subject: `  Hello\n  ${'x'.repeat(200)}`,
+      author: 'Alice <alice@example.com>',
+      folder: { id: 'acc://INBOX' },
+      date: now,
+    },
+    'fallback',
+  );
+  assert.equal(sample.id, 42);
+  assert.equal(sample.from, 'Alice <alice@example.com>');
+  assert.equal(sample.folderId, 'acc://INBOX');
+  assert.equal(sample.date, now.toISOString());
+  assert.equal(sample.subject.length, 160);
+  assert.ok(sample.subject.endsWith('…'));
+
+  const minimal = dryRunSampleOf({ id: 7 }, 'fallback://Folder');
+  assert.deepEqual(minimal, { id: 7, subject: '', from: '', folderId: 'fallback://Folder', date: null });
 });

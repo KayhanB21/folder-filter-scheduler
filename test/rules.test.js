@@ -4,7 +4,16 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EXPORT_FORMAT, buildExport, exportFilename, ruleFingerprint, ruleHash, sanitizeImport } from '../src/rules.js';
+import {
+  EXPORT_FORMAT,
+  buildExport,
+  duplicateRule,
+  exportFilename,
+  ruleFingerprint,
+  ruleHash,
+  ruleMatchesSearch,
+  sanitizeImport,
+} from '../src/rules.js';
 
 const validRule = {
   name: 'Spam domains',
@@ -785,4 +794,79 @@ test('portable import falls back to an unambiguous path match and drops unresolv
   assert.deepEqual(res.rules[0].actions, [{ type: 'move', folderId: 'new://Receipts' }]);
   assert.equal(res.remappedFolders, 2);
   assert.ok(res.problems.some((p) => /destination folder for "move"/.test(p)));
+});
+
+// --- Stop later rules, duplicate, and search filter -------------------------
+
+test('stopProcessing survives a round trip and changes the fingerprint only when enabled', () => {
+  const withStop = { ...validRule, stopProcessing: true };
+  assert.notEqual(ruleFingerprint(validRule), ruleFingerprint(withStop));
+  assert.equal(ruleFingerprint(validRule), ruleFingerprint({ ...validRule, stopProcessing: false }));
+  assert.ok(!ruleFingerprint(validRule).includes('stopProcessing'));
+
+  const exported = buildExport({ rules: [withStop, validRule] });
+  assert.equal(exported.rules[0].stopProcessing, true);
+  assert.equal('stopProcessing' in exported.rules[1], false);
+
+  const imported = sanitizeImport(exported);
+  assert.deepEqual(imported.problems, []);
+  assert.equal(imported.rules[0].stopProcessing, true);
+  assert.equal(imported.rules[1].stopProcessing, undefined);
+});
+
+test('duplicateRule deep-clones conditions, actions, and folders without carrying over the rule id', () => {
+  const original = {
+    id: 'orig-1',
+    name: 'Receipts',
+    enabled: true,
+    match: 'all',
+    folderIds: ['inbox'],
+    includeSubfolders: true,
+    stopProcessing: true,
+    schedule: { enabled: true, cron: '0 21 * * *' },
+    conditions: [{ fields: ['reply-to', 'from'], operator: 'domainInList', domains: ['shop.example'] }],
+    actions: [{ type: 'move', folderId: 'accounting' }],
+  };
+  const copy = duplicateRule(original);
+  assert.equal(copy.id, undefined);
+  assert.equal(copy.name, 'Receipts (copy)');
+  assert.equal(copy.stopProcessing, true);
+  assert.deepEqual(copy.folderIds, ['inbox']);
+  assert.deepEqual(copy.conditions, original.conditions);
+  assert.deepEqual(copy.actions, original.actions);
+
+  // Mutating the copy never mutates the original.
+  copy.folderIds.push('other');
+  copy.conditions[0].domains.push('extra.example');
+  copy.actions[0].folderId = 'elsewhere';
+  assert.deepEqual(original.folderIds, ['inbox']);
+  assert.deepEqual(original.conditions[0].domains, ['shop.example']);
+  assert.equal(original.actions[0].folderId, 'accounting');
+});
+
+test('ruleMatchesSearch matches across name, conditions, actions, tags, and folder labels', () => {
+  const rule = {
+    name: 'Newsletter Cleanup',
+    folderIds: ['acc1://INBOX'],
+    conditions: [
+      { field: 'list-unsubscribe', operator: 'contains', value: 'mailto:' },
+      { field: 'size', operator: 'largerThan', size: 5, unit: 'MB' },
+    ],
+    actions: [
+      { type: 'removeTag', tagKey: 'follow-up' },
+      { type: 'move', folderId: 'acc1://Newsletters' },
+    ],
+  };
+  const ctx = {
+    folderLabelsById: new Map([
+      ['acc1://INBOX', 'Work: /INBOX'],
+      ['acc1://Newsletters', 'Work: /Newsletters'],
+    ]),
+    tagLabelsByKey: new Map([['follow-up', 'Follow Up']]),
+  };
+  assert.equal(ruleMatchesSearch(rule, '', ctx), true);
+  assert.equal(ruleMatchesSearch(rule, 'newsletter mailto', ctx), true);
+  assert.equal(ruleMatchesSearch(rule, 'list-unsubscribe follow up', ctx), true);
+  assert.equal(ruleMatchesSearch(rule, 'work 5 mb', ctx), true);
+  assert.equal(ruleMatchesSearch(rule, 'newsletter nonexistent', ctx), false);
 });

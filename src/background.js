@@ -15,7 +15,14 @@ import {
 import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
-import { planScan, queryBoundsFor, queryFilterFor, stampScan } from './scan.js';
+import {
+  dryRunSampleOf,
+  planScan,
+  queryBoundsFor,
+  queryFilterFor,
+  recordRuleRun,
+  stampScan,
+} from './scan.js';
 import { ADVANCED_DEFAULTS, AUTH_DOH_SERVERS, alarmNeedsReset, dohOrigin, sanitizeAdvanced, trustedServerList } from './settings.js';
 import { createRunner } from './runner.js';
 import { createHeaderReads, readHeadersOrSkip } from './headers.js';
@@ -87,6 +94,8 @@ const BODY_BUDGET_MS = 20_000;
 /** Short timeout when peeking at a single right-clicked message for "Create rule…". */
 const DRAFT_HEADER_TIMEOUT_MS = 3_000;
 const PENDING_DRAFT_KEY = 'pendingDraftRule';
+/** Maximum matched messages returned in a Test Rule (dry-run) preview. */
+const DRY_RUN_SAMPLE_CAP = 25;
 
 /**
  * The SPF, DKIM, and DMARC check downloads whole messages. One download may
@@ -579,7 +588,18 @@ async function readBody(bodyReads, messageId) {
 
 /** Run one rule across all its source folders. Returns count of affected messages. */
 async function runRule(
-  rule, folderIds, runState, manual, addressBooks, settings, headerReads, authReads, bodyReads, copyHistory, quiet,
+  rule,
+  folderIds,
+  runState,
+  manual,
+  addressBooks,
+  settings,
+  headerReads,
+  authReads,
+  bodyReads,
+  copyHistory,
+  quiet,
+  stoppedMessages,
 ) {
   if (rule.enabled === false) return 0;
   const fetchFull = requiresFullMessage(rule);
@@ -611,6 +631,7 @@ async function runRule(
     };
     try {
       for await (const header of messagesInFolder(folderId, queryOpts)) {
+        if (stoppedMessages?.has(header.id)) continue;
         scanned += 1;
         const message = await normalize(header, fetchFull, headerReads, ruleAuthReads);
         if (!message) continue;
@@ -666,6 +687,9 @@ async function runRule(
           return flushLog();
         },
       });
+      if (rule.stopProcessing === true && stoppedMessages) {
+        for (const id of matchedIds) stoppedMessages.add(id);
+      }
       for (const id of skippedCopyIds) {
         if (!copiedIds.has(id)) alreadyCopied += 1;
       }
@@ -688,9 +712,22 @@ async function runRule(
   const holdWatermark = scanFailed || authPending > 0;
 
   // Only advance the watermark on a clean pass, so a transient failure does not
-  // permanently skip the messages it could not read.
-  if (!holdWatermark && rule.id) {
-    runState[rule.id] = stampScan(runState[rule.id], kind, startedAt);
+  // permanently skip the messages it could not read. Always record the latest
+  // run outcome so the options page can show live status and error badges.
+  if (rule.id) {
+    if (!holdWatermark) {
+      runState[rule.id] = stampScan(runState[rule.id], kind, startedAt);
+    }
+    runState[rule.id] = recordRuleRun(runState[rule.id], {
+      at: startedAt,
+      scanned,
+      matched,
+      affected,
+      error: scanFailed,
+      skippedHeaders: skipped,
+      skippedBodies: bodySkipped,
+      authPending,
+    });
   }
   const range = [
     bounds.fromDate ? `from ${bounds.fromDate.toISOString()}` : 'from start',
@@ -777,13 +814,26 @@ async function runAllRules(
   // Pruned against the full rule list (not `selected`), so a single-rule or
   // new-mail run never drops another rule's copy history.
   const copyHistory = await loadCopyHistory(rules);
+  // Tracks messages matched by a rule with `stopProcessing: true` so later
+  // rules in this run skip them.
+  const stoppedMessages = new Set();
   let total = 0;
 
   try {
     for (const rule of selected) {
       total += await runRule(
-        rule, scanned.get(rule), runState, isManual(rule), addressBooks, advanced, headerReads,
-        authReads, bodyReads, copyHistory, quietRule(rule),
+        rule,
+        scanned.get(rule),
+        runState,
+        isManual(rule),
+        addressBooks,
+        advanced,
+        headerReads,
+        authReads,
+        bodyReads,
+        copyHistory,
+        quietRule(rule),
+        stoppedMessages,
       );
     }
   } finally {
@@ -1257,11 +1307,108 @@ if (messenger.messages?.onNewMailReceived?.addListener) {
   }, true);
 }
 
+/**
+ * Side-effect-free dry run for the options page's "Test" button.
+ *
+ * Scans the candidate rule's folders (even when unsaved or turned off) using
+ * the exact same matcher, query bounds, pushdown, and reader budgets as a real
+ * run, without executing any action, advancing runState, or logging message
+ * content to diagnostics.
+ */
+async function testRuleDryRun(rule) {
+  const startedAt = new Date();
+  const { advanced } = await loadConfig();
+  const allFolders = await loadAllFolders([rule]);
+  const folderIds = resolveRuleFolders(rule, allFolders);
+  if (folderIds.length === 0) {
+    return {
+      ok: true,
+      scanned: 0,
+      matched: 0,
+      truncated: false,
+      samples: [],
+      skippedHeaders: 0,
+      skippedBodies: 0,
+      authPending: 0,
+      scanFailed: false,
+    };
+  }
+
+  const fetchFull = requiresFullMessage(rule);
+  const needsBody = requiresBody(rule);
+  const addressBooks = await loadAddressBooks([{ ...rule, enabled: true }]);
+  const headerReads = await newHeaderReads();
+  const authReads = requiresRaw(rule) ? await newAuthReads(advanced) : null;
+  const bodyReads = newBodyReads();
+  const bounds = queryBoundsFor(rule, { kind: 'full', fromDate: undefined }, startedAt);
+  const filter = queryFilterFor(rule);
+  const queryOpts = { ...bounds, ...filter };
+
+  let scanned = 0;
+  let matched = 0;
+  let authPending = 0;
+  let scanFailed = false;
+  const samples = [];
+
+  for (const folderId of filter.impossible ? [] : folderIds) {
+    const recordMatch = (header) => {
+      matched += 1;
+      if (samples.length < DRY_RUN_SAMPLE_CAP) {
+        samples.push(dryRunSampleOf(header, folderId));
+      }
+    };
+    try {
+      for await (const header of messagesInFolder(folderId, queryOpts)) {
+        scanned += 1;
+        const message = await normalize(header, fetchFull, headerReads, authReads);
+        if (!message) continue;
+        if (message.authPending) authPending += 1;
+        const options = { now: startedAt, addressBooks };
+        if (needsBody) {
+          const decided = decideWithoutBody(message, rule, options);
+          if (decided !== null) {
+            if (decided) recordMatch(header);
+            continue;
+          }
+          message.body = await readBody(bodyReads, header.id);
+          if (message.body === null) continue;
+        }
+        if (evaluateRule(message, rule, options)) recordMatch(header);
+      }
+    } catch (e) {
+      warn(`dry run failed for folder ${folderId} in rule "${rule.name ?? ''}"`, e);
+      scanFailed = true;
+    }
+  }
+
+  if (authReads) await finishAuthReads(authReads, true);
+  log(
+    `dry run "${rule.name ?? ''}": ${scanned} scanned, ${matched} would match, ${Date.now() - startedAt.getTime()} ms` +
+      (scanFailed ? ', WITH ERRORS' : ''),
+  );
+  await flushLog();
+
+  return {
+    ok: true,
+    scanned,
+    matched,
+    truncated: matched > samples.length,
+    samples,
+    skippedHeaders: headerReads.skipped,
+    skippedBodies: bodyReads.skipped,
+    authPending,
+    scanFailed,
+  };
+}
+
 messenger.runtime.onMessage.addListener((msg) => {
   if (msg?.command === 'runNow') {
     // A rule id is the Run button on one rule; without it, every rule runs.
     const scope = typeof msg.ruleId === 'string' ? { ruleIds: new Set([msg.ruleId]) } : {};
     return runner.request('manual', scope).then((affected) => ({ ok: true, affected }));
+  }
+  if (msg?.command === 'testRule' && msg.rule && typeof msg.rule === 'object') {
+    return testRuleDryRun(msg.rule);
   }
   if (msg?.command === 'reschedule') {
     // The options page sends this after a save, so the rules might be new,

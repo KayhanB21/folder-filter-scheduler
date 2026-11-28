@@ -7,6 +7,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **“Test” (dry-run) rule preview.** Every rule card now has a **Test** button
+  right next to **Run** that works even before saving. It scans the rule's
+  folders without moving, tagging, or deleting any mail and shows *"Would match
+  N of M messages"* alongside a sample list of matched subjects, senders,
+  folders, and dates.
+- **Per-rule status on every card.** Each rule records its latest run outcome
+  (matched/actioned counts and errors, without advancing the scan watermark on
+  failure) and displays a quiet status line — visible even when collapsed — such
+  as *Last ran 8 min ago · 3 matched*, plus inline warnings when a run had
+  errors or lacks a required permission.
+- **Rule reorder, duplicate, search, and “Stop running later rules”.**
+  - **↑ / ↓** buttons reorder rules in top-to-bottom execution order.
+  - **Duplicate** clones a rule card with a fresh identity so similar rules take
+    seconds to build.
+  - **Filter rules…** searches across rule names, conditions, actions, and
+    folders when managing large rule sets.
+  - **Stop running later rules on matched messages** (`stopProcessing`) prevents
+    subsequent rules in the same run from acting on messages already matched by
+    an earlier rule (and Thunderbird `msgFilterRules.dat` imports now map
+    `Stop execution` to it automatically).
 - **Arbitrary custom header conditions.** Choose **Custom header…** in a
   condition row and enter any header name (such as `List-Unsubscribe`,
   `X-Spam-Status`, or `Return-Path`) with `contains`, `is`, `starts with`,

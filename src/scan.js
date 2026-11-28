@@ -106,6 +106,70 @@ export function stampScan(state, kind, startedAt) {
   return next;
 }
 
+/**
+ * Record the user-visible outcome of one rule execution without touching the
+ * scan watermarks (`lastRunAt` / `lastCatchUpAt`).
+ *
+ * Called on every pass — including failed ones where the watermark must hold —
+ * so each rule card can display when it last ran, how many messages matched,
+ * and whether errors occurred. Carries counts and timestamps only, never PII.
+ */
+export function recordRuleRun(
+  state,
+  { at, scanned = 0, matched = 0, affected = 0, error = false, skippedHeaders = 0, skippedBodies = 0, authPending = 0 },
+) {
+  const when = at instanceof Date ? at.toISOString() : String(at ?? '');
+  const lastStatus = {
+    at: when,
+    scanned: Math.max(0, Number(scanned) || 0),
+    matched: Math.max(0, Number(matched) || 0),
+    affected: Math.max(0, Number(affected) || 0),
+    error: error === true,
+    ...(skippedHeaders > 0 ? { skippedHeaders } : {}),
+    ...(skippedBodies > 0 ? { skippedBodies } : {}),
+    ...(authPending > 0 ? { authPending } : {}),
+  };
+  return { ...(state ?? {}), lastStatus };
+}
+
+/**
+ * Bucket an elapsed duration into a translatable relative-time token for rule
+ * status lines: `{ unit: 'justNow' | 'minutes' | 'hours' | 'days', value }`.
+ */
+export function relativeTimeParts(timestamp, now = new Date()) {
+  const date = parseDate(timestamp);
+  if (!date) return null;
+  const diffMs = Math.max(0, now.getTime() - date.getTime());
+  const minutes = Math.floor(diffMs / MINUTE);
+  if (minutes < 1) return { unit: 'justNow', value: 0 };
+  if (minutes < 60) return { unit: 'minutes', value: minutes };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { unit: 'hours', value: hours };
+  return { unit: 'days', value: Math.floor(hours / 24) };
+}
+
+const SAMPLE_TEXT_MAX = 160;
+const trimSample = (text) => {
+  const s = String(text ?? '').replace(/\s+/g, ' ').trim();
+  return s.length > SAMPLE_TEXT_MAX ? `${s.slice(0, SAMPLE_TEXT_MAX - 1)}…` : s;
+};
+
+/**
+ * Compact, display-only summary of one matched MessageHeader for dry-run
+ * preview. Returned transiently to the options page and never persisted or
+ * logged to diagnostics.
+ */
+export function dryRunSampleOf(header, folderId = null) {
+  const d = parseDate(header?.date);
+  return {
+    id: header?.id ?? null,
+    subject: trimSample(header?.subject),
+    from: trimSample(header?.author),
+    folderId: header?.folder?.id ?? folderId ?? null,
+    date: d ? d.toISOString() : null,
+  };
+}
+
 const DAY = 24 * 60 * MINUTE;
 
 /**

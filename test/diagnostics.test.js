@@ -228,3 +228,21 @@ test('the report shows the authentication settings and hides the trusted servers
   const off = buildReport({ ...base, config: { ...config, advanced: { authOwnCheck: false } } });
   assert.match(off, /own DKIM check: off/);
 });
+
+test('the report shows stopProcessing and last run outcome when present', () => {
+  const report = buildReport({
+    ...base,
+    config: {
+      ...config,
+      rules: [{ ...config.rules[0], stopProcessing: true }],
+    },
+    runState: {
+      'aaaaaaaa-1111': {
+        ...runState['aaaaaaaa-1111'],
+        lastStatus: { at: now.toISOString(), scanned: 50, matched: 4, affected: 3, error: true },
+      },
+    },
+  });
+  assert.match(report, /stop later rules: yes/);
+  assert.match(report, /last outcome: 4 matched, 3 actioned \(with errors\)/);
+});
