@@ -72,9 +72,18 @@ test('parseThunderbirdCondition handles commas, parentheses, quoted headers, and
 
   const mixed = parseThunderbirdCondition('AND (from,contains,a) OR (subject,contains,b)');
   assert.equal(mixed.mixed, true);
+
+  // Thunderbird wraps values containing `)` or leading/trailing spaces in quotes.
+  const quoted = parseThunderbirdCondition(
+    'AND (subject,contains,"(urgent)") AND (subject,contains," lead ") AND (subject,contains,"Say \\"hi\\")") AND (subject,contains,"a" and "b")',
+  );
+  assert.deepEqual(
+    quoted.clauses.map((c) => c.value),
+    ['(urgent)', ' lead ', 'Say "hi")', '"a" and "b"'],
+  );
 });
 
-test('resolveThunderbirdFolderUri decodes percent-encoding and matches account + path', () => {
+test('resolveThunderbirdFolderUri decodes percent-encoding, matches account + path, and never falls back across accounts', () => {
   assert.deepEqual(
     parseThunderbirdFolderUri('mailbox://nobody@Local%20Folders/Backup/2026'),
     { accountHints: ['local folders'], path: '/Backup/2026' },
@@ -88,6 +97,8 @@ test('resolveThunderbirdFolderUri decodes percent-encoding and matches account +
     'local://Backup/2026',
   );
   assert.equal(resolveThunderbirdFolderUri('imap://alice%40gmail.com@imap.gmail.com/Missing', KNOWN_FOLDERS), null);
+  // Different account with the same unique folder path must NOT match alice@gmail.com's folder.
+  assert.equal(resolveThunderbirdFolderUri('imap://bob%40work.example@imap.work.example/Newsletters', KNOWN_FOLDERS), null);
 });
 
 test('importThunderbirdFilters converts rich conditions and actions accurately', () => {
@@ -155,23 +166,51 @@ condition="OR (from,ends with,@shop.example) OR (size,is less than,500) OR (body
   ]);
 });
 
-test('importThunderbirdFilters reports unsupported items, ALL, address-book mapping, and missing folders', () => {
+test('importThunderbirdFilters supports numeric junk status values written by Thunderbird', () => {
+  const dat = `
+version="9"
+name="Junk numeric"
+action="Delete"
+condition="AND (junk status,is,2) AND (junk status,is,1) AND (junk status,isn't,2) AND (junk status,isn't,1)"
+name="Junk unknown"
+action="Delete"
+condition="AND (junk status,is,0)"
+`;
+  const res = importThunderbirdFilters(dat, { knownFolders: KNOWN_FOLDERS });
+  assert.equal(res.rules.length, 1);
+  assert.deepEqual(res.rules[0].conditions, [
+    { field: 'junk', operator: 'isOn', negate: false },
+    { field: 'junk', operator: 'isOff', negate: false },
+    { field: 'junk', operator: 'isOff', negate: false },
+    { field: 'junk', operator: 'isOn', negate: false },
+  ]);
+  assert.ok(res.problems.some((p) => /unsupported Thunderbird condition "junk status is 0"/.test(p)));
+});
+
+test('importThunderbirdFilters skips widened AND rules and rules whose Copy/Move destination is missing, while keeping narrowed OR rules', () => {
   const dat = `
 version="9"
 name="Match Everything"
 action="Delete"
 condition="ALL"
-name="Mixed & Partial"
-action="Forward"
-actionValue="boss@example.com"
-action="Move to folder"
+name="Widened AND delete"
+action="Delete"
+condition="AND (from,contains,boss@example.com) AND (date,is before,01-Jan-2020)"
+name="Copy then Delete missing folder"
+action="Copy to folder"
 actionValue="imap://alice%40gmail.com@imap.gmail.com/Nonexistent"
 action="Delete"
-condition="AND (from,is in ab,moz-abmdbdirectory://abook.sqlite) OR (date,is before,01-Jan-2026)"
+condition="AND (from,contains,receipts@example.com)"
+name="OR partial"
+action="Forward"
+actionValue="boss@example.com"
+action="Delete"
+condition="OR (from,is in ab,moz-abmdbdirectory://abook.sqlite) OR (date,is before,01-Jan-2026)"
 `;
   const res = importThunderbirdFilters(dat, { knownFolders: KNOWN_FOLDERS });
   assert.equal(res.rules.length, 1);
-  assert.equal(res.rules[0].name, 'Mixed & Partial');
+  assert.equal(res.rules[0].name, 'OR partial');
+  assert.equal(res.rules[0].match, 'any');
   assert.deepEqual(res.rules[0].conditions, [
     { field: 'from', operator: 'inAddressBook', addressBookId: 'all', negate: false },
   ]);
@@ -179,9 +218,9 @@ condition="AND (from,is in ab,moz-abmdbdirectory://abook.sqlite) OR (date,is bef
 
   const joined = res.problems.join('\n');
   assert.match(joined, /Match all messages/);
+  assert.match(joined, /Widened AND delete.*skipped because dropping an unsupported condition from an AND filter/);
+  assert.match(joined, /destination folder "\/Nonexistent" for "Copy to folder" was not found, rule skipped/);
   assert.match(joined, /unsupported Thunderbird action "Forward"/);
-  assert.match(joined, /destination folder "\/Nonexistent" for "Move to folder" was not found/);
-  assert.match(joined, /mixed AND\/OR/);
   assert.match(joined, /address book mapped to All address books/);
   assert.match(joined, /unsupported Thunderbird condition "date is before"/);
 });

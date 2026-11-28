@@ -7,83 +7,68 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- **“Test” (dry-run) rule preview.** Every rule card now has a **Test** button
-  right next to **Run** that works even before saving. It scans the rule's
-  folders without moving, tagging, or deleting any mail and shows *"Would match
-  N of M messages"* alongside a sample list of matched subjects, senders,
-  folders, and dates.
-- **Per-rule status on every card.** Each rule records its latest run outcome
-  (matched/actioned counts and errors, without advancing the scan watermark on
-  failure) and displays a quiet status line — visible even when collapsed — such
-  as *Last ran 8 min ago · 3 matched*, plus inline warnings when a run had
-  errors or lacks a required permission.
-- **Rule reorder, duplicate, search, and “Stop running later rules”.**
-  - **↑ / ↓** buttons reorder rules in top-to-bottom execution order.
-  - **Duplicate** clones a rule card with a fresh identity so similar rules take
-    seconds to build.
-  - **Filter rules…** searches across rule names, conditions, actions, and
-    folders when managing large rule sets.
-  - **Stop running later rules on matched messages** (`stopProcessing`) prevents
-    subsequent rules in the same run from acting on messages already matched by
-    an earlier rule (and Thunderbird `msgFilterRules.dat` imports now map
-    `Stop execution` to it automatically).
-- **Arbitrary custom header conditions.** Choose **Custom header…** in a
-  condition row and enter any header name (such as `List-Unsubscribe`,
-  `X-Spam-Status`, or `Return-Path`) with `contains`, `is`, `starts with`,
-  `ends with`, or `matches regex`, optionally negated. Reading a custom header
-  downloads message headers on demand, like `reply-to` and `list-id`.
-- **Message size and "To or Cc" conditions.** The `size` field matches messages
-  `larger than` or `smaller than` a threshold in `KB` or `MB`, and `to or cc`
-  matches any recipient in either `To` or `Cc` (including address-book and
-  display-name checks). Both read Thunderbird's indexed header with zero
-  downloads.
-- **Remove tag and Clear all tags actions.** Rules can now remove a specific
-  tag (`removeTag`) or clear every tag (`clearTags`) in throttled waves while
-  reusing scanned headers. Within one rule, tag clears and removals run before
-  tag additions and terminal actions, so tag-swap workflows behave predictably
-  regardless of row order.
-- **Import Thunderbird's built-in `msgFilterRules.dat`.** The **Import…**
-  button now accepts Thunderbird's plain-text `msgFilterRules.dat` files
-  alongside Folder Filter Scheduler `.json` backups, converting conditions and
-  actions, matching destination folder URIs where possible, staging rules for
-  review, and reporting any unsupported items.
-- **Right-click → "Create rule from this message…".** Opens the options page
-  with a new unsaved draft rule pre-filled with the message's folder and its
-  `List-Id`, `From`, or `Subject`, ready to pick an action and save.
-- **Portable rule exports across computers.** Exports now include account name
-  and folder path metadata (`folderRefs`) alongside folder IDs so importing on
-  another profile or computer reconnects source and destination folders
-  automatically.
+- **Test a rule before saving it.** Each rule card now has a **Test** button
+  next to **Run** that checks the rule's folders without moving, tagging, or
+  deleting any mail. It reports how many messages would match and lists sample
+  subjects, senders, folders, and dates.
+- **Last-run status on every rule card.** Each card shows when the rule last
+  ran and how many messages it matched — even when collapsed — along with a
+  warning if the last run had errors or needs an optional permission.
+- **Reorder, duplicate, search, and stop later rules.** Use **↑ / ↓** to change
+  the order rules run in, **Duplicate** to copy a rule, and **Filter rules…**
+  to search a long list of rules. Turning on **Stop running later rules on
+  matched messages** keeps later rules in the same run from touching mail an
+  earlier rule already matched.
+- **Custom header conditions.** Choose **Custom header…** in any condition and
+  enter any email header name (such as `List-Unsubscribe`, `X-Spam-Status`, or
+  `Return-Path`). Like `Reply-To` and `List-Id`, reading a custom header
+  downloads message headers on demand.
+- **Message size and "to or cc" conditions.** Match mail larger or smaller than
+  a threshold in KB or MB, or match any recipient in either `To` or `Cc`
+  (including address-book and display-name checks). Both read Thunderbird's
+  indexed headers with no downloads.
+- **Remove tag and Clear all tags actions.** Rules can now remove a single tag
+  or clear every tag on matched mail. Within one rule, clearing and removing
+  tags always run before adding tags or moving the message, so tag-swap rules
+  work regardless of row order.
+- **Import Thunderbird's built-in filters (`msgFilterRules.dat`).** The
+  **Import…** button now accepts Thunderbird's filter files alongside JSON
+  backups, converts supported conditions and actions (including **Stop
+  execution**), stages rules for review, and skips rules whose conditions or
+  destination folders cannot be safely converted.
+- **Right-click → "Create rule from this message…".** Opens the settings page
+  with a new draft rule pre-filled from the selected message's folder and its
+  `List-Id`, `From`, or `Subject`, ready for you to choose an action and save.
+- **Portable rule backups across computers.** Exports now record a hashed
+  account fingerprint and folder path beside each folder so importing on another
+  computer reconnects folders in the same account automatically without writing
+  account names into the backup.
 
 ### Changed
-- **Faster multi-rule and large-folder scans.** Header and body reads are now
-  cached per run (so multiple rules watching the same folder never fetch the
-  same message twice) and bounded by a 20-second run time budget so slow IMAP
-  downloads cannot trigger Thunderbird's MV3 event-page suspension before state
-  and logs are saved. `match: "all"` (AND) rules also push `read`, `star`, and
-  positive `tag` conditions down into `messages.query()` (and skip folders when
-  conditions contradict each other).
+- **Faster scans on large folders and multi-rule setups.** Header and body
+  reads are now cached across rules in one run and share a 20-second read
+  budget; when a large uncached folder hits the budget, the next run resumes
+  where the previous one left off instead of starting over from the first
+  message. Rules matching all conditions also let Thunderbird pre-filter by
+  read status, star, and required tags before scanning.
 
 ### Fixed
-- **Skip messages when a header read throws an error.** Previously only a
-  header-read timeout skipped the message; a thrown error (such as a transient
-  IMAP failure) fell through with empty headers, which could make a negated
-  header condition match mail whose headers were never read and still advance
-  the scan watermark. Failed header reads now leave the message out, count as
-  unread headers so the watermark holds, and the matcher refuses to match
-  non-indexed header conditions when `headersRead` is explicitly `false`.
-- **Stop copy rules from duplicating the same message on later scans.** Copy
-  leaves the original in the source folder, so incremental overlap scans,
-  30-minute catch-up scans, age rules, and manual runs saw the same messages
-  again and copied them repeatedly. Each rule now remembers the messages it has
-  already copied per destination folder (stored as hashed keys, pruned when a
-  rule or copy destination is removed).
-- **Throttle bulk tag and mark updates and skip no-op updates.** `tag`,
-  `markRead`, `markUnread`, `markFlagged`, `markUnflagged`, `markJunk`, and
-  `markNotJunk` now run in sequential waves of 25 instead of firing every
-  `messages.update` call at once, reuse tags and flags already read during the
-  scan (skipping redundant `messages.get` and no-op updates), and log batch
-  progress on runs over 200 messages.
+- **Skip messages when a header read fails with an error.** Previously only a
+  timeout skipped the message; an unexpected error fell through with blank
+  headers, which could make a negated header rule match mail it never read.
+  Failed header reads now skip the message and hold the scan watermark so the
+  next run retries it.
+- **Stop copy rules from duplicating the same message on later scans.** Each
+  copy rule now remembers up to 50,000 messages per destination folder (stored
+  as hashed keys per target, cleaned up when a rule or destination is removed)
+  so overlap, catch-up, age, and manual runs do not copy the same message over
+  and over.
+- **Throttle bulk tag and mark updates and keep going past single-message
+  errors.** Tag and flag updates now run in waves of 25 instead of firing all
+  at once, reuse tags and flags read during the scan (while still letting
+  **Mark as not junk** classify unclassified mail), continue past individual
+  failed messages without moving them untagged, and report progress on large
+  runs.
 
 ## [0.4.4]
 

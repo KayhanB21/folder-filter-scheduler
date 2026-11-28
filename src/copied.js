@@ -28,8 +28,62 @@
 import { actionsOf } from './actions.js';
 
 export const COPY_HISTORY_KEY = 'copyHistory';
+/** Prefix for per-target sharded keys in `storage.local`. */
+export const COPY_BUCKET_PREFIX = 'copyHistory:';
 /** Max remembered copies per `(ruleId, destFolderId)` target. */
-export const COPY_CAP_PER_TARGET = 5000;
+export const COPY_CAP_PER_TARGET = 50_000;
+
+/** Storage key for one `(ruleId, destFolderId)` bucket so saving one rule never rewrites others. */
+export function copyBucketKey(ruleId, destFolderId) {
+  return `${COPY_BUCKET_PREFIX}${encodeURIComponent(String(ruleId))}:${encodeURIComponent(String(destFolderId))}`;
+}
+
+/** Parse a sharded `copyHistory:<ruleId>:<destId>` key back into `[ruleId, destId]`, or null. */
+export function parseCopyBucketKey(key) {
+  if (typeof key !== 'string' || !key.startsWith(COPY_BUCKET_PREFIX)) return null;
+  const rest = key.slice(COPY_BUCKET_PREFIX.length);
+  const sep = rest.indexOf(':');
+  if (sep <= 0) return null;
+  try {
+    return [decodeURIComponent(rest.slice(0, sep)), decodeURIComponent(rest.slice(sep + 1))];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reassemble the nested `{ [ruleId]: { [destId]: bucket } }` map from a full
+ * `storage.local.get(null)` dump, merging both sharded `copyHistory:*` keys and
+ * any pre-sharding legacy `copyHistory` key.
+ */
+export function loadStoredCopyHistory(allStorage) {
+  const merged = {};
+  const legacy = allStorage?.[COPY_HISTORY_KEY];
+  const hasLegacy = Boolean(legacy && typeof legacy === 'object' && Object.keys(legacy).length > 0);
+  const shardKeys = [];
+
+  if (hasLegacy) {
+    for (const [ruleId, byDest] of Object.entries(legacy)) {
+      if (!byDest || typeof byDest !== 'object') continue;
+      merged[ruleId] = {};
+      for (const [destId, bucket] of Object.entries(byDest)) {
+        if (bucket && typeof bucket === 'object') merged[ruleId][destId] = { ...bucket };
+      }
+    }
+  }
+
+  for (const [key, value] of Object.entries(allStorage ?? {})) {
+    const parsed = parseCopyBucketKey(key);
+    if (!parsed) continue;
+    shardKeys.push(key);
+    if (!value || typeof value !== 'object') continue;
+    const [ruleId, destId] = parsed;
+    merged[ruleId] ??= {};
+    merged[ruleId][destId] = { ...(merged[ruleId][destId] ?? {}), ...value };
+  }
+
+  return { stored: merged, shardKeys, hasLegacy };
+}
 
 const toHex = (buffer) => [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
@@ -161,8 +215,16 @@ export function createCopyHistory({
   const history = initial.history;
   let version = initial.changed ? 1 : 0;
   let savedVersion = 0;
+  let pendingAdds = 0;
+  const dirtyBuckets = new Set();
   // Memoize hashed keys per MessageHeader object within one run.
   const keyCache = new WeakMap();
+
+  if (initial.changed) {
+    for (const [ruleId, byDest] of Object.entries(history)) {
+      for (const destId of Object.keys(byDest)) dirtyBuckets.add(copyBucketKey(ruleId, destId));
+    }
+  }
 
   async function keyFor(header) {
     if (!header || typeof header !== 'object') return null;
@@ -175,6 +237,10 @@ export function createCopyHistory({
   return {
     get version() {
       return version;
+    },
+
+    get pendingAdds() {
+      return pendingAdds;
     },
 
     isDirty() {
@@ -230,6 +296,8 @@ export function createCopyHistory({
       if (!added) return false;
       const trimmed = trimBucket(history[ruleId][destFolderId], cap);
       history[ruleId][destFolderId] = trimmed.bucket;
+      dirtyBuckets.add(copyBucketKey(ruleId, destFolderId));
+      pendingAdds += ids.length;
       version += 1;
       return true;
     },
@@ -239,9 +307,33 @@ export function createCopyHistory({
       return pruneCopyHistory(history, rules, cap).history;
     },
 
+    /**
+     * Sharded `{ toSet, toRemove }` diff against `knownShardKeys`, so saving a
+     * copy batch writes only the single bucket that changed instead of
+     * rewriting every rule's history.
+     */
+    shardedPatch(knownShardKeys = [], { forceAll = false } = {}) {
+      const pruned = pruneCopyHistory(history, rules, cap).history;
+      const liveKeys = new Set();
+      const toSet = {};
+      for (const [ruleId, byDest] of Object.entries(pruned)) {
+        for (const [destId, bucket] of Object.entries(byDest)) {
+          const key = copyBucketKey(ruleId, destId);
+          liveKeys.add(key);
+          if (forceAll || dirtyBuckets.has(key)) toSet[key] = bucket;
+        }
+      }
+      const toRemove = knownShardKeys.filter((k) => !liveKeys.has(k));
+      return { toSet, toRemove, liveKeys: [...liveKeys] };
+    },
+
     /** Record that `savedAtVersion` was persisted successfully. */
     markSaved(savedAtVersion) {
       if (savedAtVersion > savedVersion) savedVersion = savedAtVersion;
+      if (savedVersion === version) {
+        dirtyBuckets.clear();
+        pendingAdds = 0;
+      }
     },
 
     /** History to save at the end of a run, or null when nothing changed. */

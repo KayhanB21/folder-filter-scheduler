@@ -1265,7 +1265,7 @@
     "message": "$1: la dimensione richiede un numero positivo in KB o MB"
   },
   "import_unknownActionFolder": {
-    "message": "$1: la cartella di destinazione per \"$2\" non è presente in questo profilo, azione scartata"
+    "message": "$1: la cartella di destinazione per \"$2\" non è presente in questo profilo, regola saltata"
   },
   "import_tbNoFilters": {
     "message": "Nessun filtro di Thunderbird trovato in questo file"
@@ -1286,7 +1286,7 @@
     "message": "$1: rubrica mappata su Tutte le rubriche, verifica prima di salvare"
   },
   "import_tbMissingFolder": {
-    "message": "$1: cartella di destinazione \"$3\" per \"$2\" non trovata, azione scartata"
+    "message": "$1: cartella di destinazione \"$3\" per \"$2\" non trovata, regola saltata"
   },
   "import_tbUnsupportedAction": {
     "message": "$1: azione Thunderbird non supportata \"$2\", scartata"
@@ -1443,5 +1443,14 @@
   },
   "status_ruleDuplicated": {
     "message": "Duplicata come «$1» — controllala e premi Salva."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "Si applica alle regole successive nella stessa esecuzione; non influisce su Esegui singola regola o pianificazioni indipendenti"
+  },
+  "test_unknownError": {
+    "message": "Simulazione non riuscita"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1: saltata perché rimuovere una condizione non supportata da un filtro E farebbe corrispondere più messaggi del previsto"
   }
 }

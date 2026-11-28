@@ -474,7 +474,7 @@ function evaluateSizeCondition(message, condition) {
   }
 
   const satisfied =
-    condition.operator === SIZE_OPERATORS.largerThan ? actual >= threshold : actual < threshold;
+    condition.operator === SIZE_OPERATORS.largerThan ? actual > threshold : actual < threshold;
   return condition.negate ? !satisfied : satisfied;
 }
 

@@ -1184,7 +1184,7 @@
     "message": "$1：大小需要以 KB 或 MB 为单位的正数"
   },
   "import_unknownActionFolder": {
-    "message": "$1：“$2”的目标文件夹不在此配置文件中，已丢弃该操作"
+    "message": "$1：“$2”的目标文件夹不在此配置文件中，已跳过该规则"
   },
   "import_tbNoFilters": {
     "message": "此文件中未找到 Thunderbird 过滤器"
@@ -1205,7 +1205,7 @@
     "message": "$1：通讯录已映射为“所有通讯录”，保存前请检查"
   },
   "import_tbMissingFolder": {
-    "message": "$1：未找到“$2”的目标文件夹“$3”，已丢弃该操作"
+    "message": "$1：未找到“$2”的目标文件夹“$3”，已跳过该规则"
   },
   "import_tbUnsupportedAction": {
     "message": "$1：不支持的 Thunderbird 操作“$2”，已丢弃"
@@ -1362,5 +1362,14 @@
   },
   "status_ruleDuplicated": {
     "message": "已复制为“$1” — 请检查并点击保存。"
+  },
+  "rule_stopProcessingTitle": {
+    "message": "适用于同一次运行中的后续规则；不影响单条规则的运行或独立计划任务"
+  },
+  "test_unknownError": {
+    "message": "试运行失败"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1：已跳过，因为从“与”过滤器中移除不支持的条件会匹配比预期更多的邮件"
   }
 }

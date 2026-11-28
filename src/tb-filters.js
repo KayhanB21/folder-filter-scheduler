@@ -71,6 +71,20 @@ const PRIORITY_NUMBER_MAP = Object.freeze({
   2: 'lowest',
 });
 
+function isSingleQuotedValue(str) {
+  if (str.length < 2 || str[0] !== '"' || str[str.length - 1] !== '"') return false;
+  let escaped = false;
+  for (let i = 1; i < str.length - 1; i += 1) {
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (str[i] === '\\') escaped = true;
+    else if (str[i] === '"') return false;
+  }
+  return !escaped;
+}
+
 /** Unescape Thunderbird's `\"` and `\\` inside a quoted value, keeping other backslashes (like `\d`) intact. */
 function unescapeQuoted(text) {
   let out = '';
@@ -235,7 +249,13 @@ export function parseThunderbirdCondition(conditionStr) {
       customQuoted = true;
     }
     const operator = parts[1].trim().toLowerCase();
-    const value = parts[2];
+    // Thunderbird wraps a condition value in double quotes when it contains
+    // `)` or starts/ends with whitespace (e.g. `"(urgent)"` or `" note"`).
+    let value = parts[2];
+    const trimmedVal = value.trim();
+    if (isSingleQuotedValue(trimmedVal)) {
+      value = unescapeQuoted(trimmedVal.slice(1, -1));
+    }
     clauses.push({ field: rawField, customQuoted, operator, value });
   }
 
@@ -280,12 +300,18 @@ export function parseThunderbirdFolderUri(uri) {
   return { accountHints, path };
 }
 
-/** Match a Thunderbird folder URI to a folder in the current profile, or null. */
+/**
+ * Match a Thunderbird folder URI to a folder in the current profile, or null.
+ *
+ * Requires BOTH an account match and a path match so a folder URI for one
+ * account can never silently bind to a same-named folder in another account.
+ */
 export function resolveThunderbirdFolderUri(uri, knownFolders) {
   if (!Array.isArray(knownFolders) || knownFolders.length === 0) return null;
   const parsed = parseThunderbirdFolderUri(uri);
   if (!parsed) return null;
   const { accountHints, path } = parsed;
+  if (accountHints.length === 0) return null;
   const pathLower = path.toLowerCase();
 
   const matchesAccount = (folder) => {
@@ -300,12 +326,6 @@ export function resolveThunderbirdFolderUri(uri, knownFolders) {
     (f) => String(f?.path ?? '').toLowerCase() === pathLower && matchesAccount(f),
   );
   if (ciByAccount.length === 1) return ciByAccount[0];
-
-  const exactPath = knownFolders.filter((f) => f?.path === path);
-  if (exactPath.length === 1) return exactPath[0];
-
-  const ciPath = knownFolders.filter((f) => String(f?.path ?? '').toLowerCase() === pathLower);
-  if (ciPath.length === 1) return ciPath[0];
 
   return null;
 }
@@ -383,13 +403,15 @@ function convertClause(clause, where, problems) {
     return null;
   }
 
-  // Junk status
+  // Junk status (Thunderbird writes "2" for Junk and "1" for Good/Not Junk)
   if (lowerField === 'junk status') {
     const junkVal = val.trim().toLowerCase();
-    if ((op === 'is' && (junkVal === 'junk' || junkVal === '100')) || (op === "isn't" && junkVal === 'good')) {
+    const isJunkValue = junkVal === '2' || junkVal === 'junk' || junkVal === '100';
+    const isGoodValue = junkVal === '1' || junkVal === 'good';
+    if ((op === 'is' && isJunkValue) || (op === "isn't" && isGoodValue)) {
       return { field: 'junk', operator: STATE_OPERATORS.isOn, negate: false };
     }
-    if ((op === "isn't" && (junkVal === 'junk' || junkVal === '100')) || (op === 'is' && junkVal === 'good')) {
+    if ((op === "isn't" && isJunkValue) || (op === 'is' && isGoodValue)) {
       return { field: 'junk', operator: STATE_OPERATORS.isOff, negate: false };
     }
     problems.push(t('import_tbUnsupportedCondition', where, `${clause.field} ${op} ${val}`));
@@ -470,6 +492,7 @@ function convertActions(rawActions, where, knownFolders, problems) {
 
   const mapped = [];
   let stopProcessing = false;
+  let missingDestFolder = false;
   for (const raw of rawActions) {
     const kind = String(raw?.type ?? '').trim();
     const value = String(raw?.value ?? '').trim();
@@ -485,6 +508,7 @@ function convertActions(rawActions, where, knownFolders, problems) {
       if (!folder) {
         const parsed = parseThunderbirdFolderUri(value);
         problems.push(t('import_tbMissingFolder', where, kind, parsed?.path ?? value));
+        missingDestFolder = true;
         continue;
       }
       mapped.push({ type, folderId: String(folder.id) });
@@ -511,6 +535,12 @@ function convertActions(rawActions, where, knownFolders, problems) {
     } else {
       problems.push(t('import_tbUnsupportedAction', where, kind));
     }
+  }
+
+  // Never keep a partial rule when Copy or Move lost its destination folder:
+  // "Copy to Archive, then Delete" must never turn into "Delete only".
+  if (missingDestFolder) {
+    return { actions: null, stopProcessing };
   }
 
   // Enforce execution order and at most one terminal action, matching rules.js.
@@ -593,6 +623,13 @@ export function importThunderbirdFilters(text, { knownFolders = [], existingRule
 
     if (conditions.length === 0) {
       problems.push(t('import_noConditions', where));
+      continue;
+    }
+    // Dropping a condition from an AND rule widens what it matches (e.g.
+    // "From boss AND date before 2020 -> Delete" would become "From boss ->
+    // Delete"). Skip the rule instead of staging a broader destructive filter.
+    if (condParsed.mode === 'all' && conditions.length < condParsed.clauses.length) {
+      problems.push(t('import_tbSkippedWidened', where));
       continue;
     }
     if (!actions) continue;

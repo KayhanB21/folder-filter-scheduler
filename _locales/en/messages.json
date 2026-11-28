@@ -1684,7 +1684,7 @@
     "description": "Import problem. $1 says which condition."
   },
   "import_unknownActionFolder": {
-    "message": "$1: destination folder for \"$2\" is not in this profile, action dropped",
+    "message": "$1: destination folder for \"$2\" is not in this profile, rule skipped",
     "description": "Import problem. $1 says which rule, $2 is an action id such as move or copy."
   },
   "import_tbNoFilters": {
@@ -1712,7 +1712,7 @@
     "description": "Import note when a Thunderbird address-book filter is imported. $1 says which condition."
   },
   "import_tbMissingFolder": {
-    "message": "$1: destination folder \"$3\" for \"$2\" was not found, action dropped",
+    "message": "$1: destination folder \"$3\" for \"$2\" was not found, rule skipped",
     "description": "Import problem when a Thunderbird Move/Copy folder URI does not match any folder in this profile. $1 says which rule, $2 is the Thunderbird action name, $3 is the folder path."
   },
   "import_tbUnsupportedAction": {
@@ -1922,5 +1922,17 @@
   "status_ruleDuplicated": {
     "message": "Duplicated as “$1” — review it and press Save.",
     "description": "Status after duplicating a rule. $1 is the copy name."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "Applies to later rules in the same run; does not affect single-rule Run or independent rule schedules",
+    "description": "Tooltip on the Stop running later rules checkbox."
+  },
+  "test_unknownError": {
+    "message": "Dry run failed",
+    "description": "Fallback error text when a rule test fails without a specific error message."
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1: skipped because dropping an unsupported condition from an AND filter would match more mail than intended",
+    "description": "Import problem when an AND Thunderbird filter had an unsupported condition and is therefore skipped for safety. $1 says which rule."
   }
 }

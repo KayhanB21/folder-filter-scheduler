@@ -16,6 +16,8 @@ import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
 import {
+  SCAN_PROGRESS_KEY,
+  createScanProgress,
   dryRunSampleOf,
   planScan,
   queryBoundsFor,
@@ -23,11 +25,12 @@ import {
   recordRuleRun,
   stampScan,
 } from './scan.js';
+import { ruleFingerprint } from './rules.js';
 import { ADVANCED_DEFAULTS, AUTH_DOH_SERVERS, alarmNeedsReset, dohOrigin, sanitizeAdvanced, trustedServerList } from './settings.js';
 import { createRunner } from './runner.js';
 import { createHeaderReads, readHeadersOrSkip } from './headers.js';
 import { createBodyReads } from './body.js';
-import { COPY_HISTORY_KEY, createCopyHistory } from './copied.js';
+import { COPY_HISTORY_KEY, createCopyHistory, loadStoredCopyHistory } from './copied.js';
 import { createAuthReads } from './auth/reads.js';
 import { AUTH_CACHE_KEY } from './auth/cache.js';
 import { OWN_BLOCKED, OWN_OFF, OWN_ON } from './auth/check.js';
@@ -234,30 +237,68 @@ async function saveRunState(runState) {
   await messenger.storage.local.set({ runState });
 }
 
+/** How many newly copied messages accumulate before checkpointing mid-run. */
+const COPY_CHECKPOINT_ADDS = 1000;
+
 /**
- * Load per-rule copy history for deduplicating non-terminal copy rules across
- * overlap, catch-up, age, and manual scans. Pruned against the full rule list
- * so removed rules and changed destinations are cleaned up automatically.
+ * Load per-rule copy history from sharded `copyHistory:*` storage keys (plus
+ * any legacy single `copyHistory` key for seamless migration).
  */
 async function loadCopyHistory(rules) {
-  const stored = await messenger.storage.local
-    .get({ [COPY_HISTORY_KEY]: {} })
-    .catch((e) => {
-      warn('could not load copy history', e);
-      return {};
-    });
-  return createCopyHistory({ stored: stored?.[COPY_HISTORY_KEY] ?? {}, rules });
+  const all = await messenger.storage.local.get(null).catch((e) => {
+    warn('could not load copy history', e);
+    return {};
+  });
+  const { stored, shardKeys, hasLegacy } = loadStoredCopyHistory(all);
+  const tracker = createCopyHistory({ stored, rules });
+  return { tracker, shardKeys, needsMigration: hasLegacy };
 }
 
-/** Save copy history when changed; safe to call both per batch and at run end. */
-async function persistCopyHistory(copyHistory) {
-  if (!copyHistory?.isDirty()) return;
-  const version = copyHistory.version;
+/** Save only the changed copy-history buckets (and migrate/prune stale keys). */
+async function persistCopyHistory(copyStore, { force = false } = {}) {
+  if (!copyStore?.tracker) return;
+  const { tracker } = copyStore;
+  if (!copyStore.needsMigration && !tracker.isDirty()) return;
+  if (!force && !copyStore.needsMigration && tracker.pendingAdds < COPY_CHECKPOINT_ADDS) return;
+  const version = tracker.version;
+  const { toSet, toRemove, liveKeys } = tracker.shardedPatch(copyStore.shardKeys, {
+    forceAll: copyStore.needsMigration,
+  });
   try {
-    await messenger.storage.local.set({ [COPY_HISTORY_KEY]: copyHistory.snapshot() });
-    copyHistory.markSaved(version);
+    if (Object.keys(toSet).length > 0) await messenger.storage.local.set(toSet);
+    const removeKeys = [...toRemove, ...(copyStore.needsMigration ? [COPY_HISTORY_KEY] : [])];
+    if (removeKeys.length > 0) await messenger.storage.local.remove(removeKeys);
+    copyStore.shardKeys = liveKeys;
+    copyStore.needsMigration = false;
+    tracker.markSaved(version);
   } catch (e) {
     warn('could not save copy history', e);
+  }
+}
+
+/** Fallback in-memory progress when `storage.session` is unavailable. */
+let fallbackScanProgress = {};
+
+async function loadScanProgress(rules) {
+  const session = messenger.storage.session;
+  let stored = fallbackScanProgress;
+  if (session) {
+    const res = await session.get({ [SCAN_PROGRESS_KEY]: {} }).catch(() => ({}));
+    stored = res?.[SCAN_PROGRESS_KEY] ?? {};
+  }
+  return createScanProgress({ stored, rules });
+}
+
+async function persistScanProgress(scanProgress) {
+  if (!scanProgress?.isDirty()) return;
+  const snapshot = scanProgress.snapshot();
+  const session = messenger.storage.session;
+  if (session) {
+    await session
+      .set({ [SCAN_PROGRESS_KEY]: snapshot })
+      .catch((e) => warn('could not save scan progress', e));
+  } else {
+    fallbackScanProgress = snapshot;
   }
 }
 
@@ -446,14 +487,16 @@ async function newAuthReads(advanced) {
   });
 }
 
-/** Save the cache, set the next quick retry, and log what the run did. */
-async function finishAuthReads(authReads, quiet) {
+/** Save the cache, optionally set the next quick retry, and log what the run did. */
+async function finishAuthReads(authReads, quiet, { scheduleRetry = true } = {}) {
   const { cache, retryDelayMs } = authReads.finish();
   if (cache) {
     await messenger.storage.local.set({ [AUTH_CACHE_KEY]: cache })
       .catch((e) => warn('could not save the auth check cache', e));
   }
-  if (retryDelayMs !== null) messenger.alarms.create(AUTH_RETRY_ALARM, { when: Date.now() + retryDelayMs });
+  if (scheduleRetry && retryDelayMs !== null) {
+    messenger.alarms.create(AUTH_RETRY_ALARM, { when: Date.now() + retryDelayMs });
+  }
   const c = authReads.counts;
   logUnless(
     quiet && c.checked === 0 && c.unchecked === 0,
@@ -543,12 +586,12 @@ async function* eachMessage(list) {
   }
 }
 
-/** Iterate a folder, optionally narrowed by Date and cheap indexed query filters. */
-async function* messagesInFolder(folderId, { fromDate, toDate, unread, flagged, tags } = {}) {
+/** Iterate a folder, optionally narrowed by Date and cheap MV3 indexed query filters. */
+async function* messagesInFolder(folderId, { fromDate, toDate, read, flagged, tags } = {}) {
   const query = { folderId, autoPaginationTimeout: 0 };
   if (fromDate instanceof Date) query.fromDate = fromDate;
   if (toDate instanceof Date) query.toDate = toDate;
-  if (typeof unread === 'boolean') query.unread = unread;
+  if (typeof read === 'boolean') query.read = read;
   if (typeof flagged === 'boolean') query.flagged = flagged;
   if (tags) query.tags = tags;
   yield* eachMessage(await messenger.messages.query(query));
@@ -597,7 +640,8 @@ async function runRule(
   headerReads,
   authReads,
   bodyReads,
-  copyHistory,
+  copyStore,
+  scanProgress,
   quiet,
   stoppedMessages,
 ) {
@@ -605,6 +649,11 @@ async function runRule(
   const fetchFull = requiresFullMessage(rule);
   const ruleAuthReads = requiresRaw(rule) ? authReads : null;
   const needsBody = requiresBody(rule);
+  const copyHistory = copyStore?.tracker ?? null;
+  const fingerprint = rule.id ? ruleFingerprint(rule) : null;
+  const trackProgress = Boolean(rule.id && scanProgress && (fetchFull || needsBody));
+  const resumedIds = trackProgress ? scanProgress.seenSetFor(rule.id, fingerprint) : new Set();
+  const evaluatedIds = new Set(resumedIds);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
   const startedAt = new Date();
   const plan = planScan(runState[rule.id], { manual, now: startedAt, settings });
@@ -621,6 +670,9 @@ async function runRule(
   let bodiesRead = 0;
   const skippedBefore = headerReads.skipped;
   const bodySkippedBefore = bodyReads.skipped;
+  const protectUnreadable = (id) => {
+    if (rule.stopProcessing === true && stoppedMessages) stoppedMessages.add(id);
+  };
 
   for (const folderId of filter.impossible ? [] : folderIds) {
     const matchedIds = [];
@@ -632,28 +684,45 @@ async function runRule(
     try {
       for await (const header of messagesInFolder(folderId, queryOpts)) {
         if (stoppedMessages?.has(header.id)) continue;
+        if (resumedIds.has(header.id)) continue;
         scanned += 1;
         const message = await normalize(header, fetchFull, headerReads, ruleAuthReads);
-        if (!message) continue;
-        if (message.authPending) authPending += 1;
+        if (!message) {
+          protectUnreadable(header.id);
+          continue;
+        }
+        if (message.authPending) {
+          authPending += 1;
+          protectUnreadable(header.id);
+        }
         const options = { now: startedAt, addressBooks };
         if (needsBody) {
           // The other conditions decide most messages, and those skip the read.
           const decided = decideWithoutBody(message, rule, options);
           if (decided !== null) {
+            if (!message.authPending && trackProgress) evaluatedIds.add(header.id);
             if (decided) recordMatch(header);
             continue;
           }
           message.body = await readBody(bodyReads, header.id);
-          if (message.body === null) continue;
+          if (message.body === null) {
+            protectUnreadable(header.id);
+            continue;
+          }
           bodiesRead += 1;
         }
+        if (!message.authPending && trackProgress) evaluatedIds.add(header.id);
         if (evaluateRule(message, rule, options)) recordMatch(header);
       }
     } catch (e) {
       warn(`scan failed for folder ${folderId} in rule "${rule.name}"`, e);
       scanFailed = true;
       continue;
+    }
+    // Protect matched messages BEFORE running actions so an action error
+    // cannot allow a later rule in the same run to act on them.
+    if (rule.stopProcessing === true && stoppedMessages) {
+      for (const id of matchedIds) stoppedMessages.add(id);
     }
     try {
       matched += matchedIds.length;
@@ -680,15 +749,20 @@ async function runRule(
         onBatch: async (action, batchIds) => {
           if (action.type !== 'copy' || !rule.id || !copyHistory) return;
           copyHistory.recordCopied(rule.id, action.folderId, batchIds, copyKeysByAction.get(action));
-          await persistCopyHistory(copyHistory);
+          await persistCopyHistory(copyStore);
         },
         onProgress: (action, done, total) => {
           log(`rule "${rule.name}": ${action.type} ${done} of ${total}`);
           return flushLog();
         },
       });
-      if (rule.stopProcessing === true && stoppedMessages) {
-        for (const id of matchedIds) stoppedMessages.add(id);
+      if (result.errors?.length > 0) {
+        warn(
+          `rule "${rule.name}": ${result.errors.length} message update(s) failed`,
+          result.errors[0].error,
+        );
+        for (const err of result.errors) evaluatedIds.delete(err.id);
+        scanFailed = true;
       }
       for (const id of skippedCopyIds) {
         if (!copiedIds.has(id)) alreadyCopied += 1;
@@ -696,6 +770,7 @@ async function runRule(
       affected += result.affected;
     } catch (e) {
       warn(`action failed for rule "${rule.name}"`, e);
+      for (const id of matchedIds) evaluatedIds.delete(id);
       scanFailed = true;
     }
   }
@@ -712,11 +787,15 @@ async function runRule(
   const holdWatermark = scanFailed || authPending > 0;
 
   // Only advance the watermark on a clean pass, so a transient failure does not
-  // permanently skip the messages it could not read. Always record the latest
-  // run outcome so the options page can show live status and error badges.
+  // permanently skip the messages it could not read. When a pass stops early
+  // because the read time budget ran out, remember evaluated ids so the next
+  // run resumes where this one left off instead of re-reading from message 1.
   if (rule.id) {
     if (!holdWatermark) {
       runState[rule.id] = stampScan(runState[rule.id], kind, startedAt);
+      scanProgress?.clear(rule.id);
+    } else if (trackProgress && (headerReads.budgetReached || bodyReads.budgetReached)) {
+      scanProgress.recordPartial(rule.id, fingerprint, evaluatedIds);
     }
     runState[rule.id] = recordRuleRun(runState[rule.id], {
       at: startedAt,
@@ -813,9 +892,10 @@ async function runAllRules(
   const bodyReads = newBodyReads();
   // Pruned against the full rule list (not `selected`), so a single-rule or
   // new-mail run never drops another rule's copy history.
-  const copyHistory = await loadCopyHistory(rules);
-  // Tracks messages matched by a rule with `stopProcessing: true` so later
-  // rules in this run skip them.
+  const copyStore = await loadCopyHistory(rules);
+  const scanProgress = await loadScanProgress(rules);
+  // Tracks messages matched (or unreadable) by a rule with `stopProcessing: true`
+  // so later rules in this run skip them.
   const stoppedMessages = new Set();
   let total = 0;
 
@@ -831,13 +911,15 @@ async function runAllRules(
         headerReads,
         authReads,
         bodyReads,
-        copyHistory,
+        copyStore,
+        scanProgress,
         quietRule(rule),
         stoppedMessages,
       );
     }
   } finally {
-    await persistCopyHistory(copyHistory);
+    await persistCopyHistory(copyStore, { force: true });
+    await persistScanProgress(scanProgress);
   }
 
   await saveRunState(runState);
@@ -1381,7 +1463,9 @@ async function testRuleDryRun(rule) {
     }
   }
 
-  if (authReads) await finishAuthReads(authReads, true);
+  // Save any freshly verified DKIM results without arming AUTH_RETRY_ALARM:
+  // pressing Test must never trigger a background run of saved rules.
+  if (authReads) await finishAuthReads(authReads, true, { scheduleRetry: false });
   log(
     `dry run "${rule.name ?? ''}": ${scanned} scanned, ${matched} would match, ${Date.now() - startedAt.getTime()} ms` +
       (scanFailed ? ', WITH ERRORS' : ''),

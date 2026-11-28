@@ -1069,6 +1069,15 @@ function applyRuleFilter() {
   syncOrderButtons();
 }
 
+/** Ensure a rule card is visible (clearing any hiding search filter) and expanded before focusing inside it. */
+function revealRuleCard(node) {
+  if (node.classList.contains('filtered-out') && $('#rule-filter')?.value) {
+    $('#rule-filter').value = '';
+    applyRuleFilter();
+  }
+  setCollapsed(node, false);
+}
+
 /** Run a side-effect-free dry run for one card (saved or unsaved) and render its preview. */
 async function testRuleCard(node) {
   const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
@@ -1076,7 +1085,7 @@ async function testRuleCard(node) {
     (c) => $('.cond-field', c).value === CUSTOM_HEADER_OPTION && !normalizeHeaderName($('.cond-custom-header', c).value),
   );
   if (badCustom) {
-    setCollapsed(node, false);
+    revealRuleCard(node);
     $('.cond-custom-header', badCustom)?.focus();
     flash(t('status_notSavedCustomHeader', name), true);
     return;
@@ -1084,7 +1093,7 @@ async function testRuleCard(node) {
 
   const rule = collectRule(node);
   if (rule.folderIds.length === 0) {
-    setCollapsed(node, false);
+    revealRuleCard(node);
     $('.folder-filter', node)?.focus();
     flash(t('status_testNoFolder', name), true);
     return;
@@ -1106,7 +1115,7 @@ async function testRuleCard(node) {
 
   try {
     const res = await messenger.runtime.sendMessage({ command: 'testRule', rule });
-    if (!res?.ok) throw new Error(res?.error || 'Dry run failed');
+    if (!res?.ok) throw new Error(res?.error || t('test_unknownError'));
 
     summaryEl.textContent = plural('test_summary', res.matched, res.matched, res.scanned);
 
@@ -1593,7 +1602,7 @@ async function save() {
   if (unchosen.length > 0) {
     const names = formatList([...new Set(unchosen)].map((n) => t('common_quoted', n)), 'unit');
     for (const node of rulesEl.querySelectorAll('.rule')) {
-      if (node.querySelector('.action.unchosen')) setCollapsed(node, false);
+      if (node.querySelector('.action.unchosen')) revealRuleCard(node);
     }
     rulesEl.querySelector('.action.unchosen .action-type')?.focus();
     flash(t('status_notSavedNoAction', names), true);
@@ -1606,7 +1615,7 @@ async function save() {
     (node) => $('.rule-schedule-on', node).checked && !parseCron($('.rule-cron', node).value).ok,
   );
   if (badSchedule) {
-    setCollapsed(badSchedule, false);
+    revealRuleCard(badSchedule);
     $('.rule-cron', badSchedule).focus();
     const name = $('.rule-name', badSchedule).value.trim() || t('common_untitledRule');
     flash(t('status_notSavedBadSchedule', name), true);
@@ -1620,7 +1629,7 @@ async function save() {
     ),
   );
   if (badCustomHeader) {
-    setCollapsed(badCustomHeader, false);
+    revealRuleCard(badCustomHeader);
     const badInput = [...badCustomHeader.querySelectorAll('.condition')]
       .find((c) => $('.cond-field', c).value === CUSTOM_HEADER_OPTION && !normalizeHeaderName($('.cond-custom-header', c).value))
       ?.querySelector('.cond-custom-header');
@@ -1636,7 +1645,7 @@ async function save() {
     (node) => $('.rule-enabled', node).checked && $('.rule-folders', node).selectedOptions.length === 0,
   );
   if (noFolders) {
-    setCollapsed(noFolders, false);
+    revealRuleCard(noFolders);
     $('.folder-filter', noFolders).focus();
     const name = $('.rule-name', noFolders).value.trim() || t('common_untitledRule');
     flash(t('status_notSavedNoFolder', name), true);
@@ -1811,7 +1820,11 @@ async function importRules(file) {
     return;
   }
 
+  if ($('#rule-filter')?.value) {
+    $('#rule-filter').value = '';
+  }
   for (const rule of rules) renderRule(rule);
+  applyRuleFilter();
   if (allowlist?.length) $('#allowlist').value = allowlist.join('\n');
   if (intervalMinutes) $('#interval').value = intervalMinutes;
   if (advanced) fillAdvanced(advanced);
@@ -1929,12 +1942,17 @@ async function init() {
     return undefined;
   });
 
-  // Update per-rule status lines live whenever a scheduled or new-mail run finishes.
+  // Update per-rule status lines live whenever a scheduled or new-mail run finishes,
+  // and keep relative timestamps ("just now", "8 min ago") fresh while the tab stays open.
   messenger.storage?.onChanged?.addListener((changes, area) => {
     if (area !== 'local' || !changes.runState) return;
     const next = changes.runState.newValue;
     runState = next && typeof next === 'object' ? next : {};
     refreshRuleStatuses();
+  });
+  setInterval(refreshRuleStatuses, 60_000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshRuleStatuses();
   });
 
   $('#allowlist').value = (config?.allowlist ?? DEFAULT_ALLOWLIST).join('\n');

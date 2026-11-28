@@ -1346,7 +1346,7 @@
     "message": "$1 : la taille nécessite un nombre positif en KB ou MB"
   },
   "import_unknownActionFolder": {
-    "message": "$1 : le dossier de destination pour « $2 » n’existe pas dans ce profil, action ignorée"
+    "message": "$1 : le dossier de destination pour « $2 » n’existe pas dans ce profil, règle ignorée"
   },
   "import_tbNoFilters": {
     "message": "Aucun filtre Thunderbird trouvé dans ce fichier"
@@ -1367,7 +1367,7 @@
     "message": "$1 : carnet d’adresses associé à Tous les carnets d’adresses, vérifiez avant d’enregistrer"
   },
   "import_tbMissingFolder": {
-    "message": "$1 : dossier de destination « $3 » pour « $2 » introuvable, action ignorée"
+    "message": "$1 : dossier de destination « $3 » pour « $2 » introuvable, règle ignorée"
   },
   "import_tbUnsupportedAction": {
     "message": "$1 : action Thunderbird non prise en charge « $2 », ignorée"
@@ -1524,5 +1524,14 @@
   },
   "status_ruleDuplicated": {
     "message": "Dupliquée en « $1 » — vérifiez-la et cliquez sur Enregistrer."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "S’applique aux règles suivantes d’une même exécution ; n’affecte pas l’exécution d’une seule règle ni les planifications indépendantes"
+  },
+  "test_unknownError": {
+    "message": "Échec de la simulation"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1 : ignorée car retirer une condition non prise en charge d’un filtre ET ferait correspondre plus de messages que prévu"
   }
 }

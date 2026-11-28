@@ -739,18 +739,21 @@ test('to-cc combines to and cc headers for string, address-book, and decoy-name 
   assert.equal(requiresFullMessage({ conditions: [{ field: TO_CC_FIELD, operator: 'contains', value: 'team' }] }), false);
 });
 
-test('size condition compares message.size in KB and MB, with exact complements', () => {
+test('size condition compares message.size strictly in KB and MB', () => {
   const sized = (bytes) => ({ fields: {}, size: bytes });
   const over5Mb = { field: SIZE_FIELD, operator: SIZE_OPERATORS.largerThan, size: 5, unit: 'MB' };
   const under5Mb = { field: SIZE_FIELD, operator: SIZE_OPERATORS.smallerThan, size: 5, unit: 'MB' };
   const fiveMb = 5 * 1024 * 1024;
 
-  assert.equal(evaluateCondition(sized(fiveMb), over5Mb), true);
+  assert.equal(evaluateCondition(sized(fiveMb + 1), over5Mb), true);
+  assert.equal(evaluateCondition(sized(fiveMb), over5Mb), false);
   assert.equal(evaluateCondition(sized(fiveMb - 1), over5Mb), false);
   assert.equal(evaluateCondition(sized(fiveMb), under5Mb), false);
   assert.equal(evaluateCondition(sized(fiveMb - 1), under5Mb), true);
-  assert.equal(evaluateCondition(sized(1.5 * 1024), { field: SIZE_FIELD, operator: 'largerThan', size: 1.5, unit: 'KB' }), true);
-  assert.equal(evaluateCondition(sized(fiveMb), { ...over5Mb, negate: true }), false);
+  assert.equal(evaluateCondition(sized(1.5 * 1024 + 1), { field: SIZE_FIELD, operator: 'largerThan', size: 1.5, unit: 'KB' }), true);
+  assert.equal(evaluateCondition(sized(1.5 * 1024), { field: SIZE_FIELD, operator: 'largerThan', size: 1.5, unit: 'KB' }), false);
+  assert.equal(evaluateCondition(sized(fiveMb + 1), { ...over5Mb, negate: true }), false);
+  assert.equal(evaluateCondition(sized(fiveMb), { ...over5Mb, negate: true }), true);
   assert.equal(evaluateCondition(sized(100), { ...over5Mb, negate: true }), true);
   assert.ok(FIELDS.includes(SIZE_FIELD));
   assert.ok(CHEAP_FIELDS.includes(SIZE_FIELD));

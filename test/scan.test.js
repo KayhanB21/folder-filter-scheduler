@@ -9,6 +9,9 @@ import {
   CATCH_UP_LOOKBACK_DAYS,
   SCAN_KINDS,
   SCAN_OVERLAP_MINUTES,
+  SCAN_PROGRESS_CAP,
+  SCAN_PROGRESS_KEY,
+  createScanProgress,
   dryRunSampleOf,
   planScan,
   recordRuleRun,
@@ -207,7 +210,7 @@ test('queryFilterFor pushes read, star, and positive tag conditions down on AND 
     ],
   });
   assert.deepEqual(filter, {
-    unread: true,
+    read: false,
     flagged: true,
     tags: { tags: { work: true, urgent: true }, mode: 'all' },
   });
@@ -221,7 +224,7 @@ test('queryFilterFor pushes read, star, and positive tag conditions down on AND 
         { field: 'star', operator: 'isOn', negate: true },
       ],
     }),
-    { unread: false, flagged: false },
+    { read: true, flagged: false },
   );
 });
 
@@ -324,4 +327,34 @@ test('dryRunSampleOf compacts header fields and trims long text', () => {
 
   const minimal = dryRunSampleOf({ id: 7 }, 'fallback://Folder');
   assert.deepEqual(minimal, { id: 7, subject: '', from: '', folderId: 'fallback://Folder', date: null });
+});
+
+test('createScanProgress tracks partial passes, invalidates on rule edit, prunes deleted rules, and caps size', () => {
+  assert.equal(SCAN_PROGRESS_KEY, 'scanProgress');
+  assert.equal(SCAN_PROGRESS_CAP, 50_000);
+
+  const progress = createScanProgress({
+    stored: {
+      r1: { fingerprint: 'fp-v1', seenIds: [1, 2, 'bad', 3] },
+      deleted: { fingerprint: 'fp-old', seenIds: [99] },
+      broken: { fingerprint: 123, seenIds: 'nope' },
+    },
+    rules: [{ id: 'r1' }, { id: 'r2' }],
+    cap: 4,
+  });
+
+  assert.equal(progress.isDirty(), true);
+  assert.deepEqual([...progress.seenSetFor('r1', 'fp-v1')], [1, 2, 3]);
+  // Editing the rule changes its fingerprint, so stale resume progress is ignored.
+  assert.deepEqual([...progress.seenSetFor('r1', 'fp-v2')], []);
+  assert.equal(progress.snapshot().deleted, undefined);
+
+  // Recording more ids respects cap by keeping the newest ids.
+  progress.recordPartial('r1', 'fp-v1', new Set([1, 2, 3, 4, 5, 6]));
+  assert.deepEqual([...progress.seenSetFor('r1', 'fp-v1')], [3, 4, 5, 6]);
+
+  // Clean completion clears the rule's resume entry.
+  progress.clear('r1');
+  assert.deepEqual([...progress.seenSetFor('r1', 'fp-v1')], []);
+  assert.equal(progress.snapshot().r1, undefined);
 });

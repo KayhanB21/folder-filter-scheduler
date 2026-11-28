@@ -257,3 +257,60 @@ test('budgetMs stops fresh header downloads while still serving cached messages'
   assert.equal(reads.skipped, 2);
   assert.deepEqual(calls, [1, 2]);
 });
+
+test('budgetMs counts only time inside fresh reads, ignoring time spent on other rules', async () => {
+  let t = 0;
+  const reads = createHeaderReads({
+    getHeaders: async (id) => {
+      t += 100;
+      return { headers: { 'x-id': [String(id)] } };
+    },
+    getFull: answers({}),
+    timeoutMs: 1000,
+    limit: 5,
+    budgetMs: 20_000,
+    now: () => t,
+  });
+
+  // Simulate 30 s spent moving/archiving messages in earlier rules before any header read.
+  t += 30_000;
+  assert.deepEqual(await reads.read(1, 'acct'), { 'x-id': ['1'] });
+  assert.equal(reads.spentMs, 100);
+  assert.equal(reads.budgetReached, false);
+
+  // Another 25 s spent between reads still does not eat into the read budget.
+  t += 25_000;
+  assert.deepEqual(await reads.read(2, 'acct'), { 'x-id': ['2'] });
+  assert.equal(reads.spentMs, 200);
+  assert.equal(reads.budgetReached, false);
+});
+
+test('a header call capped by remaining budget stops cleanly without switching the account to getFull', async () => {
+  const switched = [];
+  const calls = [];
+  const logged = [];
+  const reads = createHeaderReads({
+    getHeaders: (id) => {
+      calls.push(`headers:${id}`);
+      return never();
+    },
+    getFull: (id) => {
+      calls.push(`full:${id}`);
+      return answers(HEADERS)();
+    },
+    timeoutMs: 80,
+    limit: 2,
+    budgetMs: 25,
+    onSwitch: (acct) => switched.push(acct),
+    onTimeout: (m) => logged.push(m),
+  });
+
+  assert.equal(await reads.read(1, 'acct'), null);
+  assert.equal(reads.budgetReached, true);
+  assert.equal(reads.stopped, true);
+  assert.equal(reads.timeouts, 0);
+  assert.deepEqual(switched, []);
+  assert.deepEqual(calls, ['headers:1']);
+  assert.equal(logged.length, 1);
+  assert.match(logged[0], /time budget/);
+});

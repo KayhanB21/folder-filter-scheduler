@@ -5,10 +5,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  COPY_BUCKET_PREFIX,
   COPY_CAP_PER_TARGET,
+  COPY_HISTORY_KEY,
+  copyBucketKey,
   copyKeyOf,
   createCopyHistory,
   hasCopyAction,
+  loadStoredCopyHistory,
+  parseCopyBucketKey,
   pruneCopyHistory,
 } from '../src/copied.js';
 
@@ -162,7 +167,7 @@ test('pruneCopyHistory drops deleted rules and old destinations, keeps disabled 
   // Input is never mutated.
   assert.ok(stored.deletedRule);
   assert.ok(stored.keepEnabled.oldDest);
-  assert.equal(COPY_CAP_PER_TARGET, 5000);
+  assert.equal(COPY_CAP_PER_TARGET, 50_000);
 });
 
 test('markSaved prevents redundant writes and tracks later batches accurately', async () => {
@@ -190,4 +195,52 @@ test('markSaved prevents redundant writes and tracks later batches accurately', 
   const snap2 = tracker.finish();
   assert.equal(Object.keys(snap1.r1.dest).length, 1);
   assert.equal(Object.keys(snap2.r1.dest).length, 2);
+});
+
+test('sharded copyHistory keys round-trip, migrate legacy data, and write only dirty buckets', async () => {
+  const key = copyBucketKey('rule:1', 'acct1://Archive/2026');
+  assert.ok(key.startsWith(COPY_BUCKET_PREFIX));
+  assert.deepEqual(parseCopyBucketKey(key), ['rule:1', 'acct1://Archive/2026']);
+  assert.equal(parseCopyBucketKey('otherKey'), null);
+  assert.equal(parseCopyBucketKey(`${COPY_BUCKET_PREFIX}nocolon`), null);
+
+  const keyR2 = copyBucketKey('r2', 'dest2');
+  const staleKey = copyBucketKey('deleted', 'oldDest');
+  const loaded = loadStoredCopyHistory({
+    [COPY_HISTORY_KEY]: { r1: { dest1: { kLegacy: 100 } } },
+    [keyR2]: { kShard: 200 },
+    [staleKey]: { kStale: 50 },
+    unrelated: { a: 1 },
+  });
+  assert.equal(loaded.hasLegacy, true);
+  assert.deepEqual(loaded.shardKeys.sort(), [keyR2, staleKey].sort());
+  assert.deepEqual(loaded.stored, {
+    r1: { dest1: { kLegacy: 100 } },
+    r2: { dest2: { kShard: 200 } },
+    deleted: { oldDest: { kStale: 50 } },
+  });
+
+  const rules = [copyRule('r1', ['dest1']), copyRule('r2', ['dest2'])];
+  const tracker = createCopyHistory({ stored: loaded.stored, rules });
+
+  // Migration patch with forceAll writes every live bucket and drops stale shard keys.
+  const migration = tracker.shardedPatch(loaded.shardKeys, { forceAll: true });
+  const keyR1 = copyBucketKey('r1', 'dest1');
+  assert.deepEqual(Object.keys(migration.toSet).sort(), [keyR1, keyR2].sort());
+  assert.deepEqual(migration.toRemove, [staleKey]);
+  tracker.markSaved(tracker.version);
+  assert.equal(tracker.pendingAdds, 0);
+
+  // Copying for r1 marks only r1's bucket dirty; r2's shard is not rewritten.
+  const h1 = header({ id: 1, headerMessageId: '<new@example>' });
+  const { toCopy, keysById } = await tracker.filterUncopied('r1', 'dest1', [1], new Map([[1, h1]]));
+  tracker.recordCopied('r1', 'dest1', toCopy, keysById);
+  assert.equal(tracker.pendingAdds, 1);
+
+  const delta = tracker.shardedPatch(migration.liveKeys);
+  assert.deepEqual(Object.keys(delta.toSet), [keyR1]);
+  assert.deepEqual(delta.toRemove, []);
+
+  tracker.markSaved(tracker.version);
+  assert.equal(tracker.pendingAdds, 0);
 });

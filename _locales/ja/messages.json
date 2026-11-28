@@ -1552,7 +1552,7 @@
     "message": "$1: サイズは KB または MB の正の数値である必要があります"
   },
   "import_unknownActionFolder": {
-    "message": "$1: \"$2\" の移動先フォルダーがこのプロファイルにないため、操作を除外しました"
+    "message": "$1: \"$2\" の移動先フォルダーがこのプロファイルにないため、ルールをスキップしました"
   },
   "import_tbNoFilters": {
     "message": "このファイルに Thunderbird フィルターが見つかりませんでした"
@@ -1573,7 +1573,7 @@
     "message": "$1: アドレス帳を「すべてのアドレス帳」に割り当てました。保存前に確認してください"
   },
   "import_tbMissingFolder": {
-    "message": "$1: \"$2\" のフォルダー \"$3\" が見つからないため、操作を除外しました"
+    "message": "$1: \"$2\" のフォルダー \"$3\" が見つからないため、ルールをスキップしました"
   },
   "import_tbUnsupportedAction": {
     "message": "$1: 未対応の Thunderbird 操作 \"$2\" を除外しました"
@@ -1730,5 +1730,14 @@
   },
   "status_ruleDuplicated": {
     "message": "「$1」として複製しました — 内容を確認して保存を押してください。"
+  },
+  "rule_stopProcessingTitle": {
+    "message": "同じ実行内の後続ルールに適用されます。単体実行や独自スケジュールのルールには影響しません"
+  },
+  "test_unknownError": {
+    "message": "テストに失敗しました"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1: AND フィルターから未対応の条件を省くと意図より多くのメールに一致するためスキップしました"
   }
 }

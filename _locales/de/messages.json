@@ -1265,7 +1265,7 @@
     "message": "$1: Größe benötigt eine positive Zahl in KB oder MB"
   },
   "import_unknownActionFolder": {
-    "message": "$1: Zielordner für \"$2\" ist in diesem Profil nicht vorhanden, Aktion verworfen"
+    "message": "$1: Zielordner für \"$2\" ist in diesem Profil nicht vorhanden, Regel übersprungen"
   },
   "import_tbNoFilters": {
     "message": "Keine Thunderbird-Filter in dieser Datei gefunden"
@@ -1286,7 +1286,7 @@
     "message": "$1: Adressbuch wurde auf Alle Adressbücher abgebildet, vor dem Speichern prüfen"
   },
   "import_tbMissingFolder": {
-    "message": "$1: Zielordner \"$3\" für \"$2\" wurde nicht gefunden, Aktion verworfen"
+    "message": "$1: Zielordner \"$3\" für \"$2\" wurde nicht gefunden, Regel übersprungen"
   },
   "import_tbUnsupportedAction": {
     "message": "$1: Nicht unterstützte Thunderbird-Aktion \"$2\", verworfen"
@@ -1443,5 +1443,14 @@
   },
   "status_ruleDuplicated": {
     "message": "Als „$1“ dupliziert — prüfen und Speichern drücken."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "Gilt für nachfolgende Regeln im selben Lauf; betrifft nicht das Ausführen einer einzelnen Regel oder eigene Zeitpläne"
+  },
+  "test_unknownError": {
+    "message": "Testlauf fehlgeschlagen"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1: übersprungen, weil das Weglassen einer nicht unterstützten Bedingung in einem UND-Filter mehr Nachrichten treffen würde als beabsichtigt"
   }
 }
