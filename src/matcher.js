@@ -156,8 +156,25 @@ export const FIELDS = Object.freeze([
  * `messages.getFull()`, which on a non-offline IMAP folder hits the network.
  */
 export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject', AGE_FIELD, ...STATE_FIELDS, TAG_FIELD]);
+const CHEAP_FIELD_SET = new Set(CHEAP_FIELDS);
 
 const foldCase = (s) => (s ?? '').toString().toLowerCase();
+
+/**
+ * True when the message explicitly marks full headers as unread
+ * (`headersRead === false`) and this condition reads a non-cheap header.
+ *
+ * Defence in depth: `normalize()` already drops a message whose headers could
+ * not be read, and this guard guarantees that even if unread headers ever reach
+ * the matcher, a negated condition such as "Reply-To does not contain X" never
+ * matches mail whose headers were not read. Messages that omit `headersRead`
+ * (plain objects in unit tests) are unaffected.
+ */
+function needsUnreadHeader(message, condition) {
+  if (message?.headersRead !== false) return false;
+  const fields = fieldsOf(condition);
+  return (fields.length > 0 ? fields : ['']).some((f) => !CHEAP_FIELD_SET.has(foldCase(f)));
+}
 
 /**
  * The header(s) a condition reads. `fields` (plural) lets one domain-list
@@ -302,6 +319,7 @@ function valuesFor(message, field) {
  * empty the folder on the next scheduled run.
  */
 function evaluateDomainCondition(message, condition) {
+  if (needsUnreadHeader(message, condition)) return false;
   const domains = Array.isArray(condition.domains) ? condition.domains : [];
   const list = new Set(domains.map(normalizeDomain).filter(Boolean));
   if (list.size === 0) return false;
@@ -343,6 +361,7 @@ function evaluateAgeCondition(message, condition, now) {
  * make every sender a stranger and empty the folder.
  */
 function evaluateAddressBookCondition(message, condition, addressBooks) {
+  if (needsUnreadHeader(message, condition)) return false;
   const book = addressBooks?.get?.(condition.addressBookId);
   if (!(book instanceof Set) || book.size === 0) return false;
 
@@ -445,6 +464,7 @@ function evaluateBodyCondition(message, condition) {
 }
 
 function evaluateNameCondition(message, condition) {
+  if (needsUnreadHeader(message, condition)) return false;
   const anySatisfied = fieldsOf(condition)
     .flatMap((field) => valuesFor(message, field))
     .flatMap((value) => addressesFromHeaderValue(value))
@@ -469,6 +489,7 @@ export function evaluateCondition(message, condition, { now = new Date(), addres
   if (!predicate) {
     throw new Error(`Unknown operator: ${condition.operator}`);
   }
+  if (needsUnreadHeader(message, condition)) return false;
   // A regex gets the text and pattern unchanged. Its own `i` flag ignores case,
   // and folding the pattern would turn `\D` into `\d` and break `(?-i:...)`.
   const fold = condition.operator === 'matchesRegex' ? (s) => (s ?? '').toString() : foldCase;

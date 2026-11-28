@@ -116,3 +116,27 @@ export function createHeaderReads({
   };
   return reads;
 }
+
+/**
+ * Read a message's headers, or return null when the read fails for any reason.
+ *
+ * `headerReads.read()` already turns timeouts into null and counts them in
+ * `skipped`. Other errors (such as a transient IMAP failure) are thrown to the
+ * caller so they can be logged; this helper counts those in `skipped` too and
+ * returns null, so the message is never evaluated on empty headers and the
+ * scan watermark holds for a retry.
+ *
+ * @param {{ read: Function, skipped: number }} headerReads
+ * @param {number} messageId
+ * @param {string} [accountId]
+ * @param {(error: unknown) => unknown} [onError]
+ */
+export async function readHeadersOrSkip(headerReads, messageId, accountId, onError = () => {}) {
+  try {
+    return await headerReads.read(messageId, accountId);
+  } catch (e) {
+    headerReads.skipped += 1;
+    await onError(e);
+    return null;
+  }
+}

@@ -6,6 +6,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- **Skip messages when a header read throws an error.** Previously only a
+  header-read timeout skipped the message; a thrown error (such as a transient
+  IMAP failure) fell through with empty headers, which could make a negated
+  header condition match mail whose headers were never read and still advance
+  the scan watermark. Failed header reads now leave the message out, count as
+  unread headers so the watermark holds, and the matcher refuses to match
+  non-indexed header conditions when `headersRead` is explicitly `false`.
+- **Stop copy rules from duplicating the same message on later scans.** Copy
+  leaves the original in the source folder, so incremental overlap scans,
+  30-minute catch-up scans, age rules, and manual runs saw the same messages
+  again and copied them repeatedly. Each rule now remembers the messages it has
+  already copied per destination folder (stored as hashed keys, pruned when a
+  rule or copy destination is removed).
+- **Throttle bulk tag and mark updates and skip no-op updates.** `tag`,
+  `markRead`, `markUnread`, `markFlagged`, `markUnflagged`, `markJunk`, and
+  `markNotJunk` now run in sequential waves of 25 instead of firing every
+  `messages.update` call at once, reuse tags and flags already read during the
+  scan (skipping redundant `messages.get` and no-op updates), and log batch
+  progress on runs over 200 messages.
+
 ## [0.4.4]
 
 ### Fixed
