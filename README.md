@@ -36,13 +36,15 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 
 ## Features
 
-- **Conditions** on `from`, `to`, `cc`, `subject`, `body`, `reply-to`, `list-id`, `sender`
+- **Conditions** on `from`, `to`, `cc`, `to or cc`, `subject`, `body`, `reply-to`, `list-id`, `sender`,
+  or any **custom header** (`List-Unsubscribe`, `X-Spam-Status`, `Return-Path`, …)
   with `contains` / `is` / `starts with` / `ends with` / `matches regex`, each
   optionally negated, combined with AND or OR.
-- **Age conditions**: `age` · `older than` / `newer than` · N days, for rules like
-  "move security alerts to Archive after 30 days". Something the built-in
-  retention policy cannot express, since it can only delete.
-- **Address-book conditions**: `from` / `reply-to` / `sender` / `to` / `cc` · `is in address
+- **Age and size conditions**: `age` · `older than` / `newer than` · N days,
+  and `size` · `larger than` / `smaller than` · N `KB` or `MB` — both read
+  Thunderbird's indexed header with zero downloads, unlocking rules like
+  "archive mail over 5 MB after 90 days".
+- **Address-book conditions**: `from` / `reply-to` / `sender` / `to` / `cc` / `to or cc` · `is in address
   book` · one book or all of them, negatable. "Move mail from people I don't know
   out of this folder" becomes one condition. Access to address books is an
   optional permission, asked for only when you use it.
@@ -59,8 +61,9 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   Addresses, domains, patterns and folder names are left out unless you opt in.
 - **Actions**: move to Trash, archive with each account's own archive
   settings, move/copy to a chosen folder (**including a folder
-  in a different account** — e.g. Yahoo Bulk → Outlook Trash), apply one of your
-  Thunderbird tags, mark read or unread, add or remove a star, mark junk or not junk, or delete permanently. Actions
+  in a different account** — e.g. Yahoo Bulk → Outlook Trash), add, remove, or
+  clear Thunderbird tags, mark read or unread, add or remove a star, mark junk
+  or not junk, or delete permanently. Actions
   live in a single [registry](src/actions.js) that drives both the engine and
   the UI, so adding one is a one-entry change.
 - **Several actions per rule**: "tag as Friends *and* move to the Friends
@@ -92,14 +95,18 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Advanced settings** at the bottom of the options page: the new-mail trigger
   and its debounce, the catch-up interval and lookback, and the incremental scan
   overlap. Every value is clamped to a safe range on save.
-- **Lazy fetching**: a rule that only uses `from`/`to`/`cc`/`subject` reads the
-  free indexed header and downloads nothing; only `reply-to`/`list-id`/`sender`
-  rules pay for a full message fetch. Offline storage is therefore a performance
-  choice, not a requirement.
-- **Right-click harvesting**: select spam in any folder, choose *Folder Filter
-  Scheduler*, then *Add spam domains*, and the extracted sender domains are
-  merged into a standing block rule after a confirmation step. Well-known
-  providers (gmail, yahoo, outlook, …) are never blocked.
+- **Lazy fetching & query pushdown**: a rule that only uses
+  `from`/`to`/`cc`/`to or cc`/`subject`/`age`/`size`/`read`/`star`/`junk`/`tag`
+  reads the free indexed header and downloads nothing; `all` (AND) rules push
+  `read`, `star`, and positive `tag` conditions down into `messages.query()`.
+  Header and body reads are cached per run across rules and capped to a
+  20-second run budget so slow IMAP folders never hang an event page.
+- **Right-click actions**: select spam in any folder, choose *Folder Filter
+  Scheduler*, then *Add spam domains* to merge sender domains into a standing
+  block rule, or choose *Create rule from this message…* to open the options
+  page with a draft rule pre-filled from that message's folder and `List-Id` /
+  `From` / `Subject`. Well-known providers (gmail, yahoo, outlook, …) are never
+  blocked.
 - **Run from the menu or the toolbar**: the same right-click menu has *Run all
   rules now* and *Run a rule*, which lists your rules. The toolbar button opens
   a panel with the same choices. To remove the button, right-click the toolbar,
@@ -107,9 +114,11 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   clear *Show Folder Filter Scheduler in the right-click menu* under
   **Advanced**. *Use the short name FFS*, also under **Advanced**, shows FFS
   in both places.
-- **Import / export rules** as JSON, so a rule set can be backed up or moved
-  between profiles. Imported rules are validated field by field and staged on the
-  page for review before anything is stored.
+- **Import / export rules**: export portable JSON backups (recording account
+  names and folder paths alongside folder IDs so folders reconnect automatically
+  on another computer), or import Thunderbird's built-in `msgFilterRules.dat`
+  directly. Imported rules are validated field by field and staged on the page
+  for review before anything is stored.
 - **Domain-list conditions** that match subdomains automatically (`evil.com` also
   catches `bounce.evil.com`) and hold hundreds of entries in a single editable box.
 - **Incremental scheduled scans**: a scheduled run only examines messages that
@@ -222,13 +231,16 @@ Two things worth knowing:
 
 ### Backing up and moving rules
 
-**Export…** writes the current rules, protected-domains list, and interval to a
-JSON file named with the local date and time
-(`ffs-rules-2026-08-24-2013.json`), so successive backups sit
-side by side in chronological order instead of overwriting each other. **Import…** validates such a file and stages the rules on the page for
-review; nothing is stored until you press **Save**. Anything unrecognised (an
-unknown action, an empty domain list, a folder that does not exist in this
-profile) is dropped and reported rather than imported.
+**Export…** writes the current rules, protected-domains list, interval, and
+portable folder paths (`folderRefs`) to a JSON file named with the local date
+and time (`ffs-rules-2026-08-24-2013.json`), so successive backups sit side by
+side in chronological order instead of overwriting each other. **Import…**
+accepts both Folder Filter Scheduler `.json` exports (automatically reconnecting
+folders when moved to another computer) and Thunderbird's built-in
+`msgFilterRules.dat` filter files. Every imported rule is validated field by
+field and staged on the page for review; nothing is stored until you press
+**Save**. Anything unsupported or unrecognised is dropped and reported rather
+than imported.
 
 Each rule carries a short **hash** of what it does — its folders, conditions, and
 actions, ignoring its name. Importing a rule whose hash already exists skips it and

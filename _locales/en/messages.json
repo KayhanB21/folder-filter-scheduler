@@ -1586,5 +1586,157 @@
   "confirm_readFailed": {
     "message": "Could not read the selection: $1",
     "description": "Shown in the Add spam domains window. $1 is the error message, in English."
+  },
+  "menu_createRule": {
+    "message": "Create rule from this message…",
+    "description": "Entry in the right-click menu of the message list that opens settings with a new draft rule pre-filled from the selected message."
+  },
+  "options_importTitle": {
+    "message": "Import Folder Filter Scheduler backups (.json) or Thunderbird msgFilterRules.dat files",
+    "description": "Tooltip on the Import button on the options page."
+  },
+  "field_to_cc": {
+    "message": "to or cc",
+    "description": "Condition field: matches any recipient in either the To or Cc header."
+  },
+  "field_custom_header": {
+    "message": "Custom header…",
+    "description": "Choice in the condition field list that lets the user type any email header name, such as List-Unsubscribe or X-Spam-Status."
+  },
+  "field_size": {
+    "message": "size",
+    "description": "Condition field: the size of the message in KB or MB."
+  },
+  "op_largerThan": {
+    "message": "larger than",
+    "description": "Condition operator for the size field: \"size larger than 5 MB\"."
+  },
+  "op_smallerThan": {
+    "message": "smaller than",
+    "description": "Condition operator for the size field: \"size smaller than 500 KB\"."
+  },
+  "op_sizeOnly": {
+    "message": "$1 (size field only)",
+    "description": "Grayed-out operator. $1 is the operator, such as \"larger than\"."
+  },
+  "op_sizeOnlyReason": {
+    "message": "Works only with the size field.",
+    "description": "Tooltip of a grayed-out operator."
+  },
+  "cond_customHeaderPlaceholder": {
+    "message": "e.g. List-Unsubscribe",
+    "description": "Gray text in the empty custom header name box of a condition. Keep List-Unsubscribe."
+  },
+  "cond_customHeaderLabel": {
+    "message": "Custom header name",
+    "description": "Accessible name of the custom header input box."
+  },
+  "cond_customHeaderHint": {
+    "message": "Enter any email header name, such as <code>List-Unsubscribe</code>, <code>X-Spam-Status</code>, or <code>Return-Path</code>. To read it, the add-on downloads the headers of each message, so this check is slower than the built-in fields.",
+    "description": "Explanation under a custom header condition. Keep the header names inside <code>…</code> as is."
+  },
+  "cond_sizeUnitLabel": {
+    "message": "Size unit",
+    "description": "Accessible name of the KB / MB selector on a size condition."
+  },
+  "action_removeTag": {
+    "message": "Remove tag…",
+    "description": "Action in the list. The ellipsis means a tag list follows."
+  },
+  "action_removeTagHint": {
+    "message": "Removes one of your Thunderbird tags without disturbing any other tags on the message.",
+    "description": "Hint under the Remove tag action."
+  },
+  "action_clearTags": {
+    "message": "Clear all tags",
+    "description": "Action in the list."
+  },
+  "action_clearTagsHint": {
+    "message": "Removes every tag from matching messages without moving them.",
+    "description": "Hint under the Clear all tags action."
+  },
+  "summary_size": {
+    "message": "$1 $2 $3 $4",
+    "description": "A size condition in the summary of a folded rule: \"size larger than 5 MB\". $1 is the field, $2 the operator, $3 the number, $4 the unit (KB or MB)."
+  },
+  "summary_removeTagAction": {
+    "message": "Remove tag $1",
+    "description": "The remove-tag action in the summary of a folded rule. $1 is the tag name."
+  },
+  "reject_size": {
+    "message": "size condition needs a positive number (got \"$1\")",
+    "description": "A correction listed after Saved. $1 is the text typed in the size box."
+  },
+  "reject_sizeEmpty": {
+    "message": "size condition needs a positive number (got nothing)",
+    "description": "A correction listed after Saved, for an empty size box."
+  },
+  "reject_customHeader": {
+    "message": "custom header name \"$1\" is not valid",
+    "description": "A correction listed after Saved when a custom header name is invalid. $1 is what was typed."
+  },
+  "reject_customHeaderEmpty": {
+    "message": "custom header condition has no header name",
+    "description": "A correction listed after Saved when a custom header name is blank."
+  },
+  "import_sizeValue": {
+    "message": "$1: size needs a positive number in KB or MB",
+    "description": "Import problem. $1 says which condition."
+  },
+  "import_unknownActionFolder": {
+    "message": "$1: destination folder for \"$2\" is not in this profile, action dropped",
+    "description": "Import problem. $1 says which rule, $2 is an action id such as move or copy."
+  },
+  "import_tbNoFilters": {
+    "message": "No Thunderbird filters found in this file",
+    "description": "Import problem when a msgFilterRules.dat file contains no filter entries."
+  },
+  "import_tbMatchAllUnsupported": {
+    "message": "$1: \"Match all messages\" filters are not supported, rule skipped",
+    "description": "Import problem for a Thunderbird filter whose condition is ALL. $1 says which rule."
+  },
+  "import_tbBadCondition": {
+    "message": "$1: could not read the filter condition, rule skipped",
+    "description": "Import problem for a malformed Thunderbird filter condition. $1 says which rule."
+  },
+  "import_tbMixedLogic": {
+    "message": "$1: mixed AND/OR conditions were simplified to one match mode, review before saving",
+    "description": "Import warning when a Thunderbird filter mixes AND and OR. $1 says which rule."
+  },
+  "import_tbUnsupportedCondition": {
+    "message": "$1: unsupported Thunderbird condition \"$2\", dropped",
+    "description": "Import problem. $1 says which condition, $2 names the Thunderbird condition."
+  },
+  "import_tbBookMappedAll": {
+    "message": "$1: address book mapped to All address books, review before saving",
+    "description": "Import note when a Thunderbird address-book filter is imported. $1 says which condition."
+  },
+  "import_tbMissingFolder": {
+    "message": "$1: destination folder \"$3\" for \"$2\" was not found, action dropped",
+    "description": "Import problem when a Thunderbird Move/Copy folder URI does not match any folder in this profile. $1 says which rule, $2 is the Thunderbird action name, $3 is the folder path."
+  },
+  "import_tbUnsupportedAction": {
+    "message": "$1: unsupported Thunderbird action \"$2\", dropped",
+    "description": "Import problem. $1 says which rule, $2 is the Thunderbird action name."
+  },
+  "status_notSavedCustomHeader": {
+    "message": "Not saved: enter a valid header name for “$1” (letters, digits, and hyphens, e.g. List-Unsubscribe).",
+    "description": "Status when Save is refused because a custom header name is empty or invalid. $1 is the rule name."
+  },
+  "status_importRemapped_one": {
+    "message": "Reconnected $1 folder from another profile.",
+    "description": "Added to the status after Import when portable folder paths matched folders in this profile. $1 is the number of folders."
+  },
+  "status_importRemapped_other": {
+    "message": "Reconnected $1 folders from another profile.",
+    "description": "Added to the status after Import when portable folder paths matched folders in this profile. $1 is the number of folders."
+  },
+  "status_importTbPickFolders": {
+    "message": "Choose the folders each rule should watch before saving.",
+    "description": "Added to the status after importing rules from Thunderbird msgFilterRules.dat."
+  },
+  "status_draftCreated": {
+    "message": "Draft rule created from the selected message — pick an action and press Save.",
+    "description": "Status shown on the options page when opened via Create rule from this message."
   }
 }

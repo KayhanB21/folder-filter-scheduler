@@ -706,3 +706,122 @@ test('non-cheap header conditions never match when headersRead is explicitly fal
   // Unknown operators still throw rather than returning false silently.
   assert.throws(() => evaluateCondition(unread, { field: 'reply-to', operator: 'bogus', value: 'x' }));
 });
+
+// --- To or Cc, Size, and arbitrary custom headers ----------------------------
+
+import {
+  CUSTOM_HEADER_OPTION,
+  SIZE_FIELD,
+  SIZE_OPERATORS,
+  SIZE_UNITS,
+  TO_CC_FIELD,
+  isCustomHeaderField,
+  normalizeHeaderName,
+  sizeAmount,
+  sizeBytes,
+  sizeUnit,
+} from '../src/matcher.js';
+
+test('to-cc combines to and cc headers for string, address-book, and decoy-name checks', () => {
+  const m = msg({
+    to: ['"Alice" <alice@example.com>'],
+    cc: ['"Team" <team-alias@example.org>', '"Fake <ceo@bank.com>" <phish@evil.example>'],
+  });
+  assert.equal(evaluateCondition(m, { field: TO_CC_FIELD, operator: 'contains', value: 'alice@example.com' }), true);
+  assert.equal(evaluateCondition(m, { field: TO_CC_FIELD, operator: 'contains', value: 'team-alias@example.org' }), true);
+  assert.equal(evaluateCondition(m, { field: TO_CC_FIELD, operator: 'contains', value: 'nobody@example.org' }), false);
+  assert.equal(evaluateCondition(m, { field: TO_CC_FIELD, operator: 'contains', value: 'team-alias', negate: true }), false);
+  assert.equal(evaluateCondition(m, { field: TO_CC_FIELD, operator: 'contains', value: 'other', negate: true }), true);
+  assert.equal(evaluateCondition(m, { field: TO_CC_FIELD, operator: IN_ADDRESS_BOOK, addressBookId: 'all' }, { addressBooks: books }), true);
+  assert.equal(evaluateCondition(m, { field: TO_CC_FIELD, operator: NAME_SHOWS_OTHER_ADDRESS }), true);
+  assert.ok(FIELDS.includes(TO_CC_FIELD));
+  assert.ok(CHEAP_FIELDS.includes(TO_CC_FIELD));
+  assert.equal(requiresFullMessage({ conditions: [{ field: TO_CC_FIELD, operator: 'contains', value: 'team' }] }), false);
+});
+
+test('size condition compares message.size in KB and MB, with exact complements', () => {
+  const sized = (bytes) => ({ fields: {}, size: bytes });
+  const over5Mb = { field: SIZE_FIELD, operator: SIZE_OPERATORS.largerThan, size: 5, unit: 'MB' };
+  const under5Mb = { field: SIZE_FIELD, operator: SIZE_OPERATORS.smallerThan, size: 5, unit: 'MB' };
+  const fiveMb = 5 * 1024 * 1024;
+
+  assert.equal(evaluateCondition(sized(fiveMb), over5Mb), true);
+  assert.equal(evaluateCondition(sized(fiveMb - 1), over5Mb), false);
+  assert.equal(evaluateCondition(sized(fiveMb), under5Mb), false);
+  assert.equal(evaluateCondition(sized(fiveMb - 1), under5Mb), true);
+  assert.equal(evaluateCondition(sized(1.5 * 1024), { field: SIZE_FIELD, operator: 'largerThan', size: 1.5, unit: 'KB' }), true);
+  assert.equal(evaluateCondition(sized(fiveMb), { ...over5Mb, negate: true }), false);
+  assert.equal(evaluateCondition(sized(100), { ...over5Mb, negate: true }), true);
+  assert.ok(FIELDS.includes(SIZE_FIELD));
+  assert.ok(CHEAP_FIELDS.includes(SIZE_FIELD));
+  assert.deepEqual(SIZE_UNITS, ['KB', 'MB']);
+  assert.equal(requiresFullMessage({ conditions: [over5Mb] }), false);
+});
+
+test('size condition never matches on unusable threshold or missing/invalid message size', () => {
+  const validMsg = { fields: {}, size: 10 * 1024 * 1024 };
+  for (const negate of [false, true]) {
+    for (const bad of [
+      { field: SIZE_FIELD, operator: 'largerThan', size: 0, unit: 'MB', negate },
+      { field: SIZE_FIELD, operator: 'largerThan', size: -2, unit: 'MB', negate },
+      { field: SIZE_FIELD, operator: 'largerThan', size: '', unit: 'MB', negate },
+      { field: SIZE_FIELD, operator: 'largerThan', size: 'abc', unit: 'MB', negate },
+      { field: SIZE_FIELD, operator: 'largerThan', size: 5, unit: 'GB', negate },
+    ]) {
+      assert.equal(evaluateCondition(validMsg, bad), false, JSON.stringify(bad));
+    }
+    for (const badMsg of [{ fields: {} }, { fields: {}, size: -1 }, { fields: {}, size: NaN }, { fields: {}, size: '500' }]) {
+      assert.equal(
+        evaluateCondition(badMsg, { field: SIZE_FIELD, operator: 'largerThan', size: 1, unit: 'KB', negate }),
+        false,
+      );
+    }
+  }
+  assert.throws(() => evaluateCondition(validMsg, { field: SIZE_FIELD, operator: 'contains', value: '5' }));
+  assert.equal(sizeAmount({ size: '2.5' }), 2.5);
+  assert.equal(sizeAmount({ size: '' }), null);
+  assert.equal(sizeUnit({ unit: 'kb' }), 'KB');
+  assert.equal(sizeUnit({ unit: 'TB' }), null);
+  assert.equal(sizeBytes({ size: 2, unit: 'KB' }), 2048);
+});
+
+test('arbitrary custom headers match case-insensitively, require header download, and respect safety guards', () => {
+  const m = {
+    fields: {
+      'list-unsubscribe': ['<mailto:unsub@news.example>'],
+      'x-spam-status': ['Yes, score=8.4'],
+      'return-path': ['<bounce@bulk.example>'],
+    },
+    headersRead: true,
+  };
+  assert.equal(evaluateCondition(m, { field: 'List-Unsubscribe', operator: 'contains', value: 'mailto:' }), true);
+  assert.equal(evaluateCondition(m, { field: 'x-spam-status', operator: 'startsWith', value: 'yes' }), true);
+  assert.equal(evaluateCondition(m, { field: 'return-path:', operator: 'endsWith', value: 'bulk.example>' }), true);
+  assert.equal(evaluateCondition(m, { field: 'x-missing', operator: 'contains', value: 'foo', negate: true }), true);
+
+  assert.equal(requiresFullMessage({ conditions: [{ field: 'x-spam-status', operator: 'contains', value: 'Yes' }] }), true);
+  // Unread headers must never match a custom header, negated or not.
+  const unread = { fields: { from: ['a@b.com'] }, headersRead: false };
+  assert.equal(evaluateCondition(unread, { field: 'x-spam-status', operator: 'contains', value: 'Yes', negate: true }), false);
+
+  // Blank, sentinel, or malformed header names never match, even when negated.
+  for (const badField of ['', '   ', CUSTOM_HEADER_OPTION, 'bad header!', 'x:y']) {
+    for (const negate of [false, true]) {
+      assert.equal(
+        evaluateCondition(m, { field: badField, operator: 'contains', value: 'foo', negate }),
+        false,
+        `${badField} negate=${negate}`,
+      );
+    }
+  }
+
+  assert.equal(normalizeHeaderName('  X-Spam-Level: '), 'x-spam-level');
+  assert.equal(normalizeHeaderName('age'), null);
+  assert.equal(normalizeHeaderName('size'), null);
+  assert.equal(normalizeHeaderName(TO_CC_FIELD), null);
+  assert.equal(normalizeHeaderName(CUSTOM_HEADER_OPTION), null);
+  assert.equal(normalizeHeaderName('bad header'), null);
+  assert.equal(isCustomHeaderField('x-spam-status'), true);
+  assert.equal(isCustomHeaderField('reply-to'), false);
+  assert.equal(isCustomHeaderField('from'), false);
+});

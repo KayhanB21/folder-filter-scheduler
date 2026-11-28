@@ -135,7 +135,7 @@ test('state written by 0.2.0 (lastRunAt only) triggers a catch-up, then goes inc
 
 // --- Query bounds for age rules ---------------------------------------------
 
-import { queryBoundsFor } from '../src/scan.js';
+import { queryBoundsFor, queryFilterFor } from '../src/scan.js';
 
 const DAY = 24 * 60 * MINUTE;
 const older = (days, extra = {}) => ({ field: 'age', operator: 'olderThan', days, ...extra });
@@ -175,4 +175,82 @@ test('newerThan, negated olderThan, or an unusable day count give no upper bound
     assert.equal(b.fromDate, undefined);
     assert.equal(b.toDate, undefined, JSON.stringify(conds));
   }
+});
+
+// --- Query pushdown for cheap AND conditions ---------------------------------
+
+test('queryFilterFor does nothing on OR (any) rules', () => {
+  const filter = queryFilterFor({
+    match: 'any',
+    conditions: [
+      { field: 'read', operator: 'isOff' },
+      { field: 'star', operator: 'isOn' },
+      { field: 'tag', operator: 'hasTag', tagKey: '$label1' },
+    ],
+  });
+  assert.deepEqual(filter, {});
+});
+
+test('queryFilterFor pushes read, star, and positive tag conditions down on AND rules', () => {
+  const filter = queryFilterFor({
+    match: 'all',
+    conditions: [
+      { field: 'read', operator: 'isOff' },
+      { field: 'star', operator: 'isOn' },
+      { field: 'tag', operator: 'hasTag', tagKey: 'work' },
+      { field: 'tag', operator: 'hasTag', tagKey: 'urgent' },
+      { field: 'tag', operator: 'hasTag', tagKey: 'done', negate: true },
+      { field: 'junk', operator: 'isOff' },
+    ],
+  });
+  assert.deepEqual(filter, {
+    unread: true,
+    flagged: true,
+    tags: { tags: { work: true, urgent: true }, mode: 'all' },
+  });
+
+  // Negated state conditions flip cleanly too.
+  assert.deepEqual(
+    queryFilterFor({
+      match: 'all',
+      conditions: [
+        { field: 'read', operator: 'isOff', negate: true },
+        { field: 'star', operator: 'isOn', negate: true },
+      ],
+    }),
+    { unread: false, flagged: false },
+  );
+});
+
+test('queryFilterFor marks contradictory AND demands as impossible', () => {
+  assert.deepEqual(
+    queryFilterFor({
+      match: 'all',
+      conditions: [
+        { field: 'read', operator: 'isOn' },
+        { field: 'read', operator: 'isOff' },
+      ],
+    }),
+    { impossible: true },
+  );
+  assert.deepEqual(
+    queryFilterFor({
+      match: 'all',
+      conditions: [
+        { field: 'star', operator: 'isOn' },
+        { field: 'star', operator: 'isOff' },
+      ],
+    }),
+    { impossible: true },
+  );
+  assert.deepEqual(
+    queryFilterFor({
+      match: 'all',
+      conditions: [
+        { field: 'tag', operator: 'hasTag', tagKey: 'work' },
+        { field: 'tag', operator: 'hasTag', tagKey: 'work', negate: true },
+      ],
+    }),
+    { impossible: true },
+  );
 });

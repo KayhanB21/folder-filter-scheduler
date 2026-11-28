@@ -145,6 +145,81 @@ async function applyTag(messenger, ids, action, { onProgress, stateById } = {}) 
 }
 
 /**
+ * Remove one tag without disturbing any other tags on the message.
+ *
+ * Reuses scanned headers (`stateById`) just like `applyTag`, skipping both
+ * `messages.get` and no-op updates for messages that do not carry the tag.
+ */
+async function applyRemoveTag(messenger, ids, action, { onProgress, stateById } = {}) {
+  const todo = stateById
+    ? ids.filter((id) => {
+        const known = stateById.get(id)?.tags;
+        return !Array.isArray(known) || known.includes(action.tagKey);
+      })
+    : ids;
+  if (todo.length === 0) return [];
+
+  const acted = [];
+  await inUpdateBatches(
+    todo,
+    async (id) => {
+      const state = stateById?.get(id);
+      let tags;
+      if (Array.isArray(state?.tags)) {
+        tags = state.tags;
+      } else {
+        const header = await messenger.messages.get(id);
+        tags = Array.isArray(header?.tags) ? header.tags : [];
+      }
+      if (!tags.includes(action.tagKey)) return;
+      const nextTags = tags.filter((k) => k !== action.tagKey);
+      await messenger.messages.update(id, { tags: nextTags });
+      if (state) state.tags = nextTags;
+      else if (stateById) stateById.set(id, { tags: nextTags });
+      acted.push(id);
+    },
+    { onProgress },
+  );
+  return acted;
+}
+
+/**
+ * Remove every tag from each matched message, skipping messages already known
+ * to carry no tags.
+ */
+async function applyClearTags(messenger, ids, _action, { onProgress, stateById } = {}) {
+  const todo = stateById
+    ? ids.filter((id) => {
+        const known = stateById.get(id)?.tags;
+        return !Array.isArray(known) || known.length > 0;
+      })
+    : ids;
+  if (todo.length === 0) return [];
+
+  const acted = [];
+  await inUpdateBatches(
+    todo,
+    async (id) => {
+      const state = stateById?.get(id);
+      let tags;
+      if (Array.isArray(state?.tags)) {
+        tags = state.tags;
+      } else {
+        const header = await messenger.messages.get(id);
+        tags = Array.isArray(header?.tags) ? header.tags : [];
+      }
+      if (tags.length === 0) return;
+      await messenger.messages.update(id, { tags: [] });
+      if (state) state.tags = [];
+      else if (stateById) stateById.set(id, { tags: [] });
+      acted.push(id);
+    },
+    { onProgress },
+  );
+  return acted;
+}
+
+/**
  * Set one boolean message flag (`read`, `flagged`, or `junk`) in throttled
  * waves, skipping messages already known to be in the desired state.
  */
@@ -209,6 +284,20 @@ export const ACTIONS = [
     needsTag: true,
     get hint() { return t('action_tagHint'); },
     apply: applyTag,
+  },
+  {
+    id: 'removeTag',
+    get label() { return t('action_removeTag'); },
+    needsTag: true,
+    get hint() { return t('action_removeTagHint'); },
+    apply: applyRemoveTag,
+  },
+  {
+    id: 'clearTags',
+    get label() { return t('action_clearTags'); },
+    needsFolder: false,
+    get hint() { return t('action_clearTagsHint'); },
+    apply: applyClearTags,
   },
   {
     id: 'markRead',
@@ -281,17 +370,29 @@ export function actionsOf(rule) {
 }
 
 /**
- * Execution order: everything that leaves the message where it is runs first,
- * and the one action that consumes it runs last.
+ * Execution order: tag clears and removals run before tag additions and other
+ * in-place updates, and the one action that consumes the message runs last.
  *
  * This is derived rather than taken from the user's ordering because a move
- * invalidates the message ids: "move to Friends, then tag as Friends" would
- * quietly tag nothing. Unknown types are left in place so `runAction` can throw
- * on them instead of them being silently dropped here.
+ * invalidates the message ids ("move to Friends, then tag as Friends" would
+ * quietly tag nothing), and because "clear/remove tags, then add tag" lets a
+ * rule swap tags predictably regardless of row order. Unknown types are left
+ * in place so `runAction` can throw on them instead of them being silently
+ * dropped here.
  */
+function actionPhase(action) {
+  if (isTerminalAction(action)) return 3;
+  if (action?.type === 'clearTags') return 0;
+  if (action?.type === 'removeTag') return 1;
+  return 2;
+}
+
 export function orderActions(actions) {
   const list = Array.isArray(actions) ? actions : [];
-  return [...list.filter((a) => !isTerminalAction(a)), ...list.filter(isTerminalAction)];
+  return list
+    .map((action, index) => ({ action, index, phase: actionPhase(action) }))
+    .sort((a, b) => a.phase - b.phase || a.index - b.index)
+    .map((entry) => entry.action);
 }
 
 function normalizeOptions(optionsOrProgress) {

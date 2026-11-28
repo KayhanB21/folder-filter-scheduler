@@ -1110,5 +1110,119 @@
   },
   "confirm_readFailed": {
     "message": "无法读取所选内容：$1"
+  },
+  "menu_createRule": {
+    "message": "从此邮件创建规则…"
+  },
+  "options_importTitle": {
+    "message": "导入规则备份 (.json) 或 Thunderbird 的 msgFilterRules.dat 文件"
+  },
+  "field_to_cc": {
+    "message": "收件人或抄送"
+  },
+  "field_custom_header": {
+    "message": "自定义邮件头…"
+  },
+  "field_size": {
+    "message": "大小"
+  },
+  "op_largerThan": {
+    "message": "大于"
+  },
+  "op_smallerThan": {
+    "message": "小于"
+  },
+  "op_sizeOnly": {
+    "message": "$1（仅大小字段）"
+  },
+  "op_sizeOnlyReason": {
+    "message": "仅适用于大小字段。"
+  },
+  "cond_customHeaderPlaceholder": {
+    "message": "例如 List-Unsubscribe"
+  },
+  "cond_customHeaderLabel": {
+    "message": "自定义邮件头名称"
+  },
+  "cond_customHeaderHint": {
+    "message": "输入任意邮件头名称，例如 <code>List-Unsubscribe</code>、<code>X-Spam-Status</code> 或 <code>Return-Path</code>。读取时需要下载每封邮件的邮件头，因此比内置字段更慢。"
+  },
+  "cond_sizeUnitLabel": {
+    "message": "大小单位"
+  },
+  "action_removeTag": {
+    "message": "移除标签…"
+  },
+  "action_removeTagHint": {
+    "message": "移除指定的 Thunderbird 标签，不影响邮件上的其他标签。"
+  },
+  "action_clearTags": {
+    "message": "清除所有标签"
+  },
+  "action_clearTagsHint": {
+    "message": "移除匹配邮件上的所有标签，不移动邮件。"
+  },
+  "summary_size": {
+    "message": "$1 $2 $3 $4"
+  },
+  "summary_removeTagAction": {
+    "message": "移除标签 $1"
+  },
+  "reject_size": {
+    "message": "大小条件需要一个正数（收到 \"$1\"）"
+  },
+  "reject_sizeEmpty": {
+    "message": "大小条件需要一个正数（为空）"
+  },
+  "reject_customHeader": {
+    "message": "自定义邮件头名称 \"$1\" 无效"
+  },
+  "reject_customHeaderEmpty": {
+    "message": "自定义邮件头条件未填写名称"
+  },
+  "import_sizeValue": {
+    "message": "$1：大小需要以 KB 或 MB 为单位的正数"
+  },
+  "import_unknownActionFolder": {
+    "message": "$1：“$2”的目标文件夹不在此配置文件中，已丢弃该操作"
+  },
+  "import_tbNoFilters": {
+    "message": "此文件中未找到 Thunderbird 过滤器"
+  },
+  "import_tbMatchAllUnsupported": {
+    "message": "$1：不支持“匹配所有邮件”过滤器，已跳过该规则"
+  },
+  "import_tbBadCondition": {
+    "message": "$1：无法读取过滤器条件，已跳过该规则"
+  },
+  "import_tbMixedLogic": {
+    "message": "$1：混合的与/或条件已简化为单一匹配模式，保存前请检查"
+  },
+  "import_tbUnsupportedCondition": {
+    "message": "$1：不支持的 Thunderbird 条件“$2”，已丢弃"
+  },
+  "import_tbBookMappedAll": {
+    "message": "$1：通讯录已映射为“所有通讯录”，保存前请检查"
+  },
+  "import_tbMissingFolder": {
+    "message": "$1：未找到“$2”的目标文件夹“$3”，已丢弃该操作"
+  },
+  "import_tbUnsupportedAction": {
+    "message": "$1：不支持的 Thunderbird 操作“$2”，已丢弃"
+  },
+  "status_notSavedCustomHeader": {
+    "message": "未保存：请为“$1”输入有效的邮件头名称（字母、数字和连字符，例如 List-Unsubscribe）。"
+  },
+  "status_importRemapped_one": {
+    "message": "已从其他配置文件重新连接 $1 个文件夹。"
+  },
+  "status_importRemapped_other": {
+    "message": "已从其他配置文件重新连接 $1 个文件夹。"
+  },
+  "status_importTbPickFolders": {
+    "message": "保存前请为每条规则选择要监控的文件夹。"
+  },
+  "status_draftCreated": {
+    "message": "已根据所选邮件创建规则草稿 — 请选择操作并点击保存。"
   }
 }

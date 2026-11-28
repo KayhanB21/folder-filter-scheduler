@@ -1272,5 +1272,119 @@
   },
   "confirm_readFailed": {
     "message": "Impossible de lire la sélection : $1"
+  },
+  "menu_createRule": {
+    "message": "Créer une règle à partir de ce message…"
+  },
+  "options_importTitle": {
+    "message": "Importer des sauvegardes (.json) ou des fichiers msgFilterRules.dat de Thunderbird"
+  },
+  "field_to_cc": {
+    "message": "Pour ou Copie à"
+  },
+  "field_custom_header": {
+    "message": "En-tête personnalisé…"
+  },
+  "field_size": {
+    "message": "taille"
+  },
+  "op_largerThan": {
+    "message": "supérieure à"
+  },
+  "op_smallerThan": {
+    "message": "inférieure à"
+  },
+  "op_sizeOnly": {
+    "message": "$1 (champ taille uniquement)"
+  },
+  "op_sizeOnlyReason": {
+    "message": "Fonctionne uniquement avec le champ taille."
+  },
+  "cond_customHeaderPlaceholder": {
+    "message": "ex. List-Unsubscribe"
+  },
+  "cond_customHeaderLabel": {
+    "message": "Nom de l’en-tête personnalisé"
+  },
+  "cond_customHeaderHint": {
+    "message": "Saisissez n’importe quel nom d’en-tête de courriel, comme <code>List-Unsubscribe</code>, <code>X-Spam-Status</code> ou <code>Return-Path</code>. Pour le lire, le module télécharge les en-têtes de chaque message, ce qui rend ce critère plus lent que les champs intégrés."
+  },
+  "cond_sizeUnitLabel": {
+    "message": "Unité de taille"
+  },
+  "action_removeTag": {
+    "message": "Retirer l’étiquette…"
+  },
+  "action_removeTagHint": {
+    "message": "Retire l’une de vos étiquettes Thunderbird sans toucher aux autres étiquettes du message."
+  },
+  "action_clearTags": {
+    "message": "Supprimer toutes les étiquettes"
+  },
+  "action_clearTagsHint": {
+    "message": "Supprime toutes les étiquettes des messages correspondants sans les déplacer."
+  },
+  "summary_size": {
+    "message": "$1 $2 $3 $4"
+  },
+  "summary_removeTagAction": {
+    "message": "Retirer l’étiquette $1"
+  },
+  "reject_size": {
+    "message": "la condition de taille nécessite un nombre positif (reçu « $1 »)"
+  },
+  "reject_sizeEmpty": {
+    "message": "la condition de taille nécessite un nombre positif (vide)"
+  },
+  "reject_customHeader": {
+    "message": "le nom d’en-tête personnalisé « $1 » n’est pas valide"
+  },
+  "reject_customHeaderEmpty": {
+    "message": "la condition d’en-tête personnalisé n’a pas de nom"
+  },
+  "import_sizeValue": {
+    "message": "$1 : la taille nécessite un nombre positif en KB ou MB"
+  },
+  "import_unknownActionFolder": {
+    "message": "$1 : le dossier de destination pour « $2 » n’existe pas dans ce profil, action ignorée"
+  },
+  "import_tbNoFilters": {
+    "message": "Aucun filtre Thunderbird trouvé dans ce fichier"
+  },
+  "import_tbMatchAllUnsupported": {
+    "message": "$1 : les filtres « Tous les messages » ne sont pas pris en charge, règle ignorée"
+  },
+  "import_tbBadCondition": {
+    "message": "$1 : impossible de lire la condition du filtre, règle ignorée"
+  },
+  "import_tbMixedLogic": {
+    "message": "$1 : les conditions ET/OU mixtes ont été simplifiées en un seul mode, vérifiez avant d’enregistrer"
+  },
+  "import_tbUnsupportedCondition": {
+    "message": "$1 : condition Thunderbird non prise en charge « $2 », ignorée"
+  },
+  "import_tbBookMappedAll": {
+    "message": "$1 : carnet d’adresses associé à Tous les carnets d’adresses, vérifiez avant d’enregistrer"
+  },
+  "import_tbMissingFolder": {
+    "message": "$1 : dossier de destination « $3 » pour « $2 » introuvable, action ignorée"
+  },
+  "import_tbUnsupportedAction": {
+    "message": "$1 : action Thunderbird non prise en charge « $2 », ignorée"
+  },
+  "status_notSavedCustomHeader": {
+    "message": "Non enregistré : saisissez un nom d’en-tête valide pour « $1 » (lettres, chiffres et tirets, ex. List-Unsubscribe)."
+  },
+  "status_importRemapped_one": {
+    "message": "$1 dossier reconnecté depuis un autre profil."
+  },
+  "status_importRemapped_other": {
+    "message": "$1 dossiers reconnectés depuis un autre profil."
+  },
+  "status_importTbPickFolders": {
+    "message": "Choisissez les dossiers que chaque règle doit surveiller avant d’enregistrer."
+  },
+  "status_draftCreated": {
+    "message": "Brouillon de règle créé à partir du message sélectionné — choisissez une action puis cliquez sur Enregistrer."
   }
 }

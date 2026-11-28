@@ -10,9 +10,9 @@
  * a normalized message and a rule; it returns whether the rule matches.
  *
  * A normalized message is `{ fields: { <lowercased-name>: string[] } }`, plus
- * `date`, `state` (read, star, junk), and `tags` for the conditions that are
- * not about a header, `headersRead`, true when the full headers were
- * downloaded and are in `fields`, `auth`, the SPF, DKIM, and DMARC
+ * `date`, `size` (bytes), `state` (read, star, junk), and `tags` for the
+ * conditions that are not about a header, `headersRead`, true when the full
+ * headers were downloaded and are in `fields`, `auth`, the SPF, DKIM, and DMARC
  * results when a rule needs them, and `body`, the text of each text part of
  * the message as a string array when a rule needs it.
  * Header-like fields ("from", "subject", "reply-to", "x-anything") map to the
@@ -68,6 +68,34 @@ export const IN_ADDRESS_BOOK = 'inAddressBook';
  * value. Shape: `{ field, operator: 'nameShowsOtherAddress', negate }`.
  */
 export const NAME_SHOWS_OTHER_ADDRESS = 'nameShowsOtherAddress';
+
+/**
+ * The combined recipient field: reads both `to` and `cc` from the indexed
+ * message with zero downloads. Matches when any address or header value in
+ * either `to` or `cc` satisfies the condition.
+ */
+export const TO_CC_FIELD = 'to-cc';
+
+/**
+ * Sentinel option value used by the options UI for arbitrary custom headers
+ * (e.g. `X-Spam-Status`, `List-Unsubscribe`, `Return-Path`). Stored rules hold
+ * the actual lowercased header name in `condition.field`, never this sentinel.
+ */
+export const CUSTOM_HEADER_OPTION = 'custom-header';
+
+/**
+ * The message-size pseudo-field. Not a header: it compares `message.size`
+ * (bytes, read for free from Thunderbird's indexed MessageHeader) against a
+ * user threshold in KB or MB. Shape:
+ * `{ field: 'size', operator: 'largerThan' | 'smallerThan', size: N, unit: 'KB' | 'MB', negate }`.
+ */
+export const SIZE_FIELD = 'size';
+export const SIZE_OPERATORS = Object.freeze({
+  largerThan: 'largerThan',
+  smallerThan: 'smallerThan',
+});
+export const SIZE_UNITS = Object.freeze(['KB', 'MB']);
+const SIZE_UNIT_BYTES = Object.freeze({ KB: 1024, MB: 1024 * 1024 });
 
 /**
  * The message-age pseudo-field. Not a header: it compares the message date
@@ -137,12 +165,14 @@ export const FIELDS = Object.freeze([
   'from',
   'to',
   'cc',
+  TO_CC_FIELD,
   'subject',
   BODY_FIELD,
   'reply-to',
   'list-id',
   'sender',
   AGE_FIELD,
+  SIZE_FIELD,
   ...STATE_FIELDS,
   TAG_FIELD,
   PRIORITY_FIELD,
@@ -151,14 +181,57 @@ export const FIELDS = Object.freeze([
 
 /**
  * Fields obtainable for free from a lightweight MessageHeader (author,
- * recipients, ccList, subject) — i.e. without fetching the full message.
- * Everything else (reply-to, list-id, sender, arbitrary headers) needs a
+ * recipients, ccList, subject, date, size, read/flagged/junk, tags) — i.e.
+ * without fetching the full message. Everything else (reply-to, list-id,
+ * sender, arbitrary custom headers) needs a `messages.getHeaders()` /
  * `messages.getFull()`, which on a non-offline IMAP folder hits the network.
  */
-export const CHEAP_FIELDS = Object.freeze(['from', 'to', 'cc', 'subject', AGE_FIELD, ...STATE_FIELDS, TAG_FIELD]);
+export const CHEAP_FIELDS = Object.freeze([
+  'from',
+  'to',
+  'cc',
+  TO_CC_FIELD,
+  'subject',
+  AGE_FIELD,
+  SIZE_FIELD,
+  ...STATE_FIELDS,
+  TAG_FIELD,
+]);
 const CHEAP_FIELD_SET = new Set(CHEAP_FIELDS);
 
+const PSEUDO_FIELD_SET = new Set([
+  AGE_FIELD,
+  SIZE_FIELD,
+  ...STATE_FIELDS,
+  TAG_FIELD,
+  PRIORITY_FIELD,
+  AUTH_FIELD,
+  BODY_FIELD,
+]);
+const KNOWN_FIELD_SET = new Set(FIELDS);
+const HEADER_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,127}$/;
+
 const foldCase = (s) => (s ?? '').toString().toLowerCase();
+
+/**
+ * Normalize an arbitrary email header name (e.g. `"List-Unsubscribe:"` ->
+ * `"list-unsubscribe"`). Returns null when the name is blank, contains illegal
+ * characters, or collides with a pseudo-field or UI sentinel.
+ */
+export function normalizeHeaderName(name) {
+  const cleaned = String(name ?? '').trim().replace(/:+$/, '').trim().toLowerCase();
+  if (!HEADER_NAME_RE.test(cleaned)) return null;
+  if (PSEUDO_FIELD_SET.has(cleaned) || cleaned === TO_CC_FIELD || cleaned === CUSTOM_HEADER_OPTION) {
+    return null;
+  }
+  return cleaned;
+}
+
+/** True when `field` names an arbitrary custom header (not a built-in field). */
+export function isCustomHeaderField(field) {
+  const cleaned = normalizeHeaderName(field);
+  return cleaned !== null && !KNOWN_FIELD_SET.has(cleaned);
+}
 
 /**
  * True when the message explicitly marks full headers as unread
@@ -184,6 +257,10 @@ function needsUnreadHeader(message, condition) {
  */
 export function isAgeCondition(condition) {
   return foldCase(condition?.field) === AGE_FIELD;
+}
+
+export function isSizeCondition(condition) {
+  return foldCase(condition?.field) === SIZE_FIELD;
 }
 
 export function isStateCondition(condition) {
@@ -247,6 +324,28 @@ export function ageDays(condition) {
   return Number.isInteger(n) && n >= 1 ? n : null;
 }
 
+/** The numeric threshold of a size condition, or null when unusable. */
+export function sizeAmount(condition) {
+  const raw = condition?.size;
+  if (raw === '' || raw === null || raw === undefined || typeof raw === 'boolean') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** The normalised unit (`KB` or `MB`) of a size condition, or null when unknown. */
+export function sizeUnit(condition) {
+  const unit = String(condition?.unit ?? '').trim().toUpperCase();
+  return SIZE_UNITS.includes(unit) ? unit : null;
+}
+
+/** The threshold of a size condition in bytes, or null when unusable. */
+export function sizeBytes(condition) {
+  const amount = sizeAmount(condition);
+  const unit = sizeUnit(condition);
+  if (amount === null || unit === null) return null;
+  return amount * SIZE_UNIT_BYTES[unit];
+}
+
 /** Address-book ids a rule needs loaded before it can be evaluated. */
 export function addressBookIdsOf(rule) {
   const ids = new Set();
@@ -298,6 +397,13 @@ export function requiresBody(rule) {
 function valuesFor(message, field) {
   const key = foldCase(field);
   const fields = message && message.fields ? message.fields : {};
+  if (key === TO_CC_FIELD) {
+    return [
+      ...(Array.isArray(fields.to) ? fields.to : []),
+      ...(Array.isArray(fields.cc) ? fields.cc : []),
+      ...(Array.isArray(fields[TO_CC_FIELD]) ? fields[TO_CC_FIELD] : []),
+    ];
+  }
   return Array.isArray(fields[key]) ? fields[key] : [];
 }
 
@@ -349,6 +455,26 @@ function evaluateAgeCondition(message, condition, now) {
   if (condition.operator === AGE_OPERATORS.olderThan) satisfied = ageMs >= days * DAY_MS;
   else if (condition.operator === AGE_OPERATORS.newerThan) satisfied = ageMs < days * DAY_MS;
   else throw new Error(`Unknown age operator: ${condition.operator}`);
+  return condition.negate ? !satisfied : satisfied;
+}
+
+/**
+ * Evaluate a message-size condition. `message.size` is the message size in
+ * bytes as Thunderbird indexed it. NEVER matches, negated or not, when the
+ * threshold is unusable or `message.size` is missing or invalid.
+ */
+function evaluateSizeCondition(message, condition) {
+  if (condition.operator !== SIZE_OPERATORS.largerThan && condition.operator !== SIZE_OPERATORS.smallerThan) {
+    throw new Error(`Unknown size operator: ${condition.operator}`);
+  }
+  const threshold = sizeBytes(condition);
+  const actual = message?.size;
+  if (threshold === null || typeof actual !== 'number' || !Number.isFinite(actual) || actual < 0) {
+    return false;
+  }
+
+  const satisfied =
+    condition.operator === SIZE_OPERATORS.largerThan ? actual >= threshold : actual < threshold;
   return condition.negate ? !satisfied : satisfied;
 }
 
@@ -474,6 +600,7 @@ function evaluateNameCondition(message, condition) {
 
 export function evaluateCondition(message, condition, { now = new Date(), addressBooks } = {}) {
   if (isAgeCondition(condition)) return evaluateAgeCondition(message, condition, now);
+  if (isSizeCondition(condition)) return evaluateSizeCondition(message, condition);
   if (isStateCondition(condition)) return evaluateStateCondition(message, condition);
   if (isTagCondition(condition)) return evaluateTagCondition(message, condition);
   if (isPriorityCondition(condition)) return evaluatePriorityCondition(message, condition);
@@ -489,12 +616,17 @@ export function evaluateCondition(message, condition, { now = new Date(), addres
   if (!predicate) {
     throw new Error(`Unknown operator: ${condition.operator}`);
   }
+  // A blank or invalid header field (e.g. an unconfigured custom header) must
+  // never match, even when negated.
+  const fieldKey = foldCase(condition.field).trim();
+  const resolvedField = fieldKey === TO_CC_FIELD ? TO_CC_FIELD : normalizeHeaderName(fieldKey);
+  if (!resolvedField) return false;
   if (needsUnreadHeader(message, condition)) return false;
   // A regex gets the text and pattern unchanged. Its own `i` flag ignores case,
   // and folding the pattern would turn `\D` into `\d` and break `(?-i:...)`.
   const fold = condition.operator === 'matchesRegex' ? (s) => (s ?? '').toString() : foldCase;
   const needle = fold(condition.value);
-  let values = valuesFor(message, condition.field).map(fold);
+  let values = valuesFor(message, resolvedField).map(fold);
   if (values.length === 0) values = [''];
 
   const anySatisfied = values.some((v) => predicate(v, needle));

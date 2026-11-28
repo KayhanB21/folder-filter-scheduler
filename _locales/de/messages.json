@@ -1191,5 +1191,119 @@
   },
   "confirm_readFailed": {
     "message": "Auswahl konnte nicht gelesen werden: $1"
+  },
+  "menu_createRule": {
+    "message": "Regel aus dieser Nachricht erstellen…"
+  },
+  "options_importTitle": {
+    "message": "Sicherungen von Ordnerfilter-Planer (.json) oder Thunderbird-Dateien (msgFilterRules.dat) importieren"
+  },
+  "field_to_cc": {
+    "message": "An oder CC"
+  },
+  "field_custom_header": {
+    "message": "Benutzerdefinierte Kopfzeile…"
+  },
+  "field_size": {
+    "message": "Größe"
+  },
+  "op_largerThan": {
+    "message": "größer als"
+  },
+  "op_smallerThan": {
+    "message": "kleiner als"
+  },
+  "op_sizeOnly": {
+    "message": "$1 (nur Größenfeld)"
+  },
+  "op_sizeOnlyReason": {
+    "message": "Funktioniert nur mit dem Größenfeld."
+  },
+  "cond_customHeaderPlaceholder": {
+    "message": "z. B. List-Unsubscribe"
+  },
+  "cond_customHeaderLabel": {
+    "message": "Name der Kopfzeile"
+  },
+  "cond_customHeaderHint": {
+    "message": "Geben Sie einen beliebigen E-Mail-Kopfzeilennamen ein, z. B. <code>List-Unsubscribe</code>, <code>X-Spam-Status</code> oder <code>Return-Path</code>. Zum Lesen lädt das Add-on die Kopfzeilen jeder Nachricht herunter, sodass diese Prüfung langsamer ist als eingebaute Felder."
+  },
+  "cond_sizeUnitLabel": {
+    "message": "Größeneinheit"
+  },
+  "action_removeTag": {
+    "message": "Schlagwort entfernen…"
+  },
+  "action_removeTagHint": {
+    "message": "Entfernt eines Ihrer Thunderbird-Schlagwörter, ohne andere Schlagwörter der Nachricht zu verändern."
+  },
+  "action_clearTags": {
+    "message": "Alle Schlagwörter entfernen"
+  },
+  "action_clearTagsHint": {
+    "message": "Entfernt alle Schlagwörter von passenden Nachrichten, ohne sie zu verschieben."
+  },
+  "summary_size": {
+    "message": "$1 $2 $3 $4"
+  },
+  "summary_removeTagAction": {
+    "message": "Schlagwort $1 entfernen"
+  },
+  "reject_size": {
+    "message": "Größenbedingung benötigt eine positive Zahl (erhalten: \"$1\")"
+  },
+  "reject_sizeEmpty": {
+    "message": "Größenbedingung benötigt eine positive Zahl (leer)"
+  },
+  "reject_customHeader": {
+    "message": "Kopfzeilenname \"$1\" ist ungültig"
+  },
+  "reject_customHeaderEmpty": {
+    "message": "Benutzerdefinierte Kopfzeile hat keinen Namen"
+  },
+  "import_sizeValue": {
+    "message": "$1: Größe benötigt eine positive Zahl in KB oder MB"
+  },
+  "import_unknownActionFolder": {
+    "message": "$1: Zielordner für \"$2\" ist in diesem Profil nicht vorhanden, Aktion verworfen"
+  },
+  "import_tbNoFilters": {
+    "message": "Keine Thunderbird-Filter in dieser Datei gefunden"
+  },
+  "import_tbMatchAllUnsupported": {
+    "message": "$1: Filter vom Typ \"Alle Nachrichten\" werden nicht unterstützt, Regel übersprungen"
+  },
+  "import_tbBadCondition": {
+    "message": "$1: Filterbedingung konnte nicht gelesen werden, Regel übersprungen"
+  },
+  "import_tbMixedLogic": {
+    "message": "$1: Gemischte UND/ODER-Bedingungen wurden auf einen Modus vereinfacht, vor dem Speichern prüfen"
+  },
+  "import_tbUnsupportedCondition": {
+    "message": "$1: Nicht unterstützte Thunderbird-Bedingung \"$2\", verworfen"
+  },
+  "import_tbBookMappedAll": {
+    "message": "$1: Adressbuch wurde auf Alle Adressbücher abgebildet, vor dem Speichern prüfen"
+  },
+  "import_tbMissingFolder": {
+    "message": "$1: Zielordner \"$3\" für \"$2\" wurde nicht gefunden, Aktion verworfen"
+  },
+  "import_tbUnsupportedAction": {
+    "message": "$1: Nicht unterstützte Thunderbird-Aktion \"$2\", verworfen"
+  },
+  "status_notSavedCustomHeader": {
+    "message": "Nicht gespeichert: Geben Sie einen gültigen Kopfzeilennamen für „$1“ ein (Buchstaben, Ziffern und Bindestriche, z. B. List-Unsubscribe)."
+  },
+  "status_importRemapped_one": {
+    "message": "$1 Ordner aus einem anderen Profil neu verknüpft."
+  },
+  "status_importRemapped_other": {
+    "message": "$1 Ordner aus einem anderen Profil neu verknüpft."
+  },
+  "status_importTbPickFolders": {
+    "message": "Wählen Sie vor dem Speichern die Ordner aus, die jede Regel überwachen soll."
+  },
+  "status_draftCreated": {
+    "message": "Regelentwurf aus der ausgewählten Nachricht erstellt — Aktion wählen und Speichern drücken."
   }
 }

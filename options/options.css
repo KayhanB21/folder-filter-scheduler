@@ -245,9 +245,10 @@ button { white-space: nowrap; flex: none; }
   margin-top: 18px;
 }
 
-/* Age condition: a small day count with its unit, in place of the value box. */
-.cond-days { width: 72px; }
+/* Age and size conditions: a small count with its unit, in place of the value box. */
+.cond-days, .cond-size { width: 72px; }
 .cond-days-unit { opacity: 0.7; }
+.cond-custom-header { width: 13em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
 /* Address-book condition: the book picker takes the value box's place. */
 .cond-book { flex: 1; min-width: 0; }
@@ -283,3 +284,4 @@ button { white-space: nowrap; flex: none; }
 .condition:has(.cond-state-hint:not(.hidden)) ~ .condition .cond-state-hint { display: none; }
 .condition:has(.cond-priority-hint:not(.hidden)) ~ .condition .cond-priority-hint { display: none; }
 .condition:has(.cond-auth-hint:not(.hidden)) ~ .condition .cond-auth-hint { display: none; }
+.condition:has(.cond-custom-header-hint:not(.hidden)) ~ .condition .cond-custom-header-hint { display: none; }

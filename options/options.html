@@ -63,8 +63,8 @@
       <button id="toggle-all" type="button" data-i18n="options_collapseAll">Collapse all</button>
       <span class="spacer"></span>
       <button id="export" type="button" data-i18n="options_export">Export…</button>
-      <button id="import" type="button" data-i18n="options_import">Import…</button>
-      <input id="import-file" type="file" accept="application/json,.json" hidden />
+      <button id="import" type="button" title="Import rules (.json) or Thunderbird msgFilterRules.dat" data-i18n="options_import" data-i18n-title="options_importTitle">Import…</button>
+      <input id="import-file" type="file" accept="application/json,.json,.dat" hidden />
     </section>
 
     <section id="rules"></section>
@@ -345,6 +345,17 @@
     <template id="condition-template">
       <div class="condition">
         <select class="cond-field"></select>
+        <!-- Shown only when "Custom header…" is chosen in the field list. -->
+        <input
+          class="cond-custom-header hidden"
+          type="text"
+          placeholder="e.g. List-Unsubscribe"
+          spellcheck="false"
+          autocomplete="off"
+          aria-label="Custom header name"
+          data-i18n-placeholder="cond_customHeaderPlaceholder"
+          data-i18n-aria-label="cond_customHeaderLabel"
+        />
         <select class="cond-op">
           <option value="contains" data-i18n="op_contains">contains</option>
           <option value="is" data-i18n="op_is">is</option>
@@ -357,6 +368,9 @@
           <!-- For the age field only. -->
           <option value="olderThan" class="op-age" data-i18n="op_olderThan">older than</option>
           <option value="newerThan" class="op-age" data-i18n="op_newerThan">newer than</option>
+          <!-- For the size field only. -->
+          <option value="largerThan" class="op-size" data-i18n="op_largerThan">larger than</option>
+          <option value="smallerThan" class="op-size" data-i18n="op_smallerThan">smaller than</option>
           <!-- For the read, star, and junk fields only. The text is set for
                the field: "is read" and "is unread", and so on. -->
           <option value="isOn" data-i18n="op_isOn">is</option>
@@ -374,6 +388,12 @@
         <!-- Shown only for the age field: a whole number of days. -->
         <input class="cond-days hidden" type="number" min="1" step="1" placeholder="30" />
         <span class="cond-days-unit hidden" data-i18n="cond_daysUnit">days</span>
+        <!-- Shown only for the size field: a positive number in KB or MB. -->
+        <input class="cond-size hidden" type="number" min="0.1" step="any" placeholder="5" />
+        <select class="cond-size-unit hidden" aria-label="Size unit" data-i18n-aria-label="cond_sizeUnitLabel">
+          <option value="KB">KB</option>
+          <option value="MB">MB</option>
+        </select>
         <!-- Shown only for the inAddressBook operator. Without access, the
              button asks for the optional addressBooks permission instead. -->
         <select class="cond-book hidden"></select>
@@ -443,6 +463,13 @@
           every 30 minutes (see <b>Advanced</b>). So after you star, tag, or read an
           older message, the rule can take that long to act on it.
           <b>Run</b> checks every message at once.
+        </p>
+        <!-- Shown only for a custom header field. -->
+        <p class="cond-custom-header-hint cond-hint hidden" data-i18n-rich="cond_customHeaderHint">
+          Enter any email header name, such as <code>List-Unsubscribe</code>,
+          <code>X-Spam-Status</code>, or <code>Return-Path</code>. To read it, the
+          add-on downloads the headers of each message, so this check is slower than
+          the built-in fields.
         </p>
       </div>
     </template>

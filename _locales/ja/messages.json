@@ -1478,5 +1478,119 @@
   "confirm_readFailed": {
     "message": "選択したメッセージを読み込めませんでした: $1",
     "description": "Shown in the Add spam domains window. $1 is the error message, in English."
+  },
+  "menu_createRule": {
+    "message": "このメッセージからルールを作成…"
+  },
+  "options_importTitle": {
+    "message": "バックアップ (.json) または Thunderbird の msgFilterRules.dat ファイルをインポート"
+  },
+  "field_to_cc": {
+    "message": "宛先または CC"
+  },
+  "field_custom_header": {
+    "message": "カスタムヘッダー…"
+  },
+  "field_size": {
+    "message": "サイズ"
+  },
+  "op_largerThan": {
+    "message": "より大きい"
+  },
+  "op_smallerThan": {
+    "message": "より小さい"
+  },
+  "op_sizeOnly": {
+    "message": "$1 (サイズフィールドのみ)"
+  },
+  "op_sizeOnlyReason": {
+    "message": "サイズフィールドでのみ使用できます。"
+  },
+  "cond_customHeaderPlaceholder": {
+    "message": "例: List-Unsubscribe"
+  },
+  "cond_customHeaderLabel": {
+    "message": "カスタムヘッダー名"
+  },
+  "cond_customHeaderHint": {
+    "message": "<code>List-Unsubscribe</code>、<code>X-Spam-Status</code>、<code>Return-Path</code> などの任意のメールヘッダー名を入力します。読み取るために各メッセージのヘッダーをダウンロードするため、組み込みフィールドより低速になります。"
+  },
+  "cond_sizeUnitLabel": {
+    "message": "サイズの単位"
+  },
+  "action_removeTag": {
+    "message": "タグを外す…"
+  },
+  "action_removeTagHint": {
+    "message": "メッセージに付いている他のタグを残したまま、指定した Thunderbird タグを外します。"
+  },
+  "action_clearTags": {
+    "message": "すべてのタグを外す"
+  },
+  "action_clearTagsHint": {
+    "message": "一致したメッセージを移動せずに、すべてのタグを外します。"
+  },
+  "summary_size": {
+    "message": "$1 $2 $3 $4"
+  },
+  "summary_removeTagAction": {
+    "message": "タグ $1 を外す"
+  },
+  "reject_size": {
+    "message": "サイズ条件には正の数値が必要です (入力: \"$1\")"
+  },
+  "reject_sizeEmpty": {
+    "message": "サイズ条件には正の数値が必要です (空欄)"
+  },
+  "reject_customHeader": {
+    "message": "カスタムヘッダー名 \"$1\" は無効です"
+  },
+  "reject_customHeaderEmpty": {
+    "message": "カスタムヘッダー条件にヘッダー名がありません"
+  },
+  "import_sizeValue": {
+    "message": "$1: サイズは KB または MB の正の数値である必要があります"
+  },
+  "import_unknownActionFolder": {
+    "message": "$1: \"$2\" の移動先フォルダーがこのプロファイルにないため、操作を除外しました"
+  },
+  "import_tbNoFilters": {
+    "message": "このファイルに Thunderbird フィルターが見つかりませんでした"
+  },
+  "import_tbMatchAllUnsupported": {
+    "message": "$1: 「すべてのメッセージ」フィルターは未対応のためスキップしました"
+  },
+  "import_tbBadCondition": {
+    "message": "$1: フィルター条件を読み取れなかったためスキップしました"
+  },
+  "import_tbMixedLogic": {
+    "message": "$1: AND/OR 混在条件を単一モードに簡略化しました。保存前に確認してください"
+  },
+  "import_tbUnsupportedCondition": {
+    "message": "$1: 未対応の Thunderbird 条件 \"$2\" を除外しました"
+  },
+  "import_tbBookMappedAll": {
+    "message": "$1: アドレス帳を「すべてのアドレス帳」に割り当てました。保存前に確認してください"
+  },
+  "import_tbMissingFolder": {
+    "message": "$1: \"$2\" のフォルダー \"$3\" が見つからないため、操作を除外しました"
+  },
+  "import_tbUnsupportedAction": {
+    "message": "$1: 未対応の Thunderbird 操作 \"$2\" を除外しました"
+  },
+  "status_notSavedCustomHeader": {
+    "message": "保存されていません: 「$1」に有効なヘッダー名を入力してください (英数字とハイフン、例: List-Unsubscribe)。"
+  },
+  "status_importRemapped_one": {
+    "message": "別のプロファイルから $1 件のフォルダーを再接続しました。"
+  },
+  "status_importRemapped_other": {
+    "message": "別のプロファイルから $1 件のフォルダーを再接続しました。"
+  },
+  "status_importTbPickFolders": {
+    "message": "保存する前に、各ルールが監視するフォルダーを選択してください。"
+  },
+  "status_draftCreated": {
+    "message": "選択したメッセージからルールの下書きを作成しました — 操作を選んで保存を押してください。"
   }
 }
