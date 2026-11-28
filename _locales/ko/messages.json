@@ -1374,5 +1374,23 @@
   },
   "import_skippedWidened": {
     "message": "$1: 모든 조건을 요구하는 규칙에서 조건을 제외하면 의도보다 많은 메일이 일치하므로 규칙을 건너뛰었습니다"
+  },
+  "import_skippedDroppedAction": {
+    "message": "$1: 동작 하나를 가져올 수 없고, 그 동작 없이 규칙이 메일을 이동하거나 삭제하게 되므로 건너뛰었습니다"
+  },
+  "import_tbNotAutomatic": {
+    "message": "$1: Thunderbird는 이 필터를 수동, 보낸 후 또는 보관 전에만 실행하므로 꺼진 상태로 가져왔습니다"
+  },
+  "reject_blankValue": {
+    "message": "값이 없는 조건이 있어 해당 조건은 일치하지 않습니다"
+  },
+  "reject_badRegex": {
+    "message": "정규식 \"$1\"이(가) 올바르지 않아 해당 조건은 일치하지 않습니다"
+  },
+  "import_invalidRegex": {
+    "message": "$1: 정규식이 올바르지 않습니다"
+  },
+  "folders_missing": {
+    "message": "찾을 수 없는 폴더"
   }
 }

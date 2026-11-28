@@ -64,7 +64,11 @@ export function createHeaderReads({
   let spentMs = 0;
   let budgetExceeded = false;
   const seconds = timeoutMs / 1000;
-  const headersOf = (raw) => raw?.headers ?? raw ?? {};
+  // `getFull` returns a message part whose `headers` property is the
+  // dictionary. `getHeaders` returns the dictionary itself, so a property
+  // named `headers` there is a header line named "Headers" that the sender
+  // wrote, and reading it as the dictionary would drop every real header.
+  const headersOfPart = (raw) => raw?.headers ?? raw ?? {};
   const isTimeout = (e) => e?.name === 'TimeoutError';
 
   const remainingBudget = () => Math.max(0, budgetMs - spentMs);
@@ -130,7 +134,7 @@ export function createHeaderReads({
         const callLimit = Math.min(timeoutMs, remainingBudget());
         const callStart = now();
         try {
-          const headers = headersOf(await withTimeout(getHeaders(messageId), callLimit));
+          const headers = (await withTimeout(getHeaders(messageId), callLimit)) ?? {};
           spentMs += Math.max(0, now() - callStart);
           cache.set(messageId, headers);
           return headers;
@@ -166,7 +170,7 @@ export function createHeaderReads({
       const fullLimit = Math.min(timeoutMs, remainingBudget());
       const fullStart = now();
       try {
-        const headers = headersOf(await withTimeout(getFull(messageId), fullLimit));
+        const headers = headersOfPart(await withTimeout(getFull(messageId), fullLimit));
         spentMs += Math.max(0, now() - fullStart);
         if (waited) reads.timeouts -= 1;
         cache.set(messageId, headers);

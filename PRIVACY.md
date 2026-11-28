@@ -44,8 +44,10 @@ extension storage on your device. So are the times each rule last scanned, and
 a diagnostics log of up to 1000 recent entries, which records counts and rule
 names but no addresses. The results
 of authentication checks are kept there too, for up to 90 days, keyed by a hash
-of each message's Message-ID, sender, date, and size. Nothing is uploaded
-anywhere, and everything is removed if you uninstall the add-on.
+of each message's Message-ID, sender, date, and size. For a rule that copies
+mail, the add-on keeps up to 50,000 such hashes for each destination folder, so
+that it copies each message one time. Nothing is uploaded anywhere, and
+everything is removed if you uninstall the add-on.
 
 ## Permissions
 

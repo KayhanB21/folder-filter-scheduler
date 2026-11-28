@@ -1374,5 +1374,23 @@
   },
   "import_skippedWidened": {
     "message": "$1：已跳过，因为从要求满足全部条件的规则中移除条件会匹配比预期更多的邮件"
+  },
+  "import_skippedDroppedAction": {
+    "message": "$1：已跳过，因为有一个操作无法导入，缺少该操作时规则仍会移动或删除邮件"
+  },
+  "import_tbNotAutomatic": {
+    "message": "$1：Thunderbird 仅在手动运行、发送后或归档前运行此过滤器，因此导入后处于关闭状态"
+  },
+  "reject_blankValue": {
+    "message": "有一个条件未填写值，因此不会匹配"
+  },
+  "reject_badRegex": {
+    "message": "正则表达式“$1”无效，因此不会匹配"
+  },
+  "import_invalidRegex": {
+    "message": "$1：正则表达式无效"
+  },
+  "folders_missing": {
+    "message": "未找到的文件夹"
   }
 }

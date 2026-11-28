@@ -7,7 +7,10 @@ import assert from 'node:assert/strict';
 import { createHeaderReads, readHeadersOrSkip } from '../src/headers.js';
 
 const never = () => new Promise(() => {});
+// `getFull` answers with a message part that holds the headers. `getHeaders`
+// answers with the headers themselves.
 const answers = (headers) => async () => ({ headers });
+const plain = (headers) => async () => headers;
 const HEADERS = { 'reply-to': ['a@evil.example'] };
 
 /** A reader with a short limit, plus what it called and logged. */
@@ -29,7 +32,7 @@ function setup({ getHeaders, getFull, limit = 2 }) {
 }
 
 test('a working getHeaders is the only call made', async () => {
-  const { reads, calls, logged } = setup({ getHeaders: answers(HEADERS), getFull: answers({}) });
+  const { reads, calls, logged } = setup({ getHeaders: plain(HEADERS), getFull: answers({}) });
   assert.deepEqual(await reads.read(1, 'acct'), HEADERS);
   assert.deepEqual(calls, ['headers:1']);
   assert.deepEqual(logged, []);
@@ -57,7 +60,7 @@ test('the account stays on getFull for the rest of the run', async () => {
 });
 
 test('another account still starts with getHeaders', async () => {
-  const getHeaders = (id) => (id < 10 ? never() : answers(HEADERS)());
+  const getHeaders = (id) => (id < 10 ? never() : plain(HEADERS)());
   const { reads, calls } = setup({ getHeaders, getFull: answers(HEADERS) });
   await reads.read(1, 'slow');
   await reads.read(10, 'fast');
@@ -185,7 +188,7 @@ test('readHeadersOrSkip does not double-count skipped on a timeout', async () =>
 });
 
 test('readHeadersOrSkip returns headers on success and skips once if fallback getFull throws', async () => {
-  const ok = setup({ getHeaders: answers(HEADERS), getFull: answers({}) });
+  const ok = setup({ getHeaders: plain(HEADERS), getFull: answers({}) });
   assert.deepEqual(await readHeadersOrSkip(ok.reads, 1, 'acct'), HEADERS);
   assert.equal(ok.reads.skipped, 0);
 
@@ -203,7 +206,7 @@ test('readHeadersOrSkip returns headers on success and skips once if fallback ge
 });
 
 test('header reads are cached per run across multiple rules', async () => {
-  const { reads, calls } = setup({ getHeaders: answers(HEADERS), getFull: answers({}) });
+  const { reads, calls } = setup({ getHeaders: plain(HEADERS), getFull: answers({}) });
   assert.deepEqual(await reads.read(42, 'acct'), HEADERS);
   assert.deepEqual(await reads.read(42, 'acct'), HEADERS);
   assert.deepEqual(await reads.read(42, 'acct'), HEADERS);
@@ -234,7 +237,7 @@ test('budgetMs stops fresh header downloads while still serving cached messages'
     getHeaders: async (id) => {
       calls.push(id);
       t += 12_000;
-      return { headers: { 'x-id': [String(id)] } };
+      return { 'x-id': [String(id)] };
     },
     getFull: answers({}),
     timeoutMs: 20,
@@ -263,7 +266,7 @@ test('budgetMs counts only time inside fresh reads, ignoring time spent on other
   const reads = createHeaderReads({
     getHeaders: async (id) => {
       t += 100;
-      return { headers: { 'x-id': [String(id)] } };
+      return { 'x-id': [String(id)] };
     },
     getFull: answers({}),
     timeoutMs: 1000,
@@ -313,4 +316,14 @@ test('a header call capped by remaining budget stops cleanly without switching t
   assert.deepEqual(calls, ['headers:1']);
   assert.equal(logged.length, 1);
   assert.match(logged[0], /time budget/);
+});
+
+test('a header line named Headers does not replace the real headers', async () => {
+  const sent = { 'list-id': ['<team.corp.example>'], headers: ['x'] };
+  const { reads } = setup({ getHeaders: plain(sent), getFull: answers({}) });
+  assert.deepEqual(await reads.read(1, 'acct'), sent);
+
+  // The whole-message read returns a part: its `headers` property is the dictionary.
+  const full = setup({ getHeaders: undefined, getFull: answers(sent) });
+  assert.deepEqual(await full.reads.read(1, 'acct'), sent);
 });

@@ -74,10 +74,32 @@ test('only one action that consumes the message is kept', () => {
 
 test('a tag action without a tag is dropped', () => {
   const { rules, problems } = sanitizeImport(
-    file({ rules: [{ ...validRule, action: undefined, actions: [{ type: 'tag' }, { type: 'trash' }] }] }),
+    file({ rules: [{ ...validRule, action: undefined, actions: [{ type: 'tag' }, { type: 'markRead' }] }] }),
   );
-  assert.deepEqual(rules[0].actions, [{ type: 'trash' }]);
+  assert.deepEqual(rules[0].actions, [{ type: 'markRead' }]);
   assert.ok(problems.some((p) => /needs a tag/.test(p)));
+});
+
+test('a rule that loses an action and still moves or deletes mail is skipped', () => {
+  const skipped = (actions) => {
+    const { rules, problems } = sanitizeImport(file({ rules: [{ ...validRule, action: undefined, actions }] }));
+    assert.deepEqual(rules, [], JSON.stringify(actions));
+    assert.ok(problems.some((p) => /would move or delete mail without it/.test(p)), problems.join('; '));
+  };
+  skipped([{ type: 'tag' }, { type: 'trash' }]);
+  skipped([{ type: 'copy', folderId: '' }, { type: 'trash' }]);
+  skipped([{ type: 'forward' }, { type: 'deletePermanently' }]);
+  // A name that only Object.prototype has is not an action.
+  skipped([{ type: 'constructor' }, { type: 'archive' }]);
+});
+
+test('an action name from Object.prototype and a domain list that is not a list are refused', () => {
+  const proto = sanitizeImport(file({ rules: [{ ...validRule, action: undefined, actions: [{ type: 'toString' }] }] }));
+  assert.deepEqual(proto.rules, []);
+  const text = sanitizeImport(
+    file({ rules: [{ ...validRule, conditions: [{ field: 'from', operator: 'domainInList', domains: 'evil.com' }] }] }),
+  );
+  assert.deepEqual(text.rules, []);
 });
 
 test('a rule left with no usable action is skipped entirely', () => {

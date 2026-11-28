@@ -253,7 +253,9 @@ folders when moved to another computer) and Thunderbird's built-in
 `msgFilterRules.dat` filter files. Every imported rule is validated field by
 field and staged on the page for review; nothing is stored until you press
 **Save**. Anything unsupported or unrecognised is dropped and reported rather
-than imported.
+than imported. A rule is skipped whole, and reported, when dropping a part
+would make it match more mail or move or delete mail without one of its
+actions.
 
 Each rule carries a short **hash** of what it does — its folders, conditions, and
 actions, ignoring its name. Importing a rule whose hash already exists skips it and

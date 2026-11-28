@@ -130,3 +130,17 @@ test('collapsedTree marks parents and hides every folder under a collapsed one',
   // The other account's INBOX has the same path but stays open.
   assert.equal(closed.hidden.has('b:/INBOX/Family'), false);
 });
+
+test('a folder inside a nested Trash folder is skipped too', () => {
+  const withDeleted = [...all, f('a', 'INBOX/Trash/Old project'), f('a', 'INBOX/Trash/Old project/2023')];
+  assert.deepEqual(resolveRuleFolders(rule({ includeSubfolders: true }), withDeleted), [
+    'a:/INBOX',
+    'a:/INBOX/Work',
+    'a:/INBOX/Work/2024',
+  ]);
+  // A folder the user picked by hand is always kept.
+  assert.deepEqual(
+    resolveRuleFolders(rule({ folderIds: ['a:/INBOX/Trash/Old project'], includeSubfolders: true }), withDeleted),
+    ['a:/INBOX/Trash/Old project'],
+  );
+});

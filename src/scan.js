@@ -72,10 +72,17 @@ export function planScan(state, { manual = false, now = new Date(), settings } =
   const overlapMinutes = settings?.scanOverlapMinutes ?? SCAN_OVERLAP_MINUTES;
   const everyMinutes = settings?.catchUpEveryMinutes ?? CATCH_UP_EVERY_MINUTES;
   const lookbackDays = settings?.catchUpLookbackDays ?? CATCH_UP_LOOKBACK_DAYS;
-  const catchUp = () => ({
-    kind: SCAN_KINDS.catchUp,
-    fromDate: new Date(now.getTime() - lookbackDays * 24 * 60 * MINUTE),
-  });
+  const lastRun = parseDate(state?.lastRunAt);
+  // The lookback, or the last run when that is further back. Without the
+  // second bound, a rule that last ran before the lookback (Thunderbird was
+  // closed, or the rule runs monthly on its own schedule) would pass over the
+  // mail between that run and the start of the lookback, and the watermark
+  // would still advance.
+  const catchUp = () => {
+    const lookbackStart = now.getTime() - lookbackDays * 24 * 60 * MINUTE;
+    const sinceLastRun = lastRun ? lastRun.getTime() - overlapMinutes * MINUTE : lookbackStart;
+    return { kind: SCAN_KINDS.catchUp, fromDate: new Date(Math.min(lookbackStart, sinceLastRun)) };
+  };
 
   const lastCatchUp = parseDate(state?.lastCatchUpAt);
   if (!lastCatchUp || now.getTime() - lastCatchUp.getTime() >= everyMinutes * MINUTE) {
@@ -85,7 +92,6 @@ export function planScan(state, { manual = false, now = new Date(), settings } =
   // A missing lastRunAt with a valid lastCatchUpAt cannot happen through
   // stampScan, but state is user-visible storage, so fall back to a catch-up
   // rather than trusting it.
-  const lastRun = parseDate(state?.lastRunAt);
   if (!lastRun) return catchUp();
 
   return {
@@ -298,6 +304,7 @@ export function createScanProgress({ stored = {}, rules = null, cap = SCAN_PROGR
       fingerprint: entry.fingerprint,
       seenIds: cleanIds.length > cap ? cleanIds.slice(cleanIds.length - cap) : cleanIds,
       ...(cappedMatched.length > 0 ? { matchedIds: cappedMatched } : {}),
+      ...(entry.kind === SCAN_KINDS.full ? { kind: SCAN_KINDS.full } : {}),
     };
     if (
       cleanIds.length !== entry.seenIds.length ||
@@ -318,11 +325,13 @@ export function createScanProgress({ stored = {}, rules = null, cap = SCAN_PROGR
     progressFor(ruleId, fingerprint) {
       const entry = ruleId ? progress[ruleId] : null;
       if (!entry || entry.fingerprint !== fingerprint) {
-        return { seenIds: new Set(), matchedIds: new Set() };
+        return { seenIds: new Set(), matchedIds: new Set(), kind: null };
       }
       return {
         seenIds: new Set(entry.seenIds),
         matchedIds: new Set(entry.matchedIds ?? []),
+        // Set only for a full scan: see recordPartial.
+        kind: entry.kind ?? null,
       };
     },
 
@@ -334,8 +343,13 @@ export function createScanProgress({ stored = {}, rules = null, cap = SCAN_PROGR
     /**
      * Remember evaluated ids (and, for stopping rules, matched ids) when a scan
      * hits the read budget before finishing.
+     *
+     * `kind` is kept only for a full scan. A catch-up that stops early comes
+     * round again by itself, because its timer holds. A full scan is a manual
+     * run, so nothing repeats it: the caller reads the kind back and carries
+     * on with a full scan in the next run, whatever starts that run.
      */
-    recordPartial(ruleId, fingerprint, seenSet, matchedSet = null) {
+    recordPartial(ruleId, fingerprint, seenSet, matchedSet = null, kind = null) {
       if (!ruleId || !fingerprint) return;
       const list = [...seenSet].filter((id) => typeof id === 'number' && Number.isInteger(id));
       if (list.length === 0) return;
@@ -347,6 +361,7 @@ export function createScanProgress({ stored = {}, rules = null, cap = SCAN_PROGR
         fingerprint,
         seenIds: list.length > cap ? list.slice(list.length - cap) : list,
         ...(cappedMatched.length > 0 ? { matchedIds: cappedMatched } : {}),
+        ...(kind === SCAN_KINDS.full ? { kind: SCAN_KINDS.full } : {}),
       };
       dirty = true;
     },

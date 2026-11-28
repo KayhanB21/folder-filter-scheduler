@@ -35,6 +35,7 @@ import {
   ageDays,
   normalizeHeaderName,
   priorityLevel,
+  compilePattern,
 } from './matcher.js';
 import { ruleFingerprint, ruleHash } from './rules.js';
 
@@ -51,6 +52,18 @@ const STRING_FIELD_MAP = Object.freeze({
 });
 
 const ADDRESS_FIELD_SET = new Set(['from', 'to', 'cc', TO_CC_FIELD, 'reply-to', 'sender']);
+
+/** The fields and operators that Thunderbird compares address by address. */
+const PER_ADDRESS_FIELDS = new Set(['from', 'to', 'cc', TO_CC_FIELD]);
+const PER_ADDRESS_OPERATORS = new Set(['is', "isn't", 'begins with', 'ends with']);
+
+/**
+ * The bits of a filter's `type` that make Thunderbird run it by itself: on
+ * incoming mail (0x1, 0x2), on news (0x4, 0x8), after junk classification
+ * (0x20), or on a timer (0x100). The other bits are "run manually" (0x10),
+ * "after sending" (0x40), and "before archiving" (0x80).
+ */
+const AUTOMATIC_TYPE_BITS = 0x1 | 0x2 | 0x4 | 0x8 | 0x20 | 0x100;
 
 const STRING_OPERATOR_MAP = Object.freeze({
   contains: { operator: 'contains', negate: false },
@@ -142,11 +155,13 @@ export function parseThunderbirdFilters(text) {
     } else if (kv.key === 'logging' && current === null) {
       logging = kv.value;
     } else if (kv.key === 'name') {
-      current = { name: kv.value, enabled: true, type: '', condition: '', actions: [] };
+      // Thunderbird enables a filter only on the exact value `yes`, and a
+      // filter without the line is off.
+      current = { name: kv.value, enabled: false, type: '', condition: '', actions: [] };
       filters.push(current);
     } else if (current) {
       if (kv.key === 'enabled') {
-        current.enabled = kv.value.toLowerCase() !== 'no';
+        current.enabled = kv.value === 'yes';
       } else if (kv.key === 'type') {
         current.type = kv.value;
       } else if (kv.key === 'condition') {
@@ -201,7 +216,8 @@ export function parseThunderbirdCondition(conditionStr) {
     let inQuotes = false;
     for (let i = pos; i < text.length; i += 1) {
       const ch = text[i];
-      if (ch === '\\' && inQuotes && i + 1 < text.length) {
+      // Thunderbird writes a quote inside an unquoted value as `\"`.
+      if (ch === '\\' && i + 1 < text.length && (inQuotes || text[i + 1] === '"')) {
         i += 1;
         continue;
       }
@@ -228,7 +244,7 @@ export function parseThunderbirdCondition(conditionStr) {
     let quoted = false;
     for (let i = 0; i < inner.length && parts.length < 2; i += 1) {
       const ch = inner[i];
-      if (ch === '\\' && quoted && i + 1 < inner.length) {
+      if (ch === '\\' && i + 1 < inner.length && (quoted || inner[i + 1] === '"')) {
         i += 1;
         continue;
       }
@@ -255,6 +271,8 @@ export function parseThunderbirdCondition(conditionStr) {
     const trimmedVal = value.trim();
     if (isSingleQuotedValue(trimmedVal)) {
       value = unescapeQuoted(trimmedVal.slice(1, -1));
+    } else {
+      value = value.replaceAll('\\"', '"');
     }
     clauses.push({ field: rawField, customQuoted, operator, value });
   }
@@ -331,9 +349,26 @@ export function resolveThunderbirdFolderUri(uri, knownFolders) {
       ? folder.accountEmails.map((e) => String(e ?? '').trim().toLowerCase()).filter(Boolean)
       : [];
 
+  // The folders of one account only, or null when the candidates span several
+  // accounts and `preferred` doesn't single one out. An address can be an
+  // extra identity of another account, and a path that exists only there must
+  // not receive the mail.
+  const accountOf = (f) => String(f?.accountId ?? f?.accountName ?? '');
+  const oneAccount = (candidates, preferred) => {
+    const accounts = new Set(candidates.map(accountOf));
+    if (accounts.size <= 1) return candidates;
+    const chosen = new Set(candidates.filter(preferred).map(accountOf));
+    return chosen.size === 1 ? candidates.filter((f) => chosen.has(accountOf(f))) : null;
+  };
+
   if (username) {
     // 1. Exact identity email match (authoritative regardless of display name).
-    const byExactEmail = knownFolders.filter((f) => emailsOf(f).includes(username));
+    //    The account whose default identity is the login address wins.
+    const byExactEmail = oneAccount(
+      knownFolders.filter((f) => emailsOf(f).includes(username)),
+      (f) => emailsOf(f)[0] === username,
+    );
+    if (byExactEmail === null) return null;
     if (byExactEmail.length > 0) return pickByPath(byExactEmail);
 
     // 2. Local-part login + server host matching the identity email's domain
@@ -397,11 +432,18 @@ function convertClause(clause, where, problems) {
       problems.push(t('import_sizeValue', where));
       return null;
     }
-    const useMb = kb >= 1024 && kb % 1024 === 0;
-    const size = useMb ? kb / 1024 : kb;
-    const unit = useMb ? 'MB' : 'KB';
-    if (op === 'is greater than') return { field: SIZE_FIELD, operator: SIZE_OPERATORS.largerThan, size, unit, negate: false };
-    if (op === 'is less than') return { field: SIZE_FIELD, operator: SIZE_OPERATORS.smallerThan, size, unit, negate: false };
+    const sized = (amountKb, operator) => {
+      const useMb = amountKb >= 1024 && amountKb % 1024 === 0;
+      return {
+        field: SIZE_FIELD,
+        operator,
+        size: useMb ? amountKb / 1024 : amountKb,
+        unit: useMb ? 'MB' : 'KB',
+        negate: false,
+      };
+    };
+    if (op === 'is greater than') return sized(kb, SIZE_OPERATORS.largerThan);
+    if (op === 'is less than') return sized(kb, SIZE_OPERATORS.smallerThan);
     problems.push(t('import_tbUnsupportedCondition', where, `${clause.field} ${op}`));
     return null;
   }
@@ -413,8 +455,10 @@ function convertClause(clause, where, problems) {
       problems.push(t('import_noTag', where));
       return null;
     }
-    if (op === 'contains' || op === 'is') return { field: TAG_FIELD, operator: HAS_TAG, tagKey, negate: false };
-    if (op === "doesn't contain" || op === "isn't") return { field: TAG_FIELD, operator: HAS_TAG, tagKey, negate: true };
+    // Thunderbird's "is" means the message has this tag and no other tag, which
+    // a tag condition here can't say. Only "contains" converts.
+    if (op === 'contains') return { field: TAG_FIELD, operator: HAS_TAG, tagKey, negate: false };
+    if (op === "doesn't contain") return { field: TAG_FIELD, operator: HAS_TAG, tagKey, negate: true };
     problems.push(t('import_tbUnsupportedCondition', where, `${clause.field} ${op}`));
     return null;
   }
@@ -509,13 +553,25 @@ function convertClause(clause, where, problems) {
     };
   }
 
-  const mappedOp = STRING_OPERATOR_MAP[op];
+  const mappedOp = Object.hasOwn(STRING_OPERATOR_MAP, op) ? STRING_OPERATOR_MAP[op] : null;
   if (!mappedOp) {
+    problems.push(t('import_tbUnsupportedCondition', where, `${clause.field} ${op}`));
+    return null;
+  }
+  // On an address field, Thunderbird compares these operators with each
+  // address and each display name. A condition here compares the whole header
+  // text, so "From isn't boss@example.com" would match mail from
+  // "Boss <boss@example.com>", and a filter that deletes would delete it.
+  if (!clause.customQuoted && PER_ADDRESS_FIELDS.has(targetField) && PER_ADDRESS_OPERATORS.has(op)) {
     problems.push(t('import_tbUnsupportedCondition', where, `${clause.field} ${op}`));
     return null;
   }
   if (val === '') {
     problems.push(t('import_emptyValue', where));
+    return null;
+  }
+  if (mappedOp.operator === 'matchesRegex' && compilePattern(val) === null) {
+    problems.push(t('import_invalidRegex', where));
     return null;
   }
   return {
@@ -535,6 +591,7 @@ function convertActions(rawActions, where, knownFolders, problems) {
   const mapped = [];
   let stopProcessing = false;
   let missingDestFolder = false;
+  let droppedAction = false;
   for (const raw of rawActions) {
     const kind = String(raw?.type ?? '').trim();
     const value = String(raw?.value ?? '').trim();
@@ -567,15 +624,20 @@ function convertActions(rawActions, where, knownFolders, problems) {
     } else if (lower === 'addtag') {
       if (!value) {
         problems.push(t('import_needsTag', where, 'tag'));
+        droppedAction = true;
         continue;
       }
       mapped.push({ type: 'tag', tagKey: value });
     } else if (lower === 'junkscore') {
       if (value === '100') mapped.push({ type: 'markJunk' });
       else if (value === '0') mapped.push({ type: 'markNotJunk' });
-      else problems.push(t('import_tbUnsupportedAction', where, `${kind} (${value})`));
+      else {
+        problems.push(t('import_tbUnsupportedAction', where, `${kind} (${value})`));
+        droppedAction = true;
+      }
     } else {
       problems.push(t('import_tbUnsupportedAction', where, kind));
+      droppedAction = true;
     }
   }
 
@@ -606,6 +668,12 @@ function convertActions(rawActions, where, knownFolders, problems) {
 
   if (actions.length === 0) {
     problems.push(t('import_noUsableAction', where));
+    return { actions: null, stopProcessing };
+  }
+  // "Forward, then Delete" must never turn into "Delete only": when an action
+  // was dropped and the rest still removes mail from the folder, skip the rule.
+  if (droppedAction && terminal) {
+    problems.push(t('import_skippedDroppedAction', where));
     return { actions: null, stopProcessing };
   }
   return { actions, stopProcessing };
@@ -676,9 +744,15 @@ export function importThunderbirdFilters(text, { knownFolders = [], existingRule
     }
     if (!actions) continue;
 
+    // A filter that Thunderbird runs only by hand, after sending, or before
+    // archiving would run on a timer here, so it is imported turned off.
+    const typeBits = Number.parseInt(filter.type, 10);
+    const automatic = !Number.isFinite(typeBits) || (typeBits & AUTOMATIC_TYPE_BITS) !== 0;
+    if (!automatic && filter.enabled === true) problems.push(t('import_tbNotAutomatic', where));
+
     const rule = {
       name: name || t('import_defaultRuleName'),
-      enabled: filter.enabled !== false,
+      enabled: filter.enabled === true && automatic,
       match: condParsed.mode === 'all' ? 'all' : 'any',
       // msgFilterRules.dat does not name the source folder; the user picks
       // which folder(s) to watch on the options page before saving.
