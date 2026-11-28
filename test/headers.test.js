@@ -45,7 +45,8 @@ test('a getHeaders that never answers falls back to getFull on the same message'
   assert.deepEqual(await reads.read(1, 'acct'), HEADERS);
   assert.deepEqual(calls, ['headers:1', 'full:1']);
   assert.equal(logged.length, 1);
-  assert.match(logged[0], /no answer after 0\.02 s, reading whole messages on this account/);
+  // The line names the account, so a report shows which one is slow.
+  assert.match(logged[0], /no answer after 0\.02 s on account acct, reading whole messages on this account/);
   // The wait was made good, so it does not count toward the limit.
   assert.equal(reads.timeouts, 0);
   assert.equal(reads.skipped, 0);
@@ -326,4 +327,24 @@ test('a header line named Headers does not replace the real headers', async () =
   // The whole-message read returns a part: its `headers` property is the dictionary.
   const full = setup({ getHeaders: undefined, getFull: answers(sent) });
   assert.deepEqual(await full.reads.read(1, 'acct'), sent);
+});
+
+test('the reads count the calls that answered and keep the slowest one', async () => {
+  let t = 0;
+  const cost = { 1: 40, 2: 900, 3: 120 };
+  const reads = createHeaderReads({
+    getHeaders: async (id) => {
+      t += cost[id];
+      return { 'x-id': [String(id)] };
+    },
+    getFull: answers({}),
+    timeoutMs: 1000,
+    limit: 5,
+    now: () => t,
+  });
+  for (const id of [1, 2, 3, 2]) await reads.read(id, 'acct');
+  assert.equal(reads.fresh, 3);
+  assert.equal(reads.cached, 1);
+  assert.equal(reads.slowestMs, 900);
+  assert.equal(reads.spentMs, 1060);
 });

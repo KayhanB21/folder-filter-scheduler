@@ -104,11 +104,11 @@
     "description": "Heading of the section with the diagnostics report."
   },
   "diag_hint": {
-    "message": "期待どおりに動作しない場合は、このレポートをメッセージに添えて送ってください。レポートには Thunderbird のバージョン、各ルールの構成、最近の実行内容が含まれます。下のチェックボックスをオンにしない限り、アドレス、ドメイン、パターン、フォルダー名は含まれません。ここに表示されている内容がそのまま共有されます。",
+    "message": "期待どおりに動作しない場合は、このレポートをメッセージに添えて送ってください。レポートには Thunderbird のバージョン、各ルールの構成、最近の実行内容が含まれます。下のチェックボックスをオンにしない限り、アドレス、ドメイン、パターン、フォルダー名、ルール名は含まれません。ここに表示されている内容がそのまま共有されます。",
     "description": "Explanation of the diagnostics report. The report itself stays in English."
   },
   "diag_includeValues": {
-    "message": "ルールの値 (アドレス、ドメイン、パターン、フォルダー) を含める",
+    "message": "ルールの値 (アドレス、ドメイン、パターン、フォルダー、ルール名) を含める",
     "description": "Checkbox that adds the values of each rule to the diagnostics report."
   },
   "diag_copy": {
@@ -1760,5 +1760,41 @@
   },
   "folders_missing": {
     "message": "見つからないフォルダー"
+  },
+  "action_typeLabel": {
+    "message": "アクション"
+  },
+  "action_folderLabel": {
+    "message": "保存先フォルダー"
+  },
+  "action_remove": {
+    "message": "このアクションを削除"
+  },
+  "cond_fieldLabel": {
+    "message": "フィールド"
+  },
+  "cond_operatorLabel": {
+    "message": "条件の種類"
+  },
+  "cond_bookLabel": {
+    "message": "アドレス帳"
+  },
+  "cond_remove": {
+    "message": "この条件を削除"
+  },
+  "cond_domainsLabel": {
+    "message": "ドメイン (1 行に 1 つ)"
+  },
+  "status_importSettings": {
+    "message": "このファイルは次の設定も置き換えました: $1。保存する前に確認してください。"
+  },
+  "import_settingInterval": {
+    "message": "実行間隔"
+  },
+  "import_settingAdvanced": {
+    "message": "詳細設定"
+  },
+  "import_settingAllowlist": {
+    "message": "保護するドメイン"
   }
 }

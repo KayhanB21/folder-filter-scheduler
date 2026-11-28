@@ -80,10 +80,10 @@
     "message": "진단"
   },
   "diag_hint": {
-    "message": "기대와 다르게 동작하면 메시지와 함께 이 보고서를 보내 주세요. 보고서에는 Thunderbird 버전, 각 규칙의 구조, 최근 실행 내용이 들어 있습니다. 아래 상자를 선택하지 않으면 주소, 도메인, 패턴, 폴더 이름은 빠집니다. 여기 보이는 내용이 공유되는 내용 그대로입니다."
+    "message": "기대와 다르게 동작하면 메시지와 함께 이 보고서를 보내 주세요. 보고서에는 Thunderbird 버전, 각 규칙의 구조, 최근 실행 내용이 들어 있습니다. 아래 상자를 선택하지 않으면 주소, 도메인, 패턴, 폴더 이름, 규칙 이름은 빠집니다. 여기 보이는 내용이 공유되는 내용 그대로입니다."
   },
   "diag_includeValues": {
-    "message": "규칙 값 포함 (주소, 도메인, 패턴, 폴더)"
+    "message": "규칙 값 포함 (주소, 도메인, 패턴, 폴더, 규칙 이름)"
   },
   "diag_copy": {
     "message": "보고서 복사"
@@ -1392,5 +1392,41 @@
   },
   "folders_missing": {
     "message": "찾을 수 없는 폴더"
+  },
+  "action_typeLabel": {
+    "message": "동작"
+  },
+  "action_folderLabel": {
+    "message": "대상 폴더"
+  },
+  "action_remove": {
+    "message": "이 동작 삭제"
+  },
+  "cond_fieldLabel": {
+    "message": "필드"
+  },
+  "cond_operatorLabel": {
+    "message": "연산자"
+  },
+  "cond_bookLabel": {
+    "message": "주소록"
+  },
+  "cond_remove": {
+    "message": "이 조건 삭제"
+  },
+  "cond_domainsLabel": {
+    "message": "도메인 (한 줄에 하나)"
+  },
+  "status_importSettings": {
+    "message": "이 파일은 다음 설정도 바꿨습니다: $1. 저장하기 전에 확인하세요."
+  },
+  "import_settingInterval": {
+    "message": "실행 간격"
+  },
+  "import_settingAdvanced": {
+    "message": "고급 설정"
+  },
+  "import_settingAllowlist": {
+    "message": "보호된 도메인"
   }
 }

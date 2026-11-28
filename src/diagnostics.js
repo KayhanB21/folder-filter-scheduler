@@ -11,8 +11,9 @@
  *
  * Privacy is the design constraint. The report is written to be pasted into an
  * email or a public GitHub issue, so by default it carries no addresses, no
- * domains, no patterns, and no folder names: only the shape of each rule and
- * what the engine did. The user can opt in to values when they want to share
+ * domains, no patterns, no folder names, and no rule names: only the shape of
+ * each rule and what the engine did. A rule name counts as a value because a
+ * rule made from a message is named after its sender or its subject. The user can opt in to values when they want to share
  * them, and the options page shows the exact text before it leaves.
  */
 
@@ -52,6 +53,78 @@ function formatArg(arg) {
   return String(arg);
 }
 
+/**
+ * Marks around a part of a log line that the report hides unless the user
+ * includes values: a rule name or a folder id. The log keeps both forms, so
+ * the choice is made when the report is built, also for a rule that was
+ * renamed or deleted after the line was written. The marks are private-use
+ * code points, and `sensitive` removes them from the text it wraps.
+ */
+const HIDE_START = '\uE000';
+const HIDE_MIDDLE = '\uE001';
+const HIDE_END = '\uE002';
+const HIDE_MARKS = /[\uE000-\uE002]/g;
+// A line cut at MAX_MESSAGE_CHARS can end inside a span, so the end is optional.
+const HIDE_SPAN = /\uE000([^\uE000-\uE002]*)(?:\uE001([^\uE000-\uE002]*))?(?:\uE002|$)/g;
+const HIDDEN = '(hidden)';
+
+/** `value` for a log line, shown as `standIn` in a report without values. */
+export function sensitive(value, standIn = HIDDEN) {
+  const clean = (text) => String(text ?? '').replace(HIDE_MARKS, '');
+  return `${HIDE_START}${clean(value)}${HIDE_MIDDLE}${clean(standIn)}${HIDE_END}`;
+}
+
+/** The first 8 characters of a rule id, as the report prints it. */
+const shortId = (id) => String(id ?? '?').slice(0, 8);
+
+/**
+ * A rule in a log line: its quoted name, or its short id in a report without
+ * values. The rule list of the report prints the same id.
+ */
+export function ruleRef(rule) {
+  return sensitive(`"${rule?.name ?? ''}"`, rule?.id ? `[${shortId(rule.id)}]` : '[not saved]');
+}
+
+/** A folder id in a log line. The id holds the folder path. */
+export const folderRef = (folderId) => sensitive(folderId, '(folder)');
+
+/** Log text with each marked part as its value or as its stand-in. */
+export function revealText(text, includeValues) {
+  return String(text ?? '').replace(HIDE_SPAN, (_, value, standIn) => (includeValues ? value : standIn ?? HIDDEN));
+}
+
+/**
+ * Hide rule names and folder ids in a line written before the log marked
+ * them. A known rule name becomes its short id. Any other quoted name after
+ * "rule" or "dry run" is cut up to the last quote of the line, so a name that
+ * holds a quote can't show through.
+ */
+function hideUnmarked(text, rules) {
+  let out = String(text ?? '');
+  const named = rules.filter((r) => String(r?.name ?? '') !== '').sort((a, b) => b.name.length - a.name.length);
+  for (const rule of named) out = out.split(`"${rule.name}"`).join(`[${shortId(rule.id)}]`);
+  return out
+    .replace(/\b(failed for folder ).*?(?=( in rule )|$)/g, '$1(folder)')
+    .replace(/\b(rule|dry run) ".*"/g, '$1 [name hidden]');
+}
+
+/**
+ * What the header or body reads of one run cost, for the log. Empty when the
+ * run made no such read, so a run over indexed fields keeps a short line.
+ */
+export function describeReads(label, reads) {
+  if (!reads) return '';
+  const { fresh = 0, cached = 0, timeouts = 0, skipped = 0 } = reads;
+  if (fresh + cached + timeouts + skipped === 0) return '';
+  const parts = [`${fresh} in ${Math.round(reads.spentMs ?? 0)} ms`];
+  if (fresh > 0) parts.push(`slowest ${Math.round(reads.slowestMs ?? 0)} ms`);
+  if (cached > 0) parts.push(`${cached} from cache`);
+  if (timeouts > 0) parts.push(`${timeouts} with no answer`);
+  if (skipped > 0) parts.push(`${skipped} skipped`);
+  if (reads.budgetReached) parts.push('time budget reached');
+  return `; ${label}: ${parts.join(', ')}`;
+}
+
 /** One log entry from console-style arguments. */
 export function makeEntry(level, args, now = new Date()) {
   let msg = (args ?? []).map(formatArg).join(' ');
@@ -87,9 +160,16 @@ export function formatLocalTime(time, offsetMinutes) {
   );
 }
 
-export function formatEntry(entry, offsetMinutes) {
+/**
+ * One log line of the report. Without `includeValues`, rule names and folder
+ * ids are replaced: see `sensitive` and `hideUnmarked`.
+ */
+export function formatEntry(entry, offsetMinutes, { includeValues = false, rules = [] } = {}) {
   const t = entry?.t == null ? '?' : formatLocalTime(entry.t, offsetMinutes);
-  return `${t} ${entry?.level === 'warn' ? 'WARN' : 'info'} ${entry?.msg ?? ''}`;
+  const raw = String(entry?.msg ?? '');
+  let msg = revealText(raw, includeValues);
+  if (!includeValues && !raw.includes(HIDE_START)) msg = hideUnmarked(raw, rules);
+  return `${t} ${entry?.level === 'warn' ? 'WARN' : 'info'} ${msg}`;
 }
 
 const AGE_LABELS = { [AGE_OPERATORS.olderThan]: 'older than', [AGE_OPERATORS.newerThan]: 'newer than' };
@@ -136,10 +216,11 @@ export function describeAction(a, { includeValues = false } = {}) {
   return type;
 }
 
-function describeRule(rule, runState, { includeValues, generatedAt, offsetMinutes }) {
+function describeRule(rule, runState, { includeValues, generatedAt, offsetMinutes, position }) {
   const lines = [];
   const status = rule.enabled === false ? 'disabled' : 'enabled';
-  lines.push(`- "${rule.name}" [${status}] id ${String(rule.id ?? '?').slice(0, 8)}`);
+  // The id links the rule to its log lines, which print the same 8 characters.
+  lines.push(`- ${includeValues ? `"${rule.name}"` : `rule ${position}`} [${status}] id ${shortId(rule.id)}`);
   const folders = Array.isArray(rule.folderIds) ? rule.folderIds : [];
   const subs = rule.includeSubfolders === true ? ' and their subfolders' : '';
   lines.push(`    folders: ${folders.length}${subs}${includeValues && folders.length ? ` (${folders.join(', ')})` : ''}`);
@@ -222,7 +303,7 @@ export function buildReport(input) {
     `extension: ${version ?? '?'}`,
     `thunderbird: ${browser ? `${browser.name ?? ''} ${browser.version ?? ''}`.trim() : '?'}`,
     `platform: ${platform ? `${platform.os ?? '?'} ${platform.arch ?? ''}`.trim() : '?'}`,
-    `values included: ${includeValues ? 'yes' : 'no (addresses, domains, patterns and folders are hidden)'}`,
+    `values included: ${includeValues ? 'yes' : 'no (addresses, domains, patterns, folders and rule names are hidden)'}`,
     '',
     `interval: every ${config?.intervalMinutes ?? '?'} min`,
     `next scheduled run: ${alarm?.scheduledTime ? formatLocalTime(new Date(alarm.scheduledTime), offsetMinutes) : 'none scheduled'}`,
@@ -239,10 +320,12 @@ export function buildReport(input) {
     `protected domains: ${Array.isArray(config?.allowlist) ? config.allowlist.length : '?'}`,
     '',
     `rules (${rules.length}):`,
-    ...rules.flatMap((r) => describeRule(r, runState, { includeValues, generatedAt, offsetMinutes })),
+    ...rules.flatMap((r, index) =>
+      describeRule(r, runState, { includeValues, generatedAt, offsetMinutes, position: index + 1 }),
+    ),
     '',
     `log (last ${entries?.length ?? 0} entries, oldest first):`,
-    ...(entries ?? []).map((entry) => formatEntry(entry, offsetMinutes)),
+    ...(entries ?? []).map((entry) => formatEntry(entry, offsetMinutes, { includeValues, rules })),
   ];
   return `${lines.join('\n')}\n`;
 }

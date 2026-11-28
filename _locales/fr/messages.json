@@ -80,10 +80,10 @@
     "message": "Diagnostic"
   },
   "diag_hint": {
-    "message": "Si quelque chose ne fonctionne pas comme prévu, joignez ce rapport à votre message. Il indique votre version de Thunderbird, la structure de chaque règle et ce qu’ont fait les dernières exécutions. Les adresses, domaines, motifs et noms de dossiers sont omis, sauf si vous cochez la case ci-dessous. Ce que vous voyez ici est exactement ce qui sera partagé."
+    "message": "Si quelque chose ne fonctionne pas comme prévu, joignez ce rapport à votre message. Il indique votre version de Thunderbird, la structure de chaque règle et ce qu’ont fait les dernières exécutions. Les adresses, domaines, motifs, noms de dossiers et noms de règles sont omis, sauf si vous cochez la case ci-dessous. Ce que vous voyez ici est exactement ce qui sera partagé."
   },
   "diag_includeValues": {
-    "message": "Inclure les valeurs des règles (adresses, domaines, motifs, dossiers)"
+    "message": "Inclure les valeurs des règles (adresses, domaines, motifs, dossiers, noms de règles)"
   },
   "diag_copy": {
     "message": "Copier le rapport"
@@ -1554,5 +1554,41 @@
   },
   "folders_missing": {
     "message": "Dossiers introuvables"
+  },
+  "action_typeLabel": {
+    "message": "Action"
+  },
+  "action_folderLabel": {
+    "message": "Dossier de destination"
+  },
+  "action_remove": {
+    "message": "Supprimer cette action"
+  },
+  "cond_fieldLabel": {
+    "message": "Champ"
+  },
+  "cond_operatorLabel": {
+    "message": "Opérateur"
+  },
+  "cond_bookLabel": {
+    "message": "Carnet d’adresses"
+  },
+  "cond_remove": {
+    "message": "Supprimer cette condition"
+  },
+  "cond_domainsLabel": {
+    "message": "Domaines, un par ligne"
+  },
+  "status_importSettings": {
+    "message": "Le fichier a aussi remplacé ces réglages : $1. Vérifiez-les avant d’enregistrer."
+  },
+  "import_settingInterval": {
+    "message": "intervalle d’exécution"
+  },
+  "import_settingAdvanced": {
+    "message": "réglages avancés"
+  },
+  "import_settingAllowlist": {
+    "message": "domaines protégés"
   }
 }

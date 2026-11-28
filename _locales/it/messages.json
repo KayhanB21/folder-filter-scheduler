@@ -80,10 +80,10 @@
     "message": "Diagnostica"
   },
   "diag_hint": {
-    "message": "Se qualcosa non funziona come previsto, invia questo rapporto insieme al tuo messaggio. Contiene la versione di Thunderbird, la struttura di ogni regola e cosa hanno fatto le ultime esecuzioni. Indirizzi, domini, pattern e nomi delle cartelle sono esclusi, a meno che tu non selezioni la casella qui sotto. Ciò che vedi qui è esattamente ciò che verrà condiviso."
+    "message": "Se qualcosa non funziona come previsto, invia questo rapporto insieme al tuo messaggio. Contiene la versione di Thunderbird, la struttura di ogni regola e cosa hanno fatto le ultime esecuzioni. Indirizzi, domini, pattern, nomi delle cartelle e nomi delle regole sono esclusi, a meno che tu non selezioni la casella qui sotto. Ciò che vedi qui è esattamente ciò che verrà condiviso."
   },
   "diag_includeValues": {
-    "message": "Includi i valori delle regole (indirizzi, domini, pattern, cartelle)"
+    "message": "Includi i valori delle regole (indirizzi, domini, pattern, cartelle, nomi delle regole)"
   },
   "diag_copy": {
     "message": "Copia rapporto"
@@ -1473,5 +1473,41 @@
   },
   "folders_missing": {
     "message": "Cartelle non trovate"
+  },
+  "action_typeLabel": {
+    "message": "Azione"
+  },
+  "action_folderLabel": {
+    "message": "Cartella di destinazione"
+  },
+  "action_remove": {
+    "message": "Rimuovi questa azione"
+  },
+  "cond_fieldLabel": {
+    "message": "Campo"
+  },
+  "cond_operatorLabel": {
+    "message": "Operatore"
+  },
+  "cond_bookLabel": {
+    "message": "Rubrica"
+  },
+  "cond_remove": {
+    "message": "Rimuovi questa condizione"
+  },
+  "cond_domainsLabel": {
+    "message": "Domini, uno per riga"
+  },
+  "status_importSettings": {
+    "message": "Il file ha sostituito anche queste impostazioni: $1. Controllale prima di salvare."
+  },
+  "import_settingInterval": {
+    "message": "intervallo di esecuzione"
+  },
+  "import_settingAdvanced": {
+    "message": "impostazioni avanzate"
+  },
+  "import_settingAllowlist": {
+    "message": "domini protetti"
   }
 }

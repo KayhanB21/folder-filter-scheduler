@@ -80,10 +80,10 @@
     "message": "诊断"
   },
   "diag_hint": {
-    "message": "如果某项功能未按预期工作，请随消息一起发送此报告。报告列出您的 Thunderbird 版本、每条规则的结构，以及最近几次运行的情况。除非勾选下方的复选框，否则报告不包含地址、域名、匹配模式和文件夹名称。此处显示的内容就是将要分享的全部内容。"
+    "message": "如果某项功能未按预期工作，请随消息一起发送此报告。报告列出您的 Thunderbird 版本、每条规则的结构，以及最近几次运行的情况。除非勾选下方的复选框，否则报告不包含地址、域名、匹配模式、文件夹名称和规则名称。此处显示的内容就是将要分享的全部内容。"
   },
   "diag_includeValues": {
-    "message": "包含规则的值（地址、域名、匹配模式、文件夹）"
+    "message": "包含规则的值（地址、域名、匹配模式、文件夹、规则名称）"
   },
   "diag_copy": {
     "message": "复制报告"
@@ -1392,5 +1392,41 @@
   },
   "folders_missing": {
     "message": "未找到的文件夹"
+  },
+  "action_typeLabel": {
+    "message": "操作"
+  },
+  "action_folderLabel": {
+    "message": "目标文件夹"
+  },
+  "action_remove": {
+    "message": "删除此操作"
+  },
+  "cond_fieldLabel": {
+    "message": "字段"
+  },
+  "cond_operatorLabel": {
+    "message": "运算符"
+  },
+  "cond_bookLabel": {
+    "message": "通讯录"
+  },
+  "cond_remove": {
+    "message": "删除此条件"
+  },
+  "cond_domainsLabel": {
+    "message": "域名（每行一个）"
+  },
+  "status_importSettings": {
+    "message": "该文件还替换了以下设置：$1。保存前请检查。"
+  },
+  "import_settingInterval": {
+    "message": "运行间隔"
+  },
+  "import_settingAdvanced": {
+    "message": "高级设置"
+  },
+  "import_settingAllowlist": {
+    "message": "受保护的域名"
   }
 }

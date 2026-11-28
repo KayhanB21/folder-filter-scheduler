@@ -104,11 +104,11 @@
     "description": "Heading of the section with the diagnostics report."
   },
   "diag_hint": {
-    "message": "If something does not behave as expected, send this report along with your message. It lists your Thunderbird version, the shape of each rule, and what recent runs did. Addresses, domains, patterns and folder names are left out unless you tick the box below. What you see here is exactly what will be shared.",
+    "message": "If something does not behave as expected, send this report along with your message. It lists your Thunderbird version, the shape of each rule, and what recent runs did. Addresses, domains, patterns, folder names and rule names are left out unless you tick the box below. What you see here is exactly what will be shared.",
     "description": "Explanation of the diagnostics report. The report itself stays in English."
   },
   "diag_includeValues": {
-    "message": "Include rule values (addresses, domains, patterns, folders)",
+    "message": "Include rule values (addresses, domains, patterns, folders, rule names)",
     "description": "Checkbox that adds the values of each rule to the diagnostics report."
   },
   "diag_copy": {
@@ -1962,5 +1962,53 @@
   "folders_missing": {
     "message": "Folders not found",
     "description": "Heading in a folder list for the folders a rule names that no longer exist in this profile, for example after a folder was renamed or deleted."
+  },
+  "action_typeLabel": {
+    "message": "Action",
+    "description": "Accessible name of the list that chooses what an action does."
+  },
+  "action_folderLabel": {
+    "message": "Destination folder",
+    "description": "Accessible name of the folder list of a move or copy action."
+  },
+  "action_remove": {
+    "message": "Remove this action",
+    "description": "Accessible name of the \u00d7 button that removes one action from a rule."
+  },
+  "cond_fieldLabel": {
+    "message": "Field",
+    "description": "Accessible name of the list that chooses which part of a message a condition checks."
+  },
+  "cond_operatorLabel": {
+    "message": "Operator",
+    "description": "Accessible name of the list that chooses how a condition compares, for example contains or is."
+  },
+  "cond_bookLabel": {
+    "message": "Address book",
+    "description": "Accessible name of the address book list of a condition."
+  },
+  "cond_remove": {
+    "message": "Remove this condition",
+    "description": "Accessible name of the \u00d7 button that removes one condition from a rule."
+  },
+  "cond_domainsLabel": {
+    "message": "Domains, one per line",
+    "description": "Accessible name of the text box that holds the domain list of a condition."
+  },
+  "status_importSettings": {
+    "message": "The file also replaced these settings: $1. Check them before you save.",
+    "description": "Added to the status after Import when the file changed settings on the page. $1 is a list of setting names: run interval, Advanced settings, protected domains."
+  },
+  "import_settingInterval": {
+    "message": "run interval",
+    "description": "A setting name in the list of status_importSettings: the Run every N minutes box."
+  },
+  "import_settingAdvanced": {
+    "message": "Advanced settings",
+    "description": "A setting name in the list of status_importSettings: the Advanced section."
+  },
+  "import_settingAllowlist": {
+    "message": "protected domains",
+    "description": "A setting name in the list of status_importSettings: the Protected domains list."
   }
 }

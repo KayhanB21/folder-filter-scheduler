@@ -1898,20 +1898,33 @@ async function importRules(file) {
   if ($('#rule-filter')?.value) {
     $('#rule-filter').value = '';
   }
+  // The file can carry settings too. Only a setting that differs from the page
+  // is replaced, and the status names each one: before, the import replaced
+  // the interval, the Advanced settings, and the protected domains unseen.
+  const page = collectConfig();
   for (const rule of rules) renderRule(rule);
   applyRuleFilter();
-  if (allowlist?.length) $('#allowlist').value = allowlist.join('\n');
-  if (intervalMinutes) $('#interval').value = intervalMinutes;
-  if (advanced) fillAdvanced(advanced);
+  const newInterval = !!intervalMinutes && intervalMinutes !== page.intervalMinutes;
+  const newAdvanced = !!advanced && Object.keys(advanced).some((key) => advanced[key] !== page.advanced[key]);
+  const newAllowlist = allowlist?.length > 0 && allowlist.join('\n') !== page.allowlist.join('\n');
+  if (newInterval) $('#interval').value = intervalMinutes;
+  if (newAdvanced) fillAdvanced(advanced);
+  if (newAllowlist) $('#allowlist').value = allowlist.join('\n');
+  const replaced = [
+    newInterval && t('import_settingInterval'),
+    newAdvanced && t('import_settingAdvanced'),
+    newAllowlist && t('import_settingAllowlist'),
+  ].filter(Boolean);
+  const settingsNote = replaced.length > 0 ? t('status_importSettings', formatList(replaced, 'conjunction')) : '';
 
   const remapped = remappedFolders > 0 ? plural('status_importRemapped', remappedFolders, remappedFolders) : '';
   const tbHint = fromThunderbird ? t('status_importTbPickFolders') : '';
   const skipped = problems.length > 0 ? t('status_importSkipped', problems.join('; ')) : '';
   flash(
-    [plural('status_imported', rules.length, rules.length), tbHint, remapped, skipped, dupeNote]
+    [plural('status_imported', rules.length, rules.length), tbHint, remapped, settingsNote, skipped, dupeNote]
       .filter(Boolean)
       .join(' '),
-    problems.length > 0,
+    problems.length > 0 || replaced.length > 0,
   );
 }
 

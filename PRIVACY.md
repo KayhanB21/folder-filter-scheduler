@@ -41,8 +41,9 @@ server. Rules without an authentication condition never contact it.
 Your rule configuration (folders, conditions, actions, schedules, the protected
 domain list, and the Advanced settings) is saved with Thunderbird's local
 extension storage on your device. So are the times each rule last scanned, and
-a diagnostics log of up to 1000 recent entries, which records counts and rule
-names but no addresses. The results
+a diagnostics log of up to 1000 recent entries, which records counts, rule
+names, and the folder of a failed scan, but no addresses. The diagnostics
+report leaves rule names and folders out unless you include values. The results
 of authentication checks are kept there too, for up to 90 days, keyed by a hash
 of each message's Message-ID, sender, date, and size. For a rule that copies
 mail, the add-on keeps up to 50,000 such hashes for each destination folder, so
