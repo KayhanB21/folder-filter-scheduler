@@ -1385,7 +1385,7 @@
     "message": "Choisissez les dossiers que chaque règle doit surveiller avant d’enregistrer."
   },
   "status_draftCreated": {
-    "message": "Brouillon de règle créé à partir du message sélectionné — choisissez une action puis cliquez sur Enregistrer."
+    "message": "Brouillon de règle créé à partir du message sélectionné. Choisissez une action puis cliquez sur Enregistrer."
   },
   "options_filterRules": {
     "message": "Filtrer les règles…"
@@ -1508,7 +1508,7 @@
     "message": "Certains dossiers n’ont pas pu être analysés."
   },
   "test_noMatches": {
-    "message": "Aucun message ne correspond — rien ne serait déplacé, étiqueté ou supprimé."
+    "message": "Aucun message ne correspond. Rien ne serait déplacé, étiqueté ou supprimé."
   },
   "test_noSubject": {
     "message": "(sans sujet)"
@@ -1520,10 +1520,10 @@
     "message": "Choisissez au moins un dossier pour « $1 » avant de la tester."
   },
   "status_orderChanged": {
-    "message": "Ordre des règles modifié — cliquez sur Enregistrer pour le conserver."
+    "message": "Ordre des règles modifié. Cliquez sur Enregistrer pour le conserver."
   },
   "status_ruleDuplicated": {
-    "message": "Dupliquée en « $1 » — vérifiez-la et cliquez sur Enregistrer."
+    "message": "Dupliquée en « $1 ». Vérifiez-la et cliquez sur Enregistrer."
   },
   "rule_stopProcessingTitle": {
     "message": "S’applique aux règles suivantes d’une même exécution ; n’affecte pas l’exécution d’une seule règle ni les planifications indépendantes"

@@ -1223,7 +1223,7 @@
     "message": "保存前请为每条规则选择要监控的文件夹。"
   },
   "status_draftCreated": {
-    "message": "已根据所选邮件创建规则草稿 — 请选择操作并点击保存。"
+    "message": "已根据所选邮件创建规则草稿。请选择操作并点击保存。"
   },
   "options_filterRules": {
     "message": "筛选规则…"
@@ -1346,7 +1346,7 @@
     "message": "部分文件夹无法扫描。"
   },
   "test_noMatches": {
-    "message": "没有匹配的邮件 — 不会移动、标记或删除任何邮件。"
+    "message": "没有匹配的邮件。不会移动、标记或删除任何邮件。"
   },
   "test_noSubject": {
     "message": "（无主题）"
@@ -1358,10 +1358,10 @@
     "message": "测试前请为“$1”至少选择一个文件夹。"
   },
   "status_orderChanged": {
-    "message": "规则顺序已更改 — 请点击保存以保留新顺序。"
+    "message": "规则顺序已更改。请点击保存以保留新顺序。"
   },
   "status_ruleDuplicated": {
-    "message": "已复制为“$1” — 请检查并点击保存。"
+    "message": "已复制为“$1”。请检查并点击保存。"
   },
   "rule_stopProcessingTitle": {
     "message": "适用于同一次运行中的后续规则；不影响单条规则的运行或独立计划任务"

@@ -110,7 +110,7 @@ export function stampScan(state, kind, startedAt) {
  * Record the user-visible outcome of one rule execution without touching the
  * scan watermarks (`lastRunAt` / `lastCatchUpAt`).
  *
- * Called on every pass — including failed ones where the watermark must hold —
+ * Called on every pass, including failed ones where the watermark must hold,
  * so each rule card can display when it last ran, how many messages matched,
  * and whether errors occurred. Carries counts and timestamps only, never PII.
  */

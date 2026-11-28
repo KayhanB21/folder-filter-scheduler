@@ -308,7 +308,7 @@ export function parseThunderbirdFolderUri(uri) {
  *
  * When the URI carries a username (e.g. `work@gmail.com` or `alice`), it is
  * matched against the account's identity email addresses (or exact account name
- * only when identity emails are unavailable) — never against the mail server
+ * only when identity emails are unavailable), never against the mail server
  * host alone, so two Gmail accounts cannot collide. Host matching is allowed
  * only when the URI has no username, as with `mailbox://nobody@Local%20Folders`.
  */

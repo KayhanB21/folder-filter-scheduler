@@ -181,7 +181,7 @@ export const FIELDS = Object.freeze([
 
 /**
  * Fields obtainable for free from a lightweight MessageHeader (author,
- * recipients, ccList, subject, date, size, read/flagged/junk, tags) — i.e.
+ * recipients, ccList, subject, date, size, read/flagged/junk, tags), that is,
  * without fetching the full message. Everything else (reply-to, list-id,
  * sender, arbitrary custom headers) needs a `messages.getHeaders()` /
  * `messages.getFull()`, which on a non-offline IMAP folder hits the network.

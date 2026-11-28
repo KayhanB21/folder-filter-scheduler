@@ -458,7 +458,7 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
  * existing id (`account1://Spam`) belongs to the same account and path rather
  * than a different account that happens to sit in slot 1 on this computer. If
  * the id differs or belongs to another account, we reconnect ONLY when BOTH
- * the account hash (or legacy account name) AND folder path match uniquely —
+ * the account hash (or legacy account name) AND folder path match uniquely,
  * never guessing across accounts.
  */
 function resolveImportedFolder(folderId, { known, knownFolders, folderRefs }) {
@@ -487,7 +487,7 @@ function resolveImportedFolder(folderId, { known, knownFolders, folderRefs }) {
       return { id, remapped: false, missing: false };
     }
     // `id` exists on this profile, but points at a different account or path
-    // than the export recorded — fall through to reconnect by account + path.
+    // than the export recorded, so fall through to reconnect by account + path.
   }
 
   if (refPath && wantedHash && hasFolders) {

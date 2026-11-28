@@ -1304,7 +1304,7 @@
     "message": "Scegli le cartelle che ogni regola deve controllare prima di salvare."
   },
   "status_draftCreated": {
-    "message": "Bozza di regola creata dal messaggio selezionato — scegli un’azione e premi Salva."
+    "message": "Bozza di regola creata dal messaggio selezionato. Scegli un’azione e premi Salva."
   },
   "options_filterRules": {
     "message": "Filtra regole…"
@@ -1427,7 +1427,7 @@
     "message": "Impossibile analizzare alcune cartelle."
   },
   "test_noMatches": {
-    "message": "Nessun messaggio corrispondente — nulla verrebbe spostato, etichettato o eliminato."
+    "message": "Nessun messaggio corrispondente. Nulla verrebbe spostato, etichettato o eliminato."
   },
   "test_noSubject": {
     "message": "(nessun oggetto)"
@@ -1439,10 +1439,10 @@
     "message": "Scegli almeno una cartella per «$1» prima di testarla."
   },
   "status_orderChanged": {
-    "message": "Ordine delle regole modificato — premi Salva per confermare."
+    "message": "Ordine delle regole modificato. Premi Salva per confermare."
   },
   "status_ruleDuplicated": {
-    "message": "Duplicata come «$1» — controllala e premi Salva."
+    "message": "Duplicata come «$1». Controllala e premi Salva."
   },
   "rule_stopProcessingTitle": {
     "message": "Si applica alle regole successive nella stessa esecuzione; non influisce su Esegui singola regola o pianificazioni indipendenti"
