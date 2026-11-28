@@ -223,7 +223,9 @@ input, select {
 
 .conditions { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
 .condition { display: flex; align-items: center; gap: 6px; }
-.condition .cond-value { flex: 1; }
+/* The floor makes the value box wrap to the next line. Without it, a row with
+   many controls squeezed the box to a sliver that hid the text in it. */
+.condition .cond-value { flex: 1 1 8em; min-width: 8em; }
 /* The greyed operator labels carry notes such as "(header fields only)", which
    widen a select to its longest label. The cap keeps the delete button on the
    row; the open list still shows each label in full. */
@@ -322,6 +324,12 @@ button { white-space: nowrap; flex: none; }
 /* Age and size conditions: a small count with its unit, in place of the value box. */
 .cond-days, .cond-size { width: 72px; }
 .cond-days-unit { opacity: 0.7; }
+/* A folder id that this profile doesn't have, see fillFolderSelect. */
+option.missing-folder { color: var(--danger); }
+
+/* A custom header row has one control more, so its two menus give up room. */
+.condition:has(.cond-custom-header:not(.hidden)) .cond-field,
+.condition:has(.cond-custom-header:not(.hidden)) .cond-op { max-width: 11em; }
 .cond-custom-header { width: 13em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
 /* Address-book condition: the book picker takes the value box's place. */

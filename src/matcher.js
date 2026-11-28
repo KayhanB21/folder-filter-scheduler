@@ -29,21 +29,58 @@ import {
 } from './domains.js';
 import { normalizeAddress } from './contacts.js';
 
+const compiledPatterns = new Map();
+
+/**
+ * The compiled, case-insensitive regex for a pattern, or null when JavaScript
+ * can't compile it. A pattern from another regex dialect, such as `(?i)spam`,
+ * is the usual cause. Compiled one time for each pattern.
+ */
+export function compilePattern(pattern) {
+  const source = String(pattern ?? '');
+  if (!compiledPatterns.has(source)) {
+    let regex = null;
+    try {
+      regex = new RegExp(source, 'i');
+    } catch {
+      regex = null;
+    }
+    compiledPatterns.set(source, regex);
+  }
+  return compiledPatterns.get(source);
+}
+
 /** Operators are positive predicates; negation is a separate flag on a condition. */
 export const OPERATORS = Object.freeze({
   contains: (value, needle) => value.includes(needle),
   is: (value, needle) => value.trim() === needle.trim(),
   startsWith: (value, needle) => value.startsWith(needle),
   endsWith: (value, needle) => value.endsWith(needle),
-  matchesRegex: (value, needle) => {
-    // A bad pattern must never crash a scheduled run — treat it as "no match".
-    try {
-      return new RegExp(needle, 'i').test(value);
-    } catch {
-      return false;
-    }
-  },
+  // A bad pattern must never crash a scheduled run: it is "no match" here, and
+  // `unusableValue` keeps a negated condition from turning that into a match.
+  matchesRegex: (value, needle) => compilePattern(needle)?.test(value) ?? false,
 });
+
+/** The operator's predicate, or undefined. Never a method of Object.prototype. */
+const predicateFor = (operator) =>
+  (typeof operator === 'string' && Object.hasOwn(OPERATORS, operator) ? OPERATORS[operator] : undefined);
+
+/**
+ * True when a text condition has a value that can't decide anything, so the
+ * condition NEVER matches, negated or not:
+ *
+ * - A blank value with `contains`, `startsWith`, `endsWith`, or `matchesRegex`.
+ *   Every text contains the empty text, so the condition would be true for
+ *   every message, and a rule that matches any condition would then act on a
+ *   whole folder. `is` with a blank value stays: it means "is empty".
+ * - A regex that doesn't compile. It matches nothing, and its negated form
+ *   would match every message.
+ */
+export function unusableValue(condition) {
+  const value = String(condition?.value ?? '');
+  if (condition?.operator === 'matchesRegex') return value === '' || compilePattern(value) === null;
+  return value === '' && condition?.operator !== 'is';
+}
 
 /**
  * The set-lookup operator, kept out of OPERATORS on purpose: those entries are
@@ -577,8 +614,9 @@ const collapseSpace = (s) => (s ?? '').toString().replace(/\s+/g, ' ').trim();
  */
 function evaluateBodyCondition(message, condition) {
   if (!Array.isArray(message?.body)) return false;
-  const predicate = OPERATORS[condition.operator];
+  const predicate = predicateFor(condition.operator);
   if (!predicate) throw new Error(`Unknown body operator: ${condition.operator}`);
+  if (unusableValue(condition)) return false;
 
   // A regex keeps the case of its pattern, as in evaluateCondition.
   const regex = condition.operator === 'matchesRegex';
@@ -612,10 +650,11 @@ export function evaluateCondition(message, condition, { now = new Date(), addres
   if (condition.operator === DOMAIN_IN_LIST) return evaluateDomainCondition(message, condition);
   if (condition.operator === NAME_SHOWS_OTHER_ADDRESS) return evaluateNameCondition(message, condition);
 
-  const predicate = OPERATORS[condition.operator];
+  const predicate = predicateFor(condition.operator);
   if (!predicate) {
     throw new Error(`Unknown operator: ${condition.operator}`);
   }
+  if (unusableValue(condition)) return false;
   // A blank or invalid header field (e.g. an unconfigured custom header) must
   // never match, even when negated.
   const fieldKey = foldCase(condition.field).trim();

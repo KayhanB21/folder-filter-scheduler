@@ -43,6 +43,7 @@ import {
   sizeAmount,
   sizeBytes,
   sizeUnit,
+  compilePattern,
 } from './matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
@@ -434,7 +435,8 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
   if (operator === DOMAIN_IN_LIST) {
     // Re-validate every domain: an imported list must not be able to smuggle in
     // a blank or malformed entry that would match every message.
-    const { domains, invalid } = parseDomainList((raw?.domains ?? []).join('\n'));
+    const listed = Array.isArray(raw?.domains) ? raw.domains : [];
+    const { domains, invalid } = parseDomainList(listed.join('\n'));
     if (invalid.length > 0) problems.push(plural('import_invalidDomains', invalid.length, where, invalid.length));
     if (domains.length === 0) {
       problems.push(t('import_emptyDomains', where));
@@ -445,6 +447,12 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
     condition.value = String(raw?.value ?? '');
     if (condition.value === '') {
       problems.push(t('import_emptyValue', where));
+      return null;
+    }
+    // A pattern from another regex dialect, such as `(?i)spam`, would never
+    // match here. Say so at import.
+    if (operator === 'matchesRegex' && compilePattern(condition.value) === null) {
+      problems.push(t('import_invalidRegex', where));
       return null;
     }
   }
@@ -532,16 +540,20 @@ function sanitizeActions(raw, problems, where, folderContext) {
   const actions = [];
   let terminal = null;
   let missingDestFolder = false;
+  let droppedAction = false;
   for (const candidate of orderActions(listed)) {
-    const def = ACTIONS_BY_ID[candidate?.type];
+    const type = candidate?.type;
+    const def = typeof type === 'string' && Object.hasOwn(ACTIONS_BY_ID, type) ? ACTIONS_BY_ID[type] : null;
     if (!def) {
-      problems.push(t('import_unknownAction', where, candidate?.type ?? ''));
+      problems.push(t('import_unknownAction', where, String(type ?? '')));
+      droppedAction = true;
       continue;
     }
     let resolvedFolderId = null;
     if (def.needsFolder) {
       if (!candidate.folderId) {
         problems.push(t('import_needsFolder', where, def.id));
+        droppedAction = true;
         continue;
       }
       const resolved = resolveImportedFolder(candidate.folderId, folderContext);
@@ -555,6 +567,7 @@ function sanitizeActions(raw, problems, where, folderContext) {
     }
     if (def.needsTag && !candidate.tagKey) {
       problems.push(t('import_needsTag', where, def.id));
+      droppedAction = true;
       continue;
     }
     if (def.terminal) {
@@ -577,6 +590,12 @@ function sanitizeActions(raw, problems, where, folderContext) {
   if (missingDestFolder) return null;
   if (actions.length === 0) {
     problems.push(t('import_noUsableAction', where));
+    return null;
+  }
+  // Same reason as a missing folder: when an action was dropped and the rest
+  // still removes mail from the folder, the rule would do less before it does.
+  if (droppedAction && terminal) {
+    problems.push(t('import_skippedDroppedAction', where));
     return null;
   }
   return actions;

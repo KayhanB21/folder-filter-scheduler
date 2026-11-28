@@ -1536,5 +1536,23 @@
   },
   "import_skippedWidened": {
     "message": "$1 : ignorée car retirer une condition d’une règle exigeant toutes les conditions ferait correspondre plus de messages que prévu"
+  },
+  "import_skippedDroppedAction": {
+    "message": "$1 : ignorée, car une action n’a pas pu être importée et la règle déplacerait ou supprimerait des messages sans elle"
+  },
+  "import_tbNotAutomatic": {
+    "message": "$1 : Thunderbird n’exécute ce filtre que manuellement, après l’envoi ou avant l’archivage ; il est donc importé désactivé"
+  },
+  "reject_blankValue": {
+    "message": "une condition n’a pas de valeur, elle ne correspondra donc jamais"
+  },
+  "reject_badRegex": {
+    "message": "l’expression régulière « $1 » n’est pas valide, elle ne correspondra donc jamais"
+  },
+  "import_invalidRegex": {
+    "message": "$1 : l’expression régulière n’est pas valide"
+  },
+  "folders_missing": {
+    "message": "Dossiers introuvables"
   }
 }

@@ -41,7 +41,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   accepts a Thunderbird filter file as well as a JSON backup. It converts the
   supported conditions and actions, including **Stop execution**, and stages
   the rules for review. It skips a filter when a conversion would change which
-  mail the filter matches or where that mail goes.
+  mail the filter matches or where that mail goes, or would drop an action
+  from a filter that moves or deletes mail. It reports `is`, `isn't`,
+  `begins with`, and `ends with` on `From`, `To`, and `Cc`, because Thunderbird
+  compares them with each address and a condition here compares the whole
+  header. It turns off a filter that Thunderbird runs only manually, after
+  sending, or before archiving.
 - **Right-click → "Create rule from this message…".** The command opens the
   options page with a draft rule filled in from the message's folder and its
   `List-Id`, `From`, or `Subject`. You choose an action and save.
@@ -54,12 +59,41 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Shared reads and a 20-second read budget.** Rules in one run share each
   header and body read. Reads stop after 20 seconds of read time in one run.
   The next run continues after the last message checked, so a large folder
-  finishes over several runs.
+  finishes over several runs. This also holds for **Run** and **Run all rules
+  now**: the timer continues their scan of the whole folder.
 - **Narrower queries for rules that require all conditions.** Thunderbird
   filters by read status, star, and required tags before the add-on checks
   each message.
 
+- **A text condition with a blank value never matches.** Every text contains
+  the empty text, so `contains` with an empty value box matched every message,
+  and a rule that matches any condition then acted on the whole folder. A
+  regex that isn't valid never matches either, also when the condition is
+  negated. **Save** names both cases. `is` with a blank value still means that
+  the field is empty.
+- **Run all rules now asks you to save first.** The run uses the saved rules,
+  so the button refuses while a rule card has unsaved changes, as **Run** on
+  one rule does.
+- **An import skips a rule that loses an action.** When an action can't be
+  imported and the rest of the rule still moves or deletes mail, the import
+  skips the rule and says so. It reports a regex that isn't valid.
+
 ### Fixed
+- **A header line named `Headers` doesn't hide the other headers.** A
+  message with such a line read as if it had no other header, so a negated
+  header condition could match it.
+- **A scheduled scan covers all the mail from the last run on.** After a
+  pause longer than the 30-day lookback, the scan started 30 days back and
+  passed over the mail before that. This affected a rule on a monthly
+  schedule, and any rule after Thunderbird was closed for more than 30 days.
+- **A folder that no longer exists stays in the rule.** After a folder was
+  deleted or renamed, the options page showed the first folder of the list as
+  the destination of a move or copy action, and **Save** stored it. The page
+  also dropped a missing source folder. Such a folder is listed under
+  **Folders not found**, and **Save** keeps it until you choose another.
+- **Subfolders of a Trash folder are left out.** A rule that includes
+  subfolders skipped a Trash folder nested under its folder, but scanned the
+  folders inside that Trash.
 - **A header read that fails with an error skips the message.** Only a timeout
   skipped it. After an error, the rule checked the message with blank headers,
   so a negated header condition could match mail it never read. The run also
@@ -68,7 +102,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the source folder, so later scans found the message and copied it again. Each
   rule remembers up to 50,000 copied messages for each destination folder, as
   hashed keys. Past that number, it checks the destination folder before each
-  copy.
+  copy. If the add-on can't load these keys, it skips the rules that copy in
+  that run.
 - **Tag and mark actions run in groups of 25 and continue after a failed
   message.** They sent every update at the same time, and one failure stopped
   the action. A message whose update fails is left out of the rule's later

@@ -148,7 +148,7 @@ action="Archive"
 action="Mark flagged"
 action="JunkScore"
 actionValue="0"
-condition="OR (from,ends with,@shop.example) OR (size,is less than,500) OR (body,matches,invoice #\\d+)"
+condition="OR (subject,ends with,receipt) OR (size,is less than,500) OR (body,matches,invoice #\\d+)"
 `;
 
   const res = importThunderbirdFilters(dat, { knownFolders: KNOWN_FOLDERS });
@@ -179,7 +179,7 @@ condition="OR (from,ends with,@shop.example) OR (size,is less than,500) OR (body
   assert.equal(second.enabled, false);
   assert.equal(second.match, 'any');
   assert.deepEqual(second.conditions, [
-    { field: 'from', operator: 'endsWith', negate: false, value: '@shop.example' },
+    { field: 'subject', operator: 'endsWith', negate: false, value: 'receipt' },
     { field: 'size', operator: 'smallerThan', size: 500, unit: 'KB', negate: false },
     { field: 'body', operator: 'matchesRegex', negate: false, value: 'invoice #\\d+' },
   ]);
@@ -227,9 +227,10 @@ actionValue="imap://alice%40gmail.com@imap.gmail.com/Nonexistent"
 action="Delete"
 condition="AND (from,contains,receipts@example.com)"
 name="OR partial"
+enabled="yes"
 action="Forward"
 actionValue="boss@example.com"
-action="Delete"
+action="Mark read"
 condition="OR (from,is in ab,moz-abmdbdirectory://abook.sqlite) OR (date,is before,01-Jan-2026)"
 `;
   const res = importThunderbirdFilters(dat, { knownFolders: KNOWN_FOLDERS });
@@ -239,7 +240,7 @@ condition="OR (from,is in ab,moz-abmdbdirectory://abook.sqlite) OR (date,is befo
   assert.deepEqual(res.rules[0].conditions, [
     { field: 'from', operator: 'inAddressBook', addressBookId: 'all', negate: false },
   ]);
-  assert.deepEqual(res.rules[0].actions, [{ type: 'trash' }]);
+  assert.deepEqual(res.rules[0].actions, [{ type: 'markRead' }]);
 
   const joined = res.problems.join('\n');
   assert.match(joined, /Match all messages/);
@@ -282,4 +283,90 @@ condition="AND (from,contains,ceo@company.example)"
   assert.equal(res.rules.length, 1);
   assert.equal(res.rules[0].stopProcessing, true);
   assert.deepEqual(res.rules[0].actions, [{ type: 'markFlagged' }]);
+});
+
+const oneFilter = (lines) => ['version="9"', 'logging="no"', ...lines].join('\n');
+const importOne = (lines, options = { knownFolders: KNOWN_FOLDERS }) => importThunderbirdFilters(oneFilter(lines), options);
+
+test('per-address operators on an address field are reported, never imported as whole-header checks', () => {
+  for (const op of ['is', "isn't", 'begins with', 'ends with']) {
+    const res = importOne(['name="Boss"', 'enabled="yes"', 'action="Delete"', `condition="AND (from,${op},boss@example.com)"`]);
+    assert.deepEqual(res.rules, [], op);
+    assert.match(res.problems.join('\n'), new RegExp(`unsupported Thunderbird condition "from ${op}"`), op);
+  }
+  // `contains` means the same in both, and a custom header is plain text in both.
+  const kept = importOne([
+    'name="Boss"', 'enabled="yes"', 'action="Mark read"',
+    'condition="AND (to or cc,contains,boss@example.com) AND (\\"X-Envelope-From\\",is,boss@example.com) AND (subject,is,Weekly report)"',
+  ]);
+  assert.deepEqual(kept.problems, []);
+  assert.deepEqual(kept.rules[0].conditions.map((c) => `${c.field} ${c.operator}`), [
+    'to-cc contains', 'x-envelope-from is', 'subject is',
+  ]);
+});
+
+test('tag "is" and "isn\'t" are reported: Thunderbird means that tag and no other', () => {
+  for (const op of ['is', "isn't"]) {
+    const res = importOne(['name="Tagged"', 'enabled="yes"', 'action="Delete"', `condition="AND (tag,${op},$label1)"`]);
+    assert.deepEqual(res.rules, [], op);
+    assert.match(res.problems.join('\n'), /unsupported Thunderbird condition "tag is/);
+  }
+});
+
+test('a filter is on only when Thunderbird would run it by itself', () => {
+  const enabledOf = (lines) => {
+    const res = importOne(['name="F"', ...lines, 'action="Mark read"', 'condition="AND (subject,contains,x)"']);
+    return { enabled: res.rules[0].enabled, problems: res.problems.join('\n') };
+  };
+  assert.equal(enabledOf(['enabled="yes"', 'type="17"']).enabled, true);
+  assert.equal(enabledOf(['enabled="yes"']).enabled, true);
+  assert.equal(enabledOf(['enabled="no"', 'type="17"']).enabled, false);
+  // Thunderbird reads every value but `yes` as off, and a filter starts off.
+  assert.equal(enabledOf(['enabled="false"', 'type="17"']).enabled, false);
+  assert.equal(enabledOf(['enabled=""', 'type="17"']).enabled, false);
+  assert.equal(enabledOf(['type="17"']).enabled, false);
+  // 16 manual, 64 after sending, 128 before archiving, 208 all three.
+  for (const type of ['16', '64', '128', '208', '0']) {
+    const res = enabledOf(['enabled="yes"', `type="${type}"`]);
+    assert.equal(res.enabled, false, type);
+    assert.match(res.problems, /imported turned off/, type);
+  }
+  // 1 incoming, 32 after junk classification, 256 on a timer, 272 timer and manual.
+  for (const type of ['1', '32', '256', '272']) {
+    const res = enabledOf(['enabled="yes"', `type="${type}"`]);
+    assert.equal(res.enabled, true, type);
+    assert.equal(res.problems, '', type);
+  }
+});
+
+test('a filter that loses an action and still moves or deletes mail is skipped', () => {
+  const res = importOne([
+    'name="Forward then delete"', 'enabled="yes"', 'action="Forward"', 'actionValue="accounts@example.com"',
+    'action="Delete"', 'condition="AND (subject,contains,invoice)"',
+  ]);
+  assert.deepEqual(res.rules, []);
+  assert.match(res.problems.join('\n'), /would move or delete mail without it/);
+});
+
+test('an address that is an extra identity of another account does not take the folder', () => {
+  const folders = [
+    { id: 'work://INBOX', accountId: 'w', accountName: 'Work', accountEmails: ['me@work.example'], path: '/INBOX' },
+    { id: 'work://Archive', accountId: 'w', accountName: 'Work', accountEmails: ['me@work.example'], path: '/Archive' },
+    { id: 'home://INBOX', accountId: 'h', accountName: 'Home', accountEmails: ['me@home.example', 'me@work.example'], path: '/INBOX' },
+    { id: 'home://Receipts', accountId: 'h', accountName: 'Home', accountEmails: ['me@home.example', 'me@work.example'], path: '/Receipts' },
+  ];
+  const uri = (path) => `imap://me%40work.example@imap.work.example/${path}`;
+  // Work has no /Receipts, so nothing resolves: Home must not receive the mail.
+  assert.equal(resolveThunderbirdFolderUri(uri('Receipts'), folders), null);
+  assert.equal(resolveThunderbirdFolderUri(uri('INBOX'), folders)?.id, 'work://INBOX');
+  assert.equal(resolveThunderbirdFolderUri(uri('Archive'), folders)?.id, 'work://Archive');
+  // Two accounts whose default identity is the address: no way to choose.
+  const twins = folders.map((f) => ({ ...f, accountEmails: ['me@work.example'] }));
+  assert.equal(resolveThunderbirdFolderUri(uri('Receipts'), twins), null);
+});
+
+test('a quote in an unquoted value is read as Thunderbird writes it', () => {
+  const parsed = parseThunderbirdCondition('AND (subject,contains,5\\" tablet) AND (from,contains,a)');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(parsed.clauses.map((c) => c.value), ['5" tablet', 'a']);
 });

@@ -28,6 +28,7 @@ import {
   normalizeHeaderName,
   sizeAmount,
   sizeUnit,
+  unusableValue,
 } from '../src/matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
 import { diagnosticsFilename } from '../src/diagnostics.js';
@@ -408,6 +409,8 @@ function guideBackground(guide) {
 const ARROWS = { open: '\u25BC\uFE0E ', closed: '\u25B6\uFE0E ' };
 /** A collapsed account sits in `collapsedFolders` under this prefix and its id. */
 const ACCOUNT_PREFIX = 'account:';
+/** The `accountId` of the group that lists folder ids this profile lacks. */
+const MISSING_FOLDERS_GROUP = '(missing)';
 
 /**
  * Write one folder option. Indentation is CSS padding, so levels line up and a
@@ -460,6 +463,29 @@ function fillFolderSelect(select, selectedIds = []) {
     opt.selected = selectedIds.includes(f.id);
     group.append(opt);
   }
+
+  // Keep an id that is not in this profile visible, like fillBookSelect does.
+  // Without an option of its own, a deleted or renamed folder dropped out of
+  // the rule on the next Save, and a move or copy action showed the first
+  // folder of the list and stored it.
+  const known = new Set(folders.map((f) => f.id));
+  const missing = [...new Set(selectedIds.map(String))].filter((id) => id && !known.has(id));
+  if (missing.length === 0) return;
+  const lost = document.createElement('optgroup');
+  lost.label = t('folders_missing');
+  lost.dataset.name = lost.label;
+  lost.dataset.accountId = MISSING_FOLDERS_GROUP;
+  for (const id of missing) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    // A folder id is `accountId://path`: the path is what the user knows.
+    opt.textContent = id.replace(/^[^:/]*:\/\//, '/');
+    opt.title = id;
+    opt.selected = true;
+    opt.classList.add('missing-folder');
+    lost.append(opt);
+  }
+  select.append(lost);
 }
 
 /**
@@ -1049,6 +1075,17 @@ function syncOrderButtons() {
   });
 }
 
+/**
+ * Moving a card in the DOM drops keyboard focus to the page. Put it back on
+ * the arrow that was pressed, or on the other one when the card reached an end
+ * of the list and that arrow is off.
+ */
+function focusOrderButton(card, pressed) {
+  const same = $(pressed, card);
+  const other = $(pressed === '.move-up' ? '.move-down' : '.move-up', card);
+  (same && !same.disabled ? same : other)?.focus();
+}
+
 /** Filter visible rule cards by the search box at the top of the rules list. */
 function applyRuleFilter() {
   const query = $('#rule-filter')?.value ?? '';
@@ -1092,18 +1129,27 @@ function revealRuleCard(node) {
   setCollapsed(node, false);
 }
 
-/** Run a side-effect-free dry run for one card (saved or unsaved) and render its preview. */
-async function testRuleCard(node) {
-  const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
+/**
+ * True, with the field focused and a message shown, when a custom header
+ * condition of the card has no valid header name. Collecting such a card
+ * stores a blank field, which a new card then shows as another field.
+ */
+function refuseBadCustomHeader(node) {
   const badCustom = [...node.querySelectorAll('.condition')].find(
     (c) => $('.cond-field', c).value === CUSTOM_HEADER_OPTION && !normalizeHeaderName($('.cond-custom-header', c).value),
   );
-  if (badCustom) {
-    revealRuleCard(node);
-    $('.cond-custom-header', badCustom)?.focus();
-    flash(t('status_notSavedCustomHeader', name), true);
-    return;
-  }
+  if (!badCustom) return false;
+  const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
+  revealRuleCard(node);
+  $('.cond-custom-header', badCustom)?.focus();
+  flash(t('status_notSavedCustomHeader', name), true);
+  return true;
+}
+
+/** Run a side-effect-free dry run for one card (saved or unsaved) and render its preview. */
+async function testRuleCard(node) {
+  const name = $('.rule-name', node).value.trim() || t('common_untitledRule');
+  if (refuseBadCustomHeader(node)) return;
 
   const rule = collectRule(node);
   if (rule.folderIds.length === 0) {
@@ -1238,6 +1284,7 @@ function renderRule(rule = {}, saved = false, insertAfter = null) {
     if (!prev) return;
     prev.before(node);
     syncOrderButtons();
+    focusOrderButton(node, '.move-up');
     flash(t('status_orderChanged'));
   });
   $('.move-down', node).addEventListener('click', () => {
@@ -1245,9 +1292,11 @@ function renderRule(rule = {}, saved = false, insertAfter = null) {
     if (!next) return;
     next.after(node);
     syncOrderButtons();
+    focusOrderButton(node, '.move-down');
     flash(t('status_orderChanged'));
   });
   $('.dup-rule', node).addEventListener('click', () => {
+    if (refuseBadCustomHeader(node)) return;
     const copy = duplicateRule(collectRule(node));
     const card = renderRule(copy, false, node);
     setCollapsed(card, false);
@@ -1513,6 +1562,7 @@ function collectRule(node, rejected = []) {
           rejected.push(rawName ? t('reject_customHeader', rawName) : t('reject_customHeaderEmpty'));
         }
         condition.value = $('.cond-value', c).value;
+        noteUnusableValue(condition, rejected);
       } else if (STATE_FIELDS.includes(condition.field)) {
         condition.negate = false;
       } else if (condition.field === TAG_FIELD) {
@@ -1535,6 +1585,7 @@ function collectRule(node, rejected = []) {
         rejected.push(...invalid);
       } else if (operator !== NAME_SHOWS_OTHER_ADDRESS) {
         condition.value = $('.cond-value', c).value;
+        noteUnusableValue(condition, rejected);
       }
       return condition;
     }),
@@ -1607,6 +1658,16 @@ function unchosenActions() {
       .filter((row) => !ACTIONS_BY_ID[$('.action-type', row).value])
       .map(() => $('.rule-name', node).value.trim() || t('common_untitledRule')),
   );
+}
+
+/**
+ * Tell the user about a text condition that can't match: a blank value, or a
+ * regex that doesn't compile. The condition is saved as typed, like a tag
+ * condition without a tag, and the matcher never matches it.
+ */
+function noteUnusableValue(condition, rejected) {
+  if (!unusableValue(condition)) return;
+  rejected.push(condition.value === '' ? t('reject_blankValue') : t('reject_badRegex', condition.value));
 }
 
 async function save() {
@@ -1855,6 +1916,16 @@ async function importRules(file) {
 }
 
 async function runNow() {
+  // The run uses the stored rules. As for Run on one rule, refuse while a card
+  // differs from them: a rule just switched from Delete to Tag would delete.
+  const edited = [...rulesEl.querySelectorAll('.rule')].find(
+    (node) => node.dataset.unsaved === 'true' && !isBlankStarterCard(node),
+  );
+  if (edited) {
+    revealRuleCard(edited);
+    flash(t('status_saveBeforeRun', $('.rule-name', edited).value.trim() || t('common_untitledRule')), true);
+    return;
+  }
   flash(t('status_running'));
   try {
     const res = await messenger.runtime.sendMessage({ command: 'runNow' });

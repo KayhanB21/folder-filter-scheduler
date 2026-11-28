@@ -828,3 +828,54 @@ test('arbitrary custom headers match case-insensitively, require header download
   assert.equal(isCustomHeaderField('reply-to'), false);
   assert.equal(isCustomHeaderField('from'), false);
 });
+
+import { compilePattern, unusableValue } from '../src/matcher.js';
+
+test('a blank value never matches, negated or not, in any rule mode', () => {
+  const letters = [msg({ subject: ['Hello'], from: ['a@x.example'] }), msg({ subject: [''] }), msg({})];
+  for (const operator of ['contains', 'startsWith', 'endsWith', 'matchesRegex']) {
+    for (const negate of [false, true]) {
+      for (const value of ['', undefined]) {
+        const condition = { field: 'subject', operator, value, negate };
+        assert.equal(unusableValue(condition), true);
+        for (const m of letters) assert.equal(evaluateCondition(m, condition), false, `${operator} ${negate}`);
+      }
+    }
+  }
+  const rule = {
+    match: 'any',
+    conditions: [{ field: 'subject', operator: 'contains', value: 'lottery' }, { field: 'from', operator: 'contains', value: '' }],
+  };
+  assert.deepEqual(letters.map((m) => evaluateRule(m, rule)), [false, false, false]);
+  // A blank body value is the same.
+  const body = { field: 'body', operator: 'contains', value: '' };
+  assert.equal(evaluateCondition({ fields: {}, body: ['some text'] }, body), false);
+  assert.equal(evaluateCondition({ fields: {}, body: ['some text'] }, { ...body, negate: true }), false);
+});
+
+test('"is" with a blank value still means the field is empty', () => {
+  const isEmpty = { field: 'subject', operator: 'is', value: '' };
+  assert.equal(unusableValue(isEmpty), false);
+  assert.equal(evaluateCondition(msg({ subject: [''] }), isEmpty), true);
+  assert.equal(evaluateCondition(msg({ subject: ['Hello'] }), isEmpty), false);
+});
+
+test('a regex that does not compile never matches, negated or not', () => {
+  assert.equal(compilePattern('(?i)unsubscribe('), null);
+  assert.ok(compilePattern('unsub(scribe)?') instanceof RegExp);
+  for (const negate of [false, true]) {
+    const condition = { field: 'subject', operator: 'matchesRegex', value: '(?i)unsubscribe(', negate };
+    assert.equal(evaluateCondition(msg({ subject: ['Hello'] }), condition), false);
+    const body = { ...condition, field: 'body' };
+    assert.equal(evaluateCondition({ fields: {}, body: ['Hello'] }, body), false);
+  }
+});
+
+test('an operator name that only Object.prototype has is unknown', () => {
+  for (const operator of ['constructor', 'toString', 'hasOwnProperty']) {
+    assert.throws(
+      () => evaluateCondition(msg({ subject: ['hello'] }), { field: 'subject', operator, value: 'zzz' }),
+      /Unknown operator/,
+    );
+  }
+});

@@ -1938,5 +1938,29 @@
   "import_skippedWidened": {
     "message": "$1: skipped because dropping a condition from a rule that requires all conditions would match more mail than intended",
     "description": "Import problem when a rule requiring all conditions had an invalid condition dropped and is therefore skipped for safety. $1 says which rule."
+  },
+  "import_skippedDroppedAction": {
+    "message": "$1: skipped because an action could not be imported, and the rule would move or delete mail without it",
+    "description": "Import problem when one action of a rule could not be imported and the remaining actions still move or delete mail, so the rule is skipped. $1 says which rule."
+  },
+  "import_tbNotAutomatic": {
+    "message": "$1: Thunderbird runs this filter only manually, after sending, or before archiving, so it is imported turned off",
+    "description": "Import note when a Thunderbird filter is not set to run on incoming mail or on a timer. $1 says which rule."
+  },
+  "reject_blankValue": {
+    "message": "a condition has no value, so it will not match",
+    "description": "Listed after Save when a text condition has an empty value box. The condition is kept and never matches."
+  },
+  "reject_badRegex": {
+    "message": "the regular expression \"$1\" is not valid, so it will not match",
+    "description": "Listed after Save when a regular expression does not compile. $1 is the pattern as typed."
+  },
+  "import_invalidRegex": {
+    "message": "$1: the regular expression is not valid",
+    "description": "Import problem when a regular expression does not compile. $1 says which condition."
+  },
+  "folders_missing": {
+    "message": "Folders not found",
+    "description": "Heading in a folder list for the folders a rule names that no longer exist in this profile, for example after a folder was renamed or deleted."
   }
 }

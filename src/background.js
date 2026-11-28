@@ -16,6 +16,7 @@ import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
 import {
+  SCAN_KINDS,
   SCAN_PROGRESS_KEY,
   createScanProgress,
   dryRunSampleOf,
@@ -271,8 +272,13 @@ async function hasMessageInFolder(folderId, header) {
  * any legacy single `copyHistory` key for seamless migration).
  */
 async function loadCopyHistory(rules) {
+  // Without the history, a copy rule would copy every match again and then
+  // save a history that holds only this run. So the run skips the rules that
+  // copy, see runRule, and the stored history stays as it is.
+  let failed = false;
   const all = await messenger.storage.local.get(null).catch((e) => {
-    warn('could not load copy history', e);
+    warn('could not load copy history, rules that copy are skipped in this run', e);
+    failed = true;
     return {};
   });
   const ruleNames = new Map((rules ?? []).filter((r) => r?.id).map((r) => [r.id, r.name || r.id]));
@@ -289,12 +295,12 @@ async function loadCopyHistory(rules) {
       );
     },
   });
-  return { tracker, shardKeys, needsMigration: hasLegacy, hadOverflow: hadOverflowKey };
+  return { tracker, shardKeys, needsMigration: hasLegacy, hadOverflow: hadOverflowKey, failed };
 }
 
 /** Save only the changed copy-history buckets (and migrate/prune stale keys). */
 async function persistCopyHistory(copyStore, { force = false } = {}) {
-  if (!copyStore?.tracker) return;
+  if (!copyStore?.tracker || copyStore.failed) return;
   const { tracker } = copyStore;
   if (!copyStore.needsMigration && !tracker.isDirty()) return;
   if (!force && !copyStore.needsMigration && tracker.pendingAdds < COPY_CHECKPOINT_ADDS) return;
@@ -717,6 +723,13 @@ async function runRule(
   stopGuard,
 ) {
   if (rule.enabled === false) return 0;
+  if (copyStore?.failed && rule.id && actionsOf(rule).some((a) => a.type === 'copy')) {
+    // Skipped whole: running the other actions would, for a rule that copies
+    // and then moves, move the mail without the copy. The watermark holds.
+    warn(`rule "${rule.name}" skipped: its copy history could not be loaded`);
+    runState[rule.id] = recordRuleRun(runState[rule.id], { at: new Date(), error: true });
+    return 0;
+  }
   const fetchFull = requiresFullMessage(rule);
   const ruleAuthReads = requiresRaw(rule) ? authReads : null;
   const needsBody = requiresBody(rule);
@@ -735,14 +748,18 @@ async function runRule(
   const trackProgress = Boolean(rule.id && scanProgress && (fetchFull || needsBody || guardReads));
   const resumed = trackProgress
     ? scanProgress.progressFor(rule.id, fingerprint)
-    : { seenIds: new Set(), matchedIds: new Set() };
+    : { seenIds: new Set(), matchedIds: new Set(), kind: null };
   const resumedIds = resumed.seenIds;
   const resumedMatchedIds = resumed.matchedIds;
   const evaluatedIds = new Set(resumedIds);
   const matchedProgressIds = new Set(resumedMatchedIds);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
   const startedAt = new Date();
-  const plan = planScan(runState[rule.id], { manual, now: startedAt, settings });
+  // A full scan that stopped at the read budget carries on as a full scan,
+  // also when a timer or new mail starts this run. A narrower scan would end
+  // clean, clear the progress, and leave the rest of the folder unread.
+  const resumeFull = resumed.kind === SCAN_KINDS.full;
+  const plan = planScan(runState[rule.id], { manual: manual || resumeFull, now: startedAt, settings });
   const { kind } = plan;
   const bounds = queryBoundsFor(rule, plan, startedAt);
   const filter = queryFilterFor(rule);
@@ -838,6 +855,7 @@ async function runRule(
     try {
       matched += matchedIds.length;
       const copyKeysByAction = new Map();
+      const copyRemaining = new Map();
       const skippedCopyIds = new Set();
       const copiedIds = new Set();
       // Saved at once, like a header timeout: if a group never answers, the
@@ -854,6 +872,7 @@ async function runRule(
             { checkDestination: hasMessageInFolder },
           );
           copyKeysByAction.set(action, keysById);
+          copyRemaining.set(action, toCopy.length);
           for (const id of skipped) skippedCopyIds.add(id);
           for (const id of toCopy) copiedIds.add(id);
           return toCopy;
@@ -861,7 +880,12 @@ async function runRule(
         onBatch: async (action, batchIds) => {
           if (action.type !== 'copy' || !rule.id || !copyHistory) return;
           copyHistory.recordCopied(rule.id, action.folderId, batchIds, copyKeysByAction.get(action));
-          await persistCopyHistory(copyStore);
+          // Saved every COPY_CHECKPOINT_ADDS copies, and when the copy action
+          // ends. If a later action or a later rule never answers, the run
+          // doesn't reach its last save, and the next run would copy again.
+          const left = (copyRemaining.get(action) ?? 0) - batchIds.length;
+          copyRemaining.set(action, left);
+          await persistCopyHistory(copyStore, { force: left <= 0 });
         },
         onProgress: (action, done, total) => {
           log(`rule "${rule.name}": ${action.type} ${done} of ${total}`);
@@ -921,6 +945,7 @@ async function runRule(
         fingerprint,
         evaluatedIds,
         rule.stopProcessing === true ? matchedProgressIds : null,
+        kind,
       );
     }
     runState[rule.id] = recordRuleRun(runState[rule.id], {

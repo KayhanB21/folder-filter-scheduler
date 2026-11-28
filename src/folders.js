@@ -44,6 +44,10 @@ export function resolveRuleFolders(rule, allFolders = []) {
   const destinations = new Set(
     actionsOf(rule).filter((a) => a?.folderId).map((a) => String(a.folderId)),
   );
+  // Deleted mail keeps its folders: a folder moved to Trash sits under it.
+  const trash = allFolders.filter((f) => f?.id && (f.specialUse ?? []).includes('trash'));
+  const inTrash = (folder) =>
+    (folder.specialUse ?? []).includes('trash') || trash.some((t) => isDescendant(folder, t));
   const result = [];
   const seen = new Set();
   const add = (id) => {
@@ -60,7 +64,7 @@ export function resolveRuleFolders(rule, allFolders = []) {
       if (!folder?.id || !isDescendant(folder, parent)) continue;
       const childId = String(folder.id);
       if (destinations.has(childId)) continue;
-      if ((folder.specialUse ?? []).includes('trash')) continue;
+      if (inTrash(folder)) continue;
       add(childId);
     }
   }

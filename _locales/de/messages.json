@@ -1455,5 +1455,23 @@
   },
   "import_skippedWidened": {
     "message": "$1: übersprungen, weil das Weglassen einer Bedingung in einer Regel, die alle Bedingungen erfordert, mehr Nachrichten treffen würde als beabsichtigt"
+  },
+  "import_skippedDroppedAction": {
+    "message": "$1: übersprungen, weil eine Aktion nicht importiert werden konnte und die Regel ohne sie Nachrichten verschieben oder löschen würde"
+  },
+  "import_tbNotAutomatic": {
+    "message": "$1: Thunderbird führt diesen Filter nur manuell, nach dem Senden oder vor dem Archivieren aus, daher wird er deaktiviert importiert"
+  },
+  "reject_blankValue": {
+    "message": "Eine Bedingung hat keinen Wert und trifft daher nie zu"
+  },
+  "reject_badRegex": {
+    "message": "Der reguläre Ausdruck „$1“ ist ungültig und trifft daher nie zu"
+  },
+  "import_invalidRegex": {
+    "message": "$1: Der reguläre Ausdruck ist ungültig"
+  },
+  "folders_missing": {
+    "message": "Nicht gefundene Ordner"
   }
 }

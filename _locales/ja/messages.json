@@ -1742,5 +1742,23 @@
   },
   "import_skippedWidened": {
     "message": "$1: すべての条件を必要とするルールから条件を省くと意図より多くのメールに一致するためスキップしました"
+  },
+  "import_skippedDroppedAction": {
+    "message": "$1: アクションを1つインポートできず、そのままではルールがメッセージを移動または削除するため、スキップしました"
+  },
+  "import_tbNotAutomatic": {
+    "message": "$1: Thunderbird はこのフィルターを手動、送信後、またはアーカイブ前にのみ実行するため、オフの状態でインポートしました"
+  },
+  "reject_blankValue": {
+    "message": "値のない条件があるため、その条件は一致しません"
+  },
+  "reject_badRegex": {
+    "message": "正規表現「$1」が無効なため、その条件は一致しません"
+  },
+  "import_invalidRegex": {
+    "message": "$1: 正規表現が無効です"
+  },
+  "folders_missing": {
+    "message": "見つからないフォルダー"
   }
 }

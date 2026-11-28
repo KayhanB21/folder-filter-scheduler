@@ -1455,5 +1455,23 @@
   },
   "import_skippedWidened": {
     "message": "$1: saltata perché rimuovere una condizione da una regola che richiede tutte le condizioni farebbe corrispondere più messaggi del previsto"
+  },
+  "import_skippedDroppedAction": {
+    "message": "$1: saltata perché un’azione non è stata importata e la regola sposterebbe o eliminerebbe i messaggi senza di essa"
+  },
+  "import_tbNotAutomatic": {
+    "message": "$1: Thunderbird esegue questo filtro solo manualmente, dopo l’invio o prima dell’archiviazione, quindi viene importato disattivato"
+  },
+  "reject_blankValue": {
+    "message": "una condizione non ha un valore, quindi non corrisponderà"
+  },
+  "reject_badRegex": {
+    "message": "l’espressione regolare «$1» non è valida, quindi non corrisponderà"
+  },
+  "import_invalidRegex": {
+    "message": "$1: l’espressione regolare non è valida"
+  },
+  "folders_missing": {
+    "message": "Cartelle non trovate"
   }
 }

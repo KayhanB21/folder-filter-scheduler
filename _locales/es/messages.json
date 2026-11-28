@@ -1455,5 +1455,23 @@
   },
   "import_skippedWidened": {
     "message": "$1: omitida porque eliminar una condición de una regla que requiere todas las condiciones haría coincidir más correos de los previstos"
+  },
+  "import_skippedDroppedAction": {
+    "message": "$1: omitida porque no se pudo importar una acción y la regla movería o eliminaría mensajes sin ella"
+  },
+  "import_tbNotAutomatic": {
+    "message": "$1: Thunderbird solo ejecuta este filtro manualmente, después de enviar o antes de archivar, por lo que se importa desactivado"
+  },
+  "reject_blankValue": {
+    "message": "una condición no tiene valor, por lo que no coincidirá"
+  },
+  "reject_badRegex": {
+    "message": "la expresión regular «$1» no es válida, por lo que no coincidirá"
+  },
+  "import_invalidRegex": {
+    "message": "$1: la expresión regular no es válida"
+  },
+  "folders_missing": {
+    "message": "Carpetas no encontradas"
   }
 }

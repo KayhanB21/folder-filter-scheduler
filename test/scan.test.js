@@ -364,3 +364,29 @@ test('createScanProgress tracks partial passes and matched ids, invalidates on r
   assert.deepEqual([...progress.progressFor('r1', 'fp-v1').matchedIds], []);
   assert.equal(progress.snapshot().r1, undefined);
 });
+
+test('a catch-up never starts later than the last run', () => {
+  const days = (n) => new Date(now.getTime() - n * 24 * 60 * MINUTE);
+  // Thunderbird was closed for 45 days: the scan goes back to that run.
+  const closed = planScan({ lastRunAt: iso(days(45)), lastCatchUpAt: iso(days(45)) }, { now });
+  assert.equal(closed.kind, SCAN_KINDS.catchUp);
+  assert.equal(closed.fromDate.getTime(), days(45).getTime() - SCAN_OVERLAP_MINUTES * MINUTE);
+  // A rule on a monthly schedule after a 31-day month.
+  const monthly = planScan({ lastRunAt: iso(days(31)), lastCatchUpAt: iso(days(31)) }, { now });
+  assert.ok(monthly.fromDate.getTime() <= days(31).getTime());
+  // A recent run changes nothing: the lookback is further back.
+  const recent = planScan({ lastRunAt: iso(days(1)), lastCatchUpAt: iso(days(1)) }, { now });
+  assert.equal(recent.fromDate.getTime(), days(CATCH_UP_LOOKBACK_DAYS).getTime());
+});
+
+test('resume progress remembers a full scan, and only a full scan', () => {
+  const progress = createScanProgress({});
+  progress.recordPartial('A', 'fp', new Set([1, 2]), null, SCAN_KINDS.full);
+  progress.recordPartial('B', 'fp', new Set([3]), null, SCAN_KINDS.catchUp);
+  progress.recordPartial('C', 'fp', new Set([4]));
+  const restored = createScanProgress({ stored: JSON.parse(JSON.stringify(progress.snapshot())) });
+  assert.equal(restored.progressFor('A', 'fp').kind, SCAN_KINDS.full);
+  assert.equal(restored.progressFor('B', 'fp').kind, null);
+  assert.equal(restored.progressFor('C', 'fp').kind, null);
+  assert.equal(restored.progressFor('A', 'other').kind, null);
+});
