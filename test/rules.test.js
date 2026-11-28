@@ -149,7 +149,7 @@ test('an unknown operator or header field drops the condition', () => {
   assert.ok(problems.some((p) => /unknown operator/.test(p)));
 
   const bogusField = sanitizeImport(
-    file({ rules: [{ ...validRule, conditions: [{ field: 'x-evil', operator: 'contains', value: 'x' }] }] }),
+    file({ rules: [{ ...validRule, conditions: [{ field: 'bad header!', operator: 'contains', value: 'x' }] }] }),
   );
   assert.deepEqual(bogusField.rules, []);
   assert.ok(bogusField.problems.some((p) => /no recognised header field/.test(p)));
@@ -629,4 +629,160 @@ test('import rejects a body condition with a set operator, another field, or no 
   ]));
   assert.equal(rules.length, 0);
   assert.equal(problems.length, 5);
+});
+
+// --- Custom headers, To or Cc, Size, and tag removal actions -----------------
+
+test('import accepts custom headers with string operators and rejects non-string operators on them', () => {
+  const ok = sanitizeImport(withConditions([
+    { field: 'List-Unsubscribe:', operator: 'contains', value: 'mailto:' },
+    { field: 'X-Spam-Status', operator: 'startsWith', value: 'Yes', negate: true },
+  ]));
+  assert.deepEqual(ok.problems, []);
+  assert.deepEqual(ok.rules[0].conditions, [
+    { operator: 'contains', negate: false, field: 'list-unsubscribe', value: 'mailto:' },
+    { operator: 'startsWith', negate: true, field: 'x-spam-status', value: 'Yes' },
+  ]);
+
+  const bad = sanitizeImport(withConditions([
+    { field: 'x-spam-status', operator: 'domainInList', domains: ['evil.com'] },
+    { fields: ['from', 'x-spam-status'], operator: 'contains', value: 'x' },
+  ]));
+  assert.equal(bad.rules.length, 0);
+  assert.ok(bad.problems.some((p) => /does not apply/.test(p)));
+});
+
+test('import accepts to-cc for string, address-book, and decoy-name conditions', () => {
+  const { rules, problems } = sanitizeImport(withConditions([
+    { field: 'to-cc', operator: 'contains', value: 'alias@example.com' },
+    { field: 'to-cc', operator: 'inAddressBook', addressBookId: 'all' },
+    { field: 'to-cc', operator: 'nameShowsOtherAddress' },
+  ]));
+  assert.deepEqual(problems, []);
+  assert.equal(rules[0].conditions.length, 3);
+});
+
+test('import validates size conditions and fingerprints equivalent KB/MB thresholds identically', () => {
+  const ok = sanitizeImport(withConditions([
+    { field: 'size', operator: 'largerThan', size: '5', unit: 'mb' },
+    { field: 'size', operator: 'smallerThan', size: 250, unit: 'KB', negate: true },
+  ]));
+  assert.deepEqual(ok.problems, []);
+  assert.deepEqual(ok.rules[0].conditions, [
+    { operator: 'largerThan', negate: false, field: 'size', size: 5, unit: 'MB' },
+    { operator: 'smallerThan', negate: true, field: 'size', size: 250, unit: 'KB' },
+  ]);
+
+  for (const bad of [
+    { field: 'size', operator: 'largerThan', size: 0, unit: 'MB' },
+    { field: 'size', operator: 'largerThan', size: 5, unit: 'GB' },
+    { field: 'size', operator: 'contains', value: '5' },
+    { field: 'subject', operator: 'largerThan', size: 5, unit: 'MB' },
+  ]) {
+    const res = sanitizeImport(withConditions([bad]));
+    assert.equal(res.rules.length, 0, JSON.stringify(bad));
+    assert.ok(res.problems.length > 0);
+  }
+
+  const oneMb = { ...validRule, conditions: [{ field: 'size', operator: 'largerThan', size: 1, unit: 'MB' }] };
+  const kb1024 = { ...validRule, conditions: [{ field: 'size', operator: 'largerThan', size: 1024, unit: 'KB' }] };
+  const twoMb = { ...validRule, conditions: [{ field: 'size', operator: 'largerThan', size: 2, unit: 'MB' }] };
+  assert.equal(ruleFingerprint(oneMb), ruleFingerprint(kb1024));
+  assert.notEqual(ruleFingerprint(oneMb), ruleFingerprint(twoMb));
+});
+
+test('import accepts removeTag and clearTags and orders clear/remove before tag and move', () => {
+  const rule = {
+    ...validRule,
+    action: undefined,
+    actions: [
+      { type: 'move', folderId: 'done' },
+      { type: 'tag', tagKey: 'waiting' },
+      { type: 'removeTag', tagKey: 'new' },
+      { type: 'clearTags' },
+    ],
+  };
+  const { rules, problems } = sanitizeImport(file({ rules: [rule] }));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(rules[0].actions, [
+    { type: 'clearTags' },
+    { type: 'removeTag', tagKey: 'new' },
+    { type: 'tag', tagKey: 'waiting' },
+    { type: 'move', folderId: 'done' },
+  ]);
+
+  const missingTag = sanitizeImport(file({ rules: [{ ...validRule, action: undefined, actions: [{ type: 'removeTag' }] }] }));
+  assert.equal(missingTag.rules.length, 0);
+  assert.ok(missingTag.problems.some((p) => /needs a tag/.test(p)));
+});
+
+// --- Portable folder references across computers -----------------------------
+
+test('buildExport includes folderRefs only when folders are supplied and reconnects them on import', () => {
+  const sourceFolders = [
+    { id: 'acctA://INBOX', accountName: 'Work', path: '/INBOX' },
+    { id: 'acctA://Archive/Receipts', accountName: 'Work', path: '/Archive/Receipts' },
+    { id: 'acctB://Unused', accountName: 'Personal', path: '/Unused' },
+  ];
+  const rule = {
+    name: 'File receipts',
+    enabled: true,
+    match: 'all',
+    folderIds: ['acctA://INBOX'],
+    conditions: [{ field: 'subject', operator: 'contains', value: 'receipt' }],
+    actions: [{ type: 'move', folderId: 'acctA://Archive/Receipts' }],
+  };
+
+  assert.equal('folderRefs' in buildExport({ rules: [rule] }), false);
+  const exported = buildExport({ rules: [rule] }, { folders: sourceFolders });
+  assert.deepEqual(exported.folderRefs, {
+    'acctA://INBOX': { accountName: 'Work', path: '/INBOX' },
+    'acctA://Archive/Receipts': { accountName: 'Work', path: '/Archive/Receipts' },
+  });
+
+  // New computer has completely different folder IDs, same account names and paths.
+  const targetFolders = [
+    { id: 'new1://INBOX', accountName: 'work', path: '/INBOX' },
+    { id: 'new1://Archive/Receipts', accountName: 'Work', path: '/Archive/Receipts' },
+    { id: 'new2://INBOX', accountName: 'Personal', path: '/INBOX' },
+  ];
+  const imported = sanitizeImport(exported, { knownFolders: targetFolders });
+  assert.deepEqual(imported.problems, []);
+  assert.equal(imported.remappedFolders, 2);
+  assert.deepEqual(imported.rules[0].folderIds, ['new1://INBOX']);
+  assert.deepEqual(imported.rules[0].actions, [{ type: 'move', folderId: 'new1://Archive/Receipts' }]);
+});
+
+test('portable import falls back to an unambiguous path match and drops unresolvable destination folders', () => {
+  const exported = {
+    format: EXPORT_FORMAT,
+    version: 1,
+    folderRefs: {
+      'old://Receipts': { accountName: 'Old Account Name', path: '/Receipts' },
+      'old://Nowhere': { accountName: 'Old Account Name', path: '/Nowhere' },
+    },
+    rules: [
+      {
+        name: 'Move to receipts',
+        folderIds: ['old://Receipts'],
+        conditions: [{ field: 'subject', operator: 'contains', value: 'x' }],
+        actions: [{ type: 'move', folderId: 'old://Receipts' }],
+      },
+      {
+        name: 'Move to missing',
+        folderIds: ['old://Receipts'],
+        conditions: [{ field: 'subject', operator: 'contains', value: 'y' }],
+        actions: [{ type: 'move', folderId: 'old://Nowhere' }],
+      },
+    ],
+  };
+
+  const targetFolders = [{ id: 'new://Receipts', accountName: 'Renamed Account', path: '/Receipts' }];
+  const res = sanitizeImport(exported, { knownFolders: targetFolders });
+  assert.equal(res.rules.length, 1);
+  assert.equal(res.rules[0].name, 'Move to receipts');
+  assert.deepEqual(res.rules[0].folderIds, ['new://Receipts']);
+  assert.deepEqual(res.rules[0].actions, [{ type: 'move', folderId: 'new://Receipts' }]);
+  assert.equal(res.remappedFolders, 2);
+  assert.ok(res.problems.some((p) => /destination folder for "move"/.test(p)));
 });

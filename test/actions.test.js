@@ -435,3 +435,83 @@ test('when copy filters out every message, a companion move still runs and count
   assert.deepEqual(m.calls, [{ name: 'move', args: [[1, 2], 'archive'] }]);
   assert.equal(result.affected, 2);
 });
+
+test('removeTag removes one tag, preserves others, and skips messages without it', async () => {
+  const m = fakeMessenger({ 1: ['$label1', '$label2'], 2: ['$label2'] });
+  const acted = await runAction(m, [1, 2], { type: 'removeTag', tagKey: '$label1' });
+  assert.deepEqual(acted, [1]);
+  assert.deepEqual(m.calls, [{ name: 'update', args: [1, { tags: ['$label2'] }] }]);
+
+  await assert.rejects(() => runAction(m, [1], { type: 'removeTag' }), /requires a tag/);
+});
+
+test('clearTags empties all tags and skips messages already untagged', async () => {
+  const m = fakeMessenger({ 1: ['$label1', 'work'], 2: [] });
+  const acted = await runAction(m, [1, 2], { type: 'clearTags' });
+  assert.deepEqual(acted, [1]);
+  assert.deepEqual(m.calls, [{ name: 'update', args: [1, { tags: [] }] }]);
+});
+
+test('removeTag and clearTags reuse scanned headers and run before tag additions and moves', async () => {
+  let gets = 0;
+  const calls = [];
+  const m = {
+    messages: {
+      get: async (id) => {
+        gets += 1;
+        return { id, tags: [] };
+      },
+      update: async (id, props) => calls.push(['update', id, props]),
+      move: async (ids, folderId) => calls.push(['move', ids, folderId]),
+    },
+  };
+  const headers = new Map([
+    [1, { id: 1, tags: ['new', 'keep'] }],
+    [2, { id: 2, tags: ['keep'] }],
+  ]);
+
+  // Written tag-then-removeTag-then-move, but removeTag runs before tag and move runs last.
+  const swapped = await runActions(
+    m,
+    [1, 2],
+    [
+      { type: 'move', folderId: 'waiting-folder' },
+      { type: 'tag', tagKey: 'waiting' },
+      { type: 'removeTag', tagKey: 'new' },
+    ],
+    { headers },
+  );
+  assert.equal(gets, 0);
+  assert.equal(swapped.affected, 2);
+  assert.deepEqual(calls, [
+    ['update', 1, { tags: ['keep'] }],
+    ['update', 1, { tags: ['keep', 'waiting'] }],
+    ['update', 2, { tags: ['keep', 'waiting'] }],
+    ['move', [1, 2], 'waiting-folder'],
+  ]);
+
+  // clearTags runs before tag even when listed after it.
+  const calls2 = [];
+  const m2 = {
+    messages: {
+      get: async () => { gets += 1; return { tags: [] }; },
+      update: async (id, props) => calls2.push([id, props]),
+    },
+  };
+  const cleared = await runActions(
+    m2,
+    [1, 2],
+    [
+      { type: 'tag', tagKey: 'archived' },
+      { type: 'clearTags' },
+    ],
+    { headers: new Map([[1, { id: 1, tags: ['old'] }], [2, { id: 2, tags: [] }]]) },
+  );
+  assert.equal(gets, 0);
+  assert.equal(cleared.affected, 2);
+  assert.deepEqual(calls2, [
+    [1, { tags: [] }],
+    [1, { tags: ['archived'] }],
+    [2, { tags: ['archived'] }],
+  ]);
+});

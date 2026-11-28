@@ -1191,5 +1191,119 @@
   },
   "confirm_readFailed": {
     "message": "Impossibile leggere la selezione: $1"
+  },
+  "menu_createRule": {
+    "message": "Crea regola da questo messaggio…"
+  },
+  "options_importTitle": {
+    "message": "Importa backup (.json) o file msgFilterRules.dat di Thunderbird"
+  },
+  "field_to_cc": {
+    "message": "A o CC"
+  },
+  "field_custom_header": {
+    "message": "Intestazione personalizzata…"
+  },
+  "field_size": {
+    "message": "dimensione"
+  },
+  "op_largerThan": {
+    "message": "maggiore di"
+  },
+  "op_smallerThan": {
+    "message": "minore di"
+  },
+  "op_sizeOnly": {
+    "message": "$1 (solo campo dimensione)"
+  },
+  "op_sizeOnlyReason": {
+    "message": "Funziona solo con il campo dimensione."
+  },
+  "cond_customHeaderPlaceholder": {
+    "message": "es. List-Unsubscribe"
+  },
+  "cond_customHeaderLabel": {
+    "message": "Nome intestazione personalizzata"
+  },
+  "cond_customHeaderHint": {
+    "message": "Inserisci il nome di qualsiasi intestazione email, come <code>List-Unsubscribe</code>, <code>X-Spam-Status</code> o <code>Return-Path</code>. Per leggerla, l’estensione scarica le intestazioni di ogni messaggio, quindi questo controllo è più lento dei campi integrati."
+  },
+  "cond_sizeUnitLabel": {
+    "message": "Unità di dimensione"
+  },
+  "action_removeTag": {
+    "message": "Rimuovi etichetta…"
+  },
+  "action_removeTagHint": {
+    "message": "Rimuove una delle tue etichette Thunderbird senza modificare le altre etichette del messaggio."
+  },
+  "action_clearTags": {
+    "message": "Rimuovi tutte le etichette"
+  },
+  "action_clearTagsHint": {
+    "message": "Rimuove tutte le etichette dai messaggi corrispondenti senza spostarli."
+  },
+  "summary_size": {
+    "message": "$1 $2 $3 $4"
+  },
+  "summary_removeTagAction": {
+    "message": "Rimuovi etichetta $1"
+  },
+  "reject_size": {
+    "message": "la condizione dimensione richiede un numero positivo (ricevuto \"$1\")"
+  },
+  "reject_sizeEmpty": {
+    "message": "la condizione dimensione richiede un numero positivo (vuoto)"
+  },
+  "reject_customHeader": {
+    "message": "il nome dell’intestazione personalizzata \"$1\" non è valido"
+  },
+  "reject_customHeaderEmpty": {
+    "message": "la condizione intestazione personalizzata non ha un nome"
+  },
+  "import_sizeValue": {
+    "message": "$1: la dimensione richiede un numero positivo in KB o MB"
+  },
+  "import_unknownActionFolder": {
+    "message": "$1: la cartella di destinazione per \"$2\" non è presente in questo profilo, azione scartata"
+  },
+  "import_tbNoFilters": {
+    "message": "Nessun filtro di Thunderbird trovato in questo file"
+  },
+  "import_tbMatchAllUnsupported": {
+    "message": "$1: i filtri \"Tutti i messaggi\" non sono supportati, regola saltata"
+  },
+  "import_tbBadCondition": {
+    "message": "$1: impossibile leggere la condizione del filtro, regola saltata"
+  },
+  "import_tbMixedLogic": {
+    "message": "$1: condizioni E/O miste semplificate in una sola modalità, verifica prima di salvare"
+  },
+  "import_tbUnsupportedCondition": {
+    "message": "$1: condizione Thunderbird non supportata \"$2\", scartata"
+  },
+  "import_tbBookMappedAll": {
+    "message": "$1: rubrica mappata su Tutte le rubriche, verifica prima di salvare"
+  },
+  "import_tbMissingFolder": {
+    "message": "$1: cartella di destinazione \"$3\" per \"$2\" non trovata, azione scartata"
+  },
+  "import_tbUnsupportedAction": {
+    "message": "$1: azione Thunderbird non supportata \"$2\", scartata"
+  },
+  "status_notSavedCustomHeader": {
+    "message": "Non salvato: inserisci un nome di intestazione valido per «$1» (lettere, cifre e trattini, es. List-Unsubscribe)."
+  },
+  "status_importRemapped_one": {
+    "message": "Ricollegata $1 cartella da un altro profilo."
+  },
+  "status_importRemapped_other": {
+    "message": "Ricollegate $1 cartelle da un altro profilo."
+  },
+  "status_importTbPickFolders": {
+    "message": "Scegli le cartelle che ogni regola deve controllare prima di salvare."
+  },
+  "status_draftCreated": {
+    "message": "Bozza di regola creata dal messaggio selezionato — scegli un’azione e premi Salva."
   }
 }

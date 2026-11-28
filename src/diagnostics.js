@@ -21,11 +21,13 @@ import {
   DOMAIN_IN_LIST,
   IN_ADDRESS_BOOK,
   NAME_SHOWS_OTHER_ADDRESS,
+  SIZE_OPERATORS,
   STATE_LABELS,
   fieldsOf,
   isAgeCondition,
   isAuthCondition,
   isPriorityCondition,
+  isSizeCondition,
   isStateCondition,
   isTagCondition,
 } from './matcher.js';
@@ -91,12 +93,16 @@ export function formatEntry(entry, offsetMinutes) {
 }
 
 const AGE_LABELS = { [AGE_OPERATORS.olderThan]: 'older than', [AGE_OPERATORS.newerThan]: 'newer than' };
+const SIZE_LABELS = { [SIZE_OPERATORS.largerThan]: 'larger than', [SIZE_OPERATORS.smallerThan]: 'smaller than' };
 
 /** One condition as text. Values are replaced by their length unless opted in. */
 export function describeCondition(c, { includeValues = false } = {}) {
   const not = c?.negate ? 'not ' : '';
   if (isAgeCondition(c)) {
     return `age ${not}${AGE_LABELS[c.operator] ?? c.operator} ${c.days} day(s)`;
+  }
+  if (isSizeCondition(c)) {
+    return `size ${not}${SIZE_LABELS[c.operator] ?? c.operator} ${c.size} ${c.unit}`;
   }
   if (isStateCondition(c)) {
     return `${not}${STATE_LABELS[String(c.field).toLowerCase()]?.[c.operator] ?? c.operator}`;

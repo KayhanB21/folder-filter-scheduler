@@ -4,11 +4,14 @@
 
 import {
   FIELDS,
+  CUSTOM_HEADER_OPTION,
   DOMAIN_IN_LIST,
   IN_ADDRESS_BOOK,
   NAME_SHOWS_OTHER_ADDRESS,
   AGE_FIELD,
   AGE_OPERATORS,
+  SIZE_FIELD,
+  SIZE_OPERATORS,
   STATE_FIELDS,
   STATE_OPERATORS,
   TAG_FIELD,
@@ -21,6 +24,10 @@ import {
   AUTH_PASSES,
   AUTH_METHODS,
   ageDays,
+  isCustomHeaderField,
+  normalizeHeaderName,
+  sizeAmount,
+  sizeUnit,
 } from '../src/matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from '../src/contacts.js';
 import { diagnosticsFilename } from '../src/diagnostics.js';
@@ -28,6 +35,7 @@ import { ACTIONS, ACTIONS_BY_ID, actionsOf, isTerminalAction, orderActions } fro
 import { ADVANCED_DEFAULTS, dohOrigin, sanitizeAdvanced } from '../src/settings.js';
 import { DEFAULT_ALLOWLIST, parseDomainList } from '../src/domains.js';
 import { buildExport, exportFilename, sanitizeImport } from '../src/rules.js';
+import { importThunderbirdFilters, isThunderbirdFilterFile } from '../src/tb-filters.js';
 import { collapsedTree, folderDepth, folderMatchesFilter, resolveRuleFolders, treeGuides } from '../src/folders.js';
 import { describeCron, nextRun, parseCron } from '../src/cron.js';
 import { applyI18n, formatList, plural, t } from '../src/i18n.js';
@@ -617,13 +625,23 @@ function fillDomainFieldSelect(select, cond) {
   if (!DOMAIN_FIELD_SETS.some((s) => s.value === current)) select.value = 'reply-to,from';
 }
 
+/** Field choices offered in the condition picker, with "Custom header…" grouped with the headers. */
+const PICKER_FIELDS = (() => {
+  const list = [...FIELDS];
+  const afterSender = list.indexOf('sender');
+  if (afterSender >= 0) list.splice(afterSender + 1, 0, CUSTOM_HEADER_OPTION);
+  else list.push(CUSTOM_HEADER_OPTION);
+  return Object.freeze(list);
+})();
+
 function fillFieldSelect(select, value) {
   select.innerHTML = '';
-  for (const field of FIELDS) {
+  const selected = isCustomHeaderField(value) ? CUSTOM_HEADER_OPTION : value;
+  for (const field of PICKER_FIELDS) {
     const opt = document.createElement('option');
     opt.value = field;
     opt.textContent = fieldLabel(field);
-    opt.selected = field === value;
+    opt.selected = field === selected;
     select.append(opt);
   }
 }
@@ -641,7 +659,7 @@ const GREY_FIELD_REASONS = {
 function greyOtherFields(select, mode) {
   const offered = new Set([...select.options].map((o) => o.value));
   const [bothHeaders] = DOMAIN_FIELD_SETS;
-  for (const { value, label } of [...FIELDS.map((f) => ({ value: f, label: fieldLabel(f) })), bothHeaders]) {
+  for (const { value, label } of [...PICKER_FIELDS.map((f) => ({ value: f, label: fieldLabel(f) })), bothHeaders]) {
     if (offered.has(value)) continue;
     const isSet = value === bothHeaders.value;
     const opt = document.createElement('option');
@@ -659,6 +677,7 @@ function greyOtherFields(select, mode) {
  */
 const GREY_OPERATORS = {
   age: { suffix: 'op_ageOnly', reason: 'op_ageOnlyReason' },
+  size: { suffix: 'op_sizeOnly', reason: 'op_sizeOnlyReason' },
   state: { suffix: null, reason: 'op_stateOnlyReason' },
   tag: { suffix: 'op_tagOnly', reason: 'op_tagOnlyReason' },
   priority: { suffix: null, reason: 'op_priorityOnlyReason' },
@@ -678,13 +697,18 @@ const stateLabel = (field, operator) => t(`state_${field}_${operator}`);
 function renderCondition(container, cond = {}) {
   const node = $('#condition-template').content.firstElementChild.cloneNode(true);
   const fieldSelect = $('.cond-field', node);
+  const customHeaderInput = $('.cond-custom-header', node);
   const op = $('.cond-op', node);
-  fillFieldSelect(fieldSelect, cond.field ?? 'reply-to');
+  const initialField = isCustomHeaderField(cond.field) ? CUSTOM_HEADER_OPTION : (cond.field ?? 'reply-to');
+  fillFieldSelect(fieldSelect, initialField);
+  customHeaderInput.value = isCustomHeaderField(cond.field) ? cond.field : '';
   op.value = cond.operator ?? 'contains';
   $('.cond-negate', node).checked = !!cond.negate;
   $('.cond-value', node).value = cond.value ?? '';
   $('.cond-domains', node).value = (cond.domains ?? []).join('\n');
   $('.cond-days', node).value = ageDays(cond) ?? '';
+  $('.cond-size', node).value = sizeAmount(cond) ?? '';
+  $('.cond-size-unit', node).value = sizeUnit(cond) ?? 'MB';
   // A new priority row starts on High: the level people most often filter on.
   $('.cond-priority', node).value = PRIORITY_LEVELS.includes(cond.value) ? cond.value : 'high';
   // A new authentication row starts on DKIM: the check the add-on runs itself.
@@ -745,26 +769,29 @@ function renderCondition(container, cond = {}) {
     const isAddress = isBook || isName;
     const nextMode = isList ? 'list' : isAddress ? 'address' : 'plain';
     if (nextMode !== mode) {
-      const previous = mode === null ? (cond.field ?? cond.fields?.[0]) : fieldSelect.value;
+      const previous = mode === null ? (cond.fields?.[0] ?? initialField) : fieldSelect.value;
       if (isList) fillDomainFieldSelect(fieldSelect, cond);
       else if (isAddress) fillBookFieldSelect(fieldSelect, previous);
-      else fillFieldSelect(fieldSelect, FIELDS.includes(previous) ? previous : 'reply-to');
+      else fillFieldSelect(fieldSelect, PICKER_FIELDS.includes(previous) ? previous : 'reply-to');
       greyOtherFields(fieldSelect, nextMode);
       mode = nextMode;
     }
 
-    // Age, the three states, tag, and priority each take their own operators
-    // and nothing else. Every other field takes the rest. An operator that the
-    // field rules out stays in the list, greyed and under its own heading, with
-    // the reason on hover.
+    // Age, size, the three states, tag, priority, and auth each take their own
+    // operators and nothing else. Every other field takes the rest. An operator
+    // that the field rules out stays in the list, greyed and under its own
+    // heading, with the reason on hover.
     const field = fieldSelect.value;
     const isAge = field === AGE_FIELD;
+    const isSize = field === SIZE_FIELD;
+    const isCustom = field === CUSTOM_HEADER_OPTION;
     const isState = STATE_FIELDS.includes(field);
     const isTag = field === TAG_FIELD;
     const isPriority = field === PRIORITY_FIELD;
     const isAuth = field === AUTH_FIELD;
     const kindOf = (value) => {
       if (value in AGE_OPERATORS) return 'age';
+      if (value in SIZE_OPERATORS) return 'size';
       if (value in STATE_OPERATORS) return 'state';
       if (value === PRIORITY_IS) return 'priority';
       if (value === AUTH_PASSES) return 'auth';
@@ -772,6 +799,7 @@ function renderCondition(container, cond = {}) {
     };
     let kind = 'plain';
     if (isAge) kind = 'age';
+    else if (isSize) kind = 'size';
     else if (isState) kind = 'state';
     else if (isTag) kind = 'tag';
     else if (isPriority) kind = 'priority';
@@ -799,6 +827,7 @@ function renderCondition(container, cond = {}) {
     if (kindOf(op.value) !== kind) {
       op.value = {
         age: AGE_OPERATORS.olderThan,
+        size: SIZE_OPERATORS.largerThan,
         state: STATE_OPERATORS.isOn,
         tag: HAS_TAG,
         priority: PRIORITY_IS,
@@ -812,9 +841,11 @@ function renderCondition(container, cond = {}) {
     negate.closest('label').classList.toggle('hidden', isState);
     if (isState) negate.checked = false;
 
+    customHeaderInput.classList.toggle('hidden', !isCustom);
+    $('.cond-custom-header-hint', node).classList.toggle('hidden', !isCustom);
     $('.cond-domains', node).classList.toggle('hidden', !isList);
     $('.cond-value', node).classList.toggle(
-      'hidden', isList || isAge || isAddress || isState || isTag || isPriority || isAuth,
+      'hidden', isList || isAge || isSize || isAddress || isState || isTag || isPriority || isAuth,
     );
     $('.cond-priority', node).classList.toggle('hidden', !isPriority);
     $('.cond-priority-hint', node).classList.toggle('hidden', !isPriority);
@@ -826,6 +857,8 @@ function renderCondition(container, cond = {}) {
     $('.cond-state-hint', node).classList.toggle('hidden', !isState && !isTag);
     $('.cond-days', node).classList.toggle('hidden', !isAge);
     $('.cond-days-unit', node).classList.toggle('hidden', !isAge);
+    $('.cond-size', node).classList.toggle('hidden', !isSize);
+    $('.cond-size-unit', node).classList.toggle('hidden', !isSize);
     node.syncBooks();
     node.syncTags();
   };
@@ -973,6 +1006,7 @@ function renderRule(rule = {}, saved = false) {
   rulesEl.append(node);
   // Restore the remembered view state. A rule the user just added stays open.
   if (rule.id && collapsed.has(rule.id)) setCollapsed(node, true);
+  return node;
 }
 
 /**
@@ -1013,7 +1047,9 @@ function ruleSummary(node) {
   const conditions = [...node.querySelectorAll('.condition')].map((c) => {
     // A multi-field set is stored comma-joined; read it back as prose.
     const value = $('.cond-field', c).value;
-    const field = fieldsLabel(value);
+    const field = value === CUSTOM_HEADER_OPTION
+      ? ($('.cond-custom-header', c).value.trim() || fieldLabel(CUSTOM_HEADER_OPTION))
+      : fieldsLabel(value);
     const negate = $('.cond-negate', c).checked;
     const operator = $('.cond-op', c).value;
     // The operator's own text, before syncRow greyed or renamed it.
@@ -1023,6 +1059,11 @@ function ruleSummary(node) {
     if (value === AGE_FIELD) {
       const days = $('.cond-days', c).value || '?';
       return plural('summary_age', Number(days), field, op, days);
+    }
+    if (value === SIZE_FIELD) {
+      const amount = $('.cond-size', c).value || '?';
+      const unit = $('.cond-size-unit', c).value || 'MB';
+      return t('summary_size', field, op, amount, unit);
     }
     if (STATE_FIELDS.includes(value)) return stateLabel(value, operator);
     if (value === TAG_FIELD) return t(negate ? 'summary_notHasTag' : 'summary_hasTag', tagLabel(c.dataset.tagKey));
@@ -1056,6 +1097,7 @@ function ruleSummary(node) {
   ).map((a) => {
     const def = ACTIONS_BY_ID[a.type];
     if (!def) return t('summary_noAction');
+    if (a.type === 'removeTag') return t('summary_removeTagAction', tagLabel(a.tagKey));
     return def.needsTag ? t('summary_tagAction', tagLabel(a.tagKey)) : def.label;
   });
   const folderCount = $('.rule-folders', node).selectedOptions.length;
@@ -1157,6 +1199,21 @@ function collectConfig(rejected = []) {
           const days = ageDays({ days: raw });
           condition.days = days ?? 0;
           if (days === null) rejected.push(raw ? t('reject_ageDays', raw) : t('reject_ageDaysEmpty'));
+        } else if (condition.field === SIZE_FIELD) {
+          const raw = $('.cond-size', c).value.trim();
+          const amount = sizeAmount({ size: raw });
+          const unit = sizeUnit({ unit: $('.cond-size-unit', c).value }) ?? 'MB';
+          condition.size = amount ?? 0;
+          condition.unit = unit;
+          if (amount === null) rejected.push(raw ? t('reject_size', raw) : t('reject_sizeEmpty'));
+        } else if (condition.field === CUSTOM_HEADER_OPTION) {
+          const rawName = $('.cond-custom-header', c).value.trim();
+          const normalized = normalizeHeaderName(rawName);
+          condition.field = normalized ?? '';
+          if (!normalized) {
+            rejected.push(rawName ? t('reject_customHeader', rawName) : t('reject_customHeaderEmpty'));
+          }
+          condition.value = $('.cond-value', c).value;
         } else if (STATE_FIELDS.includes(condition.field)) {
           condition.negate = false;
         } else if (condition.field === TAG_FIELD) {
@@ -1276,6 +1333,23 @@ async function save() {
     return;
   }
 
+  // Refuse a blank or invalid custom header name so the typed text is not lost.
+  const badCustomHeader = [...rulesEl.querySelectorAll('.rule')].find((node) =>
+    [...node.querySelectorAll('.condition')].some(
+      (c) => $('.cond-field', c).value === CUSTOM_HEADER_OPTION && !normalizeHeaderName($('.cond-custom-header', c).value),
+    ),
+  );
+  if (badCustomHeader) {
+    setCollapsed(badCustomHeader, false);
+    const badInput = [...badCustomHeader.querySelectorAll('.condition')]
+      .find((c) => $('.cond-field', c).value === CUSTOM_HEADER_OPTION && !normalizeHeaderName($('.cond-custom-header', c).value))
+      ?.querySelector('.cond-custom-header');
+    badInput?.focus();
+    const name = $('.rule-name', badCustomHeader).value.trim() || t('common_untitledRule');
+    flash(t('status_notSavedCustomHeader', name), true);
+    return;
+  }
+
   // An enabled rule without folders scans nothing, yet the card looks active.
   // A disabled one saves, so a draft can wait for its folders.
   const noFolders = [...rulesEl.querySelectorAll('.rule')].find(
@@ -1305,7 +1379,9 @@ async function save() {
 
   // Address-book conditions are kept even when they cannot run yet, but the
   // user must be told, since a condition that never matches looks like a bug.
-  const tagActions = collected.rules.flatMap((r) => r.actions.filter((a) => a.type === 'tag'));
+  const tagActions = collected.rules.flatMap((r) =>
+    r.actions.filter((a) => ACTIONS_BY_ID[a.type]?.needsTag),
+  );
   const bookConds = collected.rules.flatMap((r) => r.conditions.filter((c) => c.operator === IN_ADDRESS_BOOK));
   const knownBooks = new Set([ALL_ADDRESS_BOOKS, ...addressBooks.map((b) => b.id)]);
   const notes = [];
@@ -1381,7 +1457,8 @@ async function clearDiagnostics() {
 
 function exportRules() {
   const now = new Date();
-  const blob = new Blob([JSON.stringify(buildExport(collectConfig(), { exportedAt: now }), null, 2)], {
+  const payload = buildExport(collectConfig(), { exportedAt: now, folders });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: 'application/json',
   });
   const url = URL.createObjectURL(blob);
@@ -1399,24 +1476,46 @@ function exportRules() {
  * Import is deliberately staged: rules are validated and rendered into the page,
  * but nothing is stored until the user presses Save. So a bad file can be
  * abandoned by reloading, and can never start deleting mail on its own.
+ *
+ * Accepts both Folder Filter Scheduler `.json` exports (with portable folder
+ * matching across computers) and Thunderbird's built-in `msgFilterRules.dat`.
  */
 async function importRules(file) {
-  let data;
+  let text;
   try {
-    data = JSON.parse(await file.text());
+    text = await file.text();
   } catch (e) {
     flash(t('status_importReadFailed', file.name, e.message), true);
     return;
   }
 
-  const { rules, duplicates, allowlist, intervalMinutes, advanced, problems } = sanitizeImport(data, {
-    knownFolderIds: folders.map((f) => f.id),
-    // Only checkable with access; otherwise ids are kept and checked on use.
-    knownAddressBookIds: bookAccess ? addressBooks.map((b) => b.id) : undefined,
-    // Compare against what is on the page, including unsaved edits, so
-    // re-importing the same file does not pile up duplicate rules.
-    existingRules: collectConfig().rules,
-  });
+  const fromThunderbird = isThunderbirdFilterFile(text);
+  let result;
+  if (fromThunderbird) {
+    result = importThunderbirdFilters(text, {
+      knownFolders: folders,
+      existingRules: collectConfig().rules,
+    });
+  } else {
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      flash(t('status_importReadFailed', file.name, e.message), true);
+      return;
+    }
+    result = sanitizeImport(data, {
+      knownFolderIds: folders.map((f) => f.id),
+      knownFolders: folders,
+      // Only checkable with access; otherwise ids are kept and checked on use.
+      knownAddressBookIds: bookAccess ? addressBooks.map((b) => b.id) : undefined,
+      // Compare against what is on the page, including unsaved edits, so
+      // re-importing the same file does not pile up duplicate rules.
+      existingRules: collectConfig().rules,
+    });
+  }
+
+  const { rules, duplicates, allowlist, intervalMinutes, advanced, remappedFolders = 0, problems } = result;
 
   const dupeNote = duplicates.length
     ? t('status_importDuplicates', formatList(duplicates.map((d) => t('status_importDuplicate', d.name, d.hash, d.matches)), 'unit'))
@@ -1436,9 +1535,13 @@ async function importRules(file) {
   if (intervalMinutes) $('#interval').value = intervalMinutes;
   if (advanced) fillAdvanced(advanced);
 
+  const remapped = remappedFolders > 0 ? plural('status_importRemapped', remappedFolders, remappedFolders) : '';
+  const tbHint = fromThunderbird ? t('status_importTbPickFolders') : '';
   const skipped = problems.length > 0 ? t('status_importSkipped', problems.join('; ')) : '';
   flash(
-    [plural('status_imported', rules.length, rules.length), skipped, dupeNote].filter(Boolean).join(' '),
+    [plural('status_imported', rules.length, rules.length), tbHint, remapped, skipped, dupeNote]
+      .filter(Boolean)
+      .join(' '),
     problems.length > 0,
   );
 }
@@ -1478,6 +1581,33 @@ async function runRuleNow(node) {
   }
 }
 
+/** Track drafts already rendered so open-page delivery and init() never duplicate one. */
+const seenDraftIds = new Set();
+
+function isBlankStarterCard(node) {
+  if (!node || node.dataset.unsaved !== 'true') return false;
+  if ($('.rule-folders', node).selectedOptions.length > 0) return false;
+  const actions = [...node.querySelectorAll('.action')];
+  if (actions.length !== 1 || $('.action-type', actions[0]).value !== '') return false;
+  const conds = [...node.querySelectorAll('.condition')];
+  if (conds.length !== 1) return false;
+  return $('.cond-value', conds[0]).value === '' && $('.cond-domains', conds[0]).value === '';
+}
+
+function applyDraftRule(draftId, rule) {
+  if (!rule || (draftId && seenDraftIds.has(draftId))) return;
+  if (draftId) seenDraftIds.add(draftId);
+  const existingCards = [...rulesEl.querySelectorAll('.rule')];
+  if (existingCards.length === 1 && isBlankStarterCard(existingCards[0])) {
+    existingCards[0].remove();
+  }
+  const card = renderRule(rule, false);
+  setCollapsed(card, false);
+  card.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  $('.action-type', card)?.focus();
+  flash(t('status_draftCreated'));
+}
+
 async function init() {
   await loadFolders();
   await loadAddressBooks();
@@ -1498,6 +1628,17 @@ async function init() {
   // The blank starter card of a fresh install is not in storage yet.
   for (const r of rules) renderRule(r, Boolean(config?.rules?.length));
   if (firstVisit && rules.length > 3) setAllCollapsed(true);
+
+  const pending = await messenger.runtime.sendMessage({ command: 'takeDraftRule' }).catch(() => null);
+  if (pending?.draft?.rule) applyDraftRule(pending.draft.id, pending.draft.rule);
+
+  messenger.runtime.onMessage?.addListener((msg) => {
+    if (msg?.command === 'draftRule' && msg.rule) {
+      applyDraftRule(msg.draftId, msg.rule);
+      return Promise.resolve({ handled: true });
+    }
+    return undefined;
+  });
 
   $('#allowlist').value = (config?.allowlist ?? DEFAULT_ALLOWLIST).join('\n');
   $('#reset-allowlist').addEventListener('click', () => {

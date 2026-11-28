@@ -139,7 +139,15 @@ test('describeCondition and formatEntry read as plain text', () => {
   assert.equal(formatEntry({ t: '2026-10-15T21:38:36.000Z', level: 'info', msg: 'm' }, -120), '2026-10-15 23:38:36 +02:00 info m');
   assert.equal(describeAction({ type: 'tag', tagKey: '$label1' }), 'tag -> (tag)');
   assert.equal(describeAction({ type: 'tag', tagKey: '$label1' }, { includeValues: true }), 'tag -> $label1');
+  assert.equal(describeAction({ type: 'removeTag', tagKey: '$label1' }), 'removeTag -> (tag)');
+  assert.equal(describeAction({ type: 'removeTag', tagKey: '$label1' }, { includeValues: true }), 'removeTag -> $label1');
+  assert.equal(describeAction({ type: 'clearTags' }), 'clearTags');
   assert.equal(describeAction({ type: 'markRead' }), 'markRead');
+  assert.equal(describeCondition({ field: 'size', operator: 'largerThan', size: 5, unit: 'MB' }), 'size larger than 5 MB');
+  assert.equal(describeCondition({ field: 'size', operator: 'smallerThan', size: 500, unit: 'KB', negate: true }), 'size not smaller than 500 KB');
+  assert.equal(describeCondition({ field: 'to-cc', operator: 'contains', value: 'secret@example.com' }), 'to-cc contains <18 chars>');
+  assert.equal(describeCondition({ field: 'x-spam-status', operator: 'contains', value: 'Yes' }), 'x-spam-status contains <3 chars>');
+  assert.equal(describeCondition({ field: 'x-spam-status', operator: 'contains', value: 'Yes' }, { includeValues: true }), 'x-spam-status contains "Yes"');
 });
 
 test('a pre-0.3.2 single-action rule still shows its action', () => {

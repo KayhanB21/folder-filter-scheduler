@@ -25,7 +25,15 @@
  *   catch-up lookback.
  */
 
-import { AGE_OPERATORS, ageDays, isAgeCondition } from './matcher.js';
+import {
+  AGE_OPERATORS,
+  HAS_TAG,
+  STATE_OPERATORS,
+  ageDays,
+  isAgeCondition,
+  isStateCondition,
+  isTagCondition,
+} from './matcher.js';
 import { ADVANCED_DEFAULTS } from './settings.js';
 
 /**
@@ -130,4 +138,58 @@ export function queryBoundsFor(rule, plan, now = new Date()) {
     .filter((n) => n !== null);
   if (olderThan.length > 0) bounds.toDate = new Date(now.getTime() - Math.max(...olderThan) * DAY);
   return bounds;
+}
+
+/**
+ * Push cheap `all` (AND) conditions (`read`, `star`, positive `tag`) down into
+ * Thunderbird's `messages.query()` so big folders return far fewer headers.
+ *
+ * Returns `{ unread?, flagged?, tags?, impossible? }`. `impossible: true` means
+ * the rule carries contradictory demands (such as read AND unread) so the folder
+ * scan can be skipped entirely. The matcher still re-evaluates every returned
+ * message, so pushdown only ever narrows the candidate set, never decides it.
+ */
+export function queryFilterFor(rule) {
+  if (rule?.match !== 'all') return {};
+  const conditions = Array.isArray(rule?.conditions) ? rule.conditions : [];
+
+  let unread;
+  let flagged;
+  const requiredTags = {};
+  const forbiddenTags = new Set();
+
+  for (const c of conditions) {
+    if (isStateCondition(c)) {
+      const field = String(c.field).toLowerCase();
+      if (field !== 'read' && field !== 'star') continue;
+      if (c.operator !== STATE_OPERATORS.isOn && c.operator !== STATE_OPERATORS.isOff) continue;
+      const wantsOn = (c.operator === STATE_OPERATORS.isOn) !== (c.negate === true);
+      if (field === 'read') {
+        const wantsUnread = !wantsOn;
+        if (unread !== undefined && unread !== wantsUnread) return { impossible: true };
+        unread = wantsUnread;
+      } else {
+        if (flagged !== undefined && flagged !== wantsOn) return { impossible: true };
+        flagged = wantsOn;
+      }
+    } else if (isTagCondition(c) && c.operator === HAS_TAG) {
+      const key = typeof c.tagKey === 'string' ? c.tagKey.trim() : '';
+      if (!key) continue;
+      if (c.negate === true) {
+        if (requiredTags[key]) return { impossible: true };
+        forbiddenTags.add(key);
+      } else {
+        if (forbiddenTags.has(key)) return { impossible: true };
+        requiredTags[key] = true;
+      }
+    }
+  }
+
+  const filter = {};
+  if (unread !== undefined) filter.unread = unread;
+  if (flagged !== undefined) filter.flagged = flagged;
+  if (Object.keys(requiredTags).length > 0) {
+    filter.tags = { tags: requiredTags, mode: 'all' };
+  }
+  return filter;
 }

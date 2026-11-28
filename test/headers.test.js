@@ -201,3 +201,59 @@ test('readHeadersOrSkip returns headers on success and skips once if fallback ge
   assert.deepEqual(errors, ['offline']);
   assert.equal(fallbackThrows.reads.skipped, 1);
 });
+
+test('header reads are cached per run across multiple rules', async () => {
+  const { reads, calls } = setup({ getHeaders: answers(HEADERS), getFull: answers({}) });
+  assert.deepEqual(await reads.read(42, 'acct'), HEADERS);
+  assert.deepEqual(await reads.read(42, 'acct'), HEADERS);
+  assert.deepEqual(await reads.read(42, 'acct'), HEADERS);
+  assert.deepEqual(calls, ['headers:42']);
+  assert.equal(reads.cached, 2);
+});
+
+test('a failed or timed-out message is remembered for the run without losing skipped counts', async () => {
+  let attempts = 0;
+  const { reads } = setup({
+    getHeaders: async () => {
+      attempts += 1;
+      throw new Error('IMAP reset');
+    },
+    getFull: answers(HEADERS),
+  });
+  assert.equal(await readHeadersOrSkip(reads, 7, 'acct'), null);
+  assert.equal(await readHeadersOrSkip(reads, 7, 'acct'), null);
+  assert.equal(attempts, 1);
+  assert.equal(reads.skipped, 2);
+});
+
+test('budgetMs stops fresh header downloads while still serving cached messages', async () => {
+  let t = 0;
+  const calls = [];
+  const logged = [];
+  const reads = createHeaderReads({
+    getHeaders: async (id) => {
+      calls.push(id);
+      t += 12_000;
+      return { headers: { 'x-id': [String(id)] } };
+    },
+    getFull: answers({}),
+    timeoutMs: 20,
+    limit: 5,
+    budgetMs: 20_000,
+    now: () => t,
+    onTimeout: (msg) => logged.push(msg),
+  });
+
+  assert.deepEqual(await reads.read(1, 'acct'), { 'x-id': ['1'] });
+  assert.deepEqual(await reads.read(2, 'acct'), { 'x-id': ['2'] });
+  // Elapsed is now 24s >= 20s: message 3 is deferred, but cached message 1 still succeeds.
+  assert.equal(await reads.read(3, 'acct'), null);
+  assert.equal(reads.stopped, true);
+  assert.equal(reads.skipped, 1);
+  assert.equal(logged.length, 1);
+  assert.match(logged[0], /20 s time budget/);
+  assert.deepEqual(await reads.read(1, 'acct'), { 'x-id': ['1'] });
+  assert.equal(await reads.read(4, 'acct'), null);
+  assert.equal(reads.skipped, 2);
+  assert.deepEqual(calls, [1, 2]);
+});

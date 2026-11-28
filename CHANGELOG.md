@@ -6,6 +6,44 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Arbitrary custom header conditions.** Choose **Custom header…** in a
+  condition row and enter any header name (such as `List-Unsubscribe`,
+  `X-Spam-Status`, or `Return-Path`) with `contains`, `is`, `starts with`,
+  `ends with`, or `matches regex`, optionally negated. Reading a custom header
+  downloads message headers on demand, like `reply-to` and `list-id`.
+- **Message size and "To or Cc" conditions.** The `size` field matches messages
+  `larger than` or `smaller than` a threshold in `KB` or `MB`, and `to or cc`
+  matches any recipient in either `To` or `Cc` (including address-book and
+  display-name checks). Both read Thunderbird's indexed header with zero
+  downloads.
+- **Remove tag and Clear all tags actions.** Rules can now remove a specific
+  tag (`removeTag`) or clear every tag (`clearTags`) in throttled waves while
+  reusing scanned headers. Within one rule, tag clears and removals run before
+  tag additions and terminal actions, so tag-swap workflows behave predictably
+  regardless of row order.
+- **Import Thunderbird's built-in `msgFilterRules.dat`.** The **Import…**
+  button now accepts Thunderbird's plain-text `msgFilterRules.dat` files
+  alongside Folder Filter Scheduler `.json` backups, converting conditions and
+  actions, matching destination folder URIs where possible, staging rules for
+  review, and reporting any unsupported items.
+- **Right-click → "Create rule from this message…".** Opens the options page
+  with a new unsaved draft rule pre-filled with the message's folder and its
+  `List-Id`, `From`, or `Subject`, ready to pick an action and save.
+- **Portable rule exports across computers.** Exports now include account name
+  and folder path metadata (`folderRefs`) alongside folder IDs so importing on
+  another profile or computer reconnects source and destination folders
+  automatically.
+
+### Changed
+- **Faster multi-rule and large-folder scans.** Header and body reads are now
+  cached per run (so multiple rules watching the same folder never fetch the
+  same message twice) and bounded by a 20-second run time budget so slow IMAP
+  downloads cannot trigger Thunderbird's MV3 event-page suspension before state
+  and logs are saved. `match: "all"` (AND) rules also push `read`, `star`, and
+  positive `tag` conditions down into `messages.query()` (and skip folders when
+  conditions contradict each other).
+
 ### Fixed
 - **Skip messages when a header read throws an error.** Previously only a
   header-read timeout skipped the message; a thrown error (such as a transient

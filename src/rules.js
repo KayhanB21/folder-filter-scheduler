@@ -16,7 +16,34 @@
  */
 
 import { ACTIONS_BY_ID, actionsOf, orderActions } from './actions.js';
-import { OPERATORS, DOMAIN_IN_LIST, FIELDS, AGE_FIELD, AGE_OPERATORS, IN_ADDRESS_BOOK, NAME_SHOWS_OTHER_ADDRESS, STATE_FIELDS, STATE_OPERATORS, TAG_FIELD, HAS_TAG, PRIORITY_FIELD, PRIORITY_IS, PRIORITY_LEVELS, AUTH_FIELD, AUTH_PASSES, AUTH_METHODS, BODY_FIELD, ageDays } from './matcher.js';
+import {
+  OPERATORS,
+  DOMAIN_IN_LIST,
+  FIELDS,
+  AGE_FIELD,
+  AGE_OPERATORS,
+  SIZE_FIELD,
+  SIZE_OPERATORS,
+  IN_ADDRESS_BOOK,
+  NAME_SHOWS_OTHER_ADDRESS,
+  STATE_FIELDS,
+  STATE_OPERATORS,
+  TAG_FIELD,
+  HAS_TAG,
+  PRIORITY_FIELD,
+  PRIORITY_IS,
+  PRIORITY_LEVELS,
+  AUTH_FIELD,
+  AUTH_PASSES,
+  AUTH_METHODS,
+  BODY_FIELD,
+  ageDays,
+  isCustomHeaderField,
+  normalizeHeaderName,
+  sizeAmount,
+  sizeBytes,
+  sizeUnit,
+} from './matcher.js';
 import { ADDRESS_BOOK_FIELDS, ALL_ADDRESS_BOOKS } from './contacts.js';
 import { DEFAULT_ALLOWLIST, normalizeDomain, parseDomainList } from './domains.js';
 import { sanitizeAdvanced } from './settings.js';
@@ -33,12 +60,14 @@ const KNOWN_OPERATORS = new Set([
   IN_ADDRESS_BOOK,
   NAME_SHOWS_OTHER_ADDRESS,
   ...Object.keys(AGE_OPERATORS),
+  ...Object.keys(SIZE_OPERATORS),
   ...Object.keys(STATE_OPERATORS),
   HAS_TAG,
   PRIORITY_IS,
   AUTH_PASSES,
 ]);
 const AGE_OPERATOR_SET = new Set(Object.keys(AGE_OPERATORS));
+const SIZE_OPERATOR_SET = new Set(Object.keys(SIZE_OPERATORS));
 
 /**
  * A canonical string capturing what a rule *does*, ignoring cosmetics.
@@ -63,6 +92,8 @@ export function ruleFingerprint(rule) {
         shape.domains = [...(c.domains ?? [])].map(normalizeDomain).filter(Boolean).sort();
       } else if (AGE_OPERATOR_SET.has(shape.operator)) {
         shape.days = ageDays(c);
+      } else if (SIZE_OPERATOR_SET.has(shape.operator)) {
+        shape.bytes = sizeBytes(c);
       } else if (shape.operator === IN_ADDRESS_BOOK) {
         shape.addressBookId = String(c?.addressBookId ?? '');
       } else if (shape.operator === HAS_TAG) {
@@ -128,8 +159,47 @@ export function exportFilename(date = new Date()) {
   return `ffs-rules-${stamp}.json`;
 }
 
+/**
+ * Portable folder metadata for every folder referenced by a rule or action.
+ * Lets an export from one computer reconnect folders by account name and path
+ * when imported on another profile whose internal folder ids differ.
+ */
+function buildFolderRefs(rules, folders) {
+  if (!Array.isArray(folders) || folders.length === 0) return null;
+  const byId = new Map(folders.filter((f) => f?.id && f?.path).map((f) => [String(f.id), f]));
+  const refs = {};
+  const record = (id) => {
+    const key = String(id ?? '');
+    if (!key || refs[key]) return;
+    const folder = byId.get(key);
+    if (!folder) return;
+    refs[key] = { accountName: String(folder.accountName ?? ''), path: String(folder.path) };
+  };
+  for (const rule of rules ?? []) {
+    for (const id of rule?.folderIds ?? []) record(id);
+    for (const action of actionsOf(rule)) {
+      if (action?.folderId) record(action.folderId);
+    }
+  }
+  return Object.keys(refs).length > 0 ? refs : null;
+}
+
 /** The object written to a .json export. Run state is deliberately excluded. */
-export function buildExport(config, { exportedAt = new Date() } = {}) {
+export function buildExport(config, { exportedAt = new Date(), folders } = {}) {
+  const rules = (config?.rules ?? []).map((rule) => ({
+    // Informational only: import recomputes it rather than trusting the file.
+    hash: ruleHash(rule),
+    name: rule.name,
+    enabled: rule.enabled !== false,
+    match: rule.match === 'all' ? 'all' : 'any',
+    folderIds: [...(rule.folderIds ?? [])],
+    includeSubfolders: rule.includeSubfolders === true,
+    // Only when the rule has one, so files without schedules look as before.
+    ...(rule.schedule ? { schedule: sanitizeSchedule(rule.schedule) } : {}),
+    conditions: (rule.conditions ?? []).map((c) => ({ ...c })),
+    actions: actionsOf(rule).map((a) => ({ ...a })),
+  }));
+  const folderRefs = buildFolderRefs(rules, folders);
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
@@ -137,19 +207,8 @@ export function buildExport(config, { exportedAt = new Date() } = {}) {
     intervalMinutes: config?.intervalMinutes ?? 10,
     advanced: sanitizeAdvanced(config?.advanced).settings,
     allowlist: config?.allowlist ?? [...DEFAULT_ALLOWLIST],
-    rules: (config?.rules ?? []).map((rule) => ({
-      // Informational only: import recomputes it rather than trusting the file.
-      hash: ruleHash(rule),
-      name: rule.name,
-      enabled: rule.enabled !== false,
-      match: rule.match === 'all' ? 'all' : 'any',
-      folderIds: [...(rule.folderIds ?? [])],
-      includeSubfolders: rule.includeSubfolders === true,
-      // Only when the rule has one, so files without schedules look as before.
-      ...(rule.schedule ? { schedule: sanitizeSchedule(rule.schedule) } : {}),
-      conditions: (rule.conditions ?? []).map((c) => ({ ...c })),
-      actions: actionsOf(rule).map((a) => ({ ...a })),
-    })),
+    ...(folderRefs ? { folderRefs } : {}),
+    rules,
   };
 }
 
@@ -157,7 +216,16 @@ function sanitizeFields(raw, problems, where) {
   const listed = Array.isArray(raw?.fields) && raw.fields.length > 0
     ? raw.fields
     : [raw?.field].filter(Boolean);
-  const fields = listed.map((f) => String(f).toLowerCase()).filter((f) => KNOWN_FIELDS.has(f));
+  const fields = [];
+  for (const entry of listed) {
+    const lower = String(entry ?? '').trim().toLowerCase();
+    if (KNOWN_FIELDS.has(lower)) {
+      fields.push(lower);
+    } else {
+      const custom = normalizeHeaderName(entry);
+      if (custom) fields.push(custom);
+    }
+  }
 
   if (fields.length === 0) {
     problems.push(t('import_noField', where));
@@ -197,16 +265,40 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
     return condition;
   }
 
+  // Size is a pseudo-field with its own operators too.
+  const sizeField = fields.length === 1 && fields[0] === SIZE_FIELD;
+  const sizeOperator = SIZE_OPERATOR_SET.has(operator);
+  if (sizeField !== sizeOperator) {
+    problems.push(t('import_operatorMismatch', where, operator, fields.join(',')));
+    return null;
+  }
+  if (sizeField) {
+    const size = sizeAmount(raw);
+    const unit = sizeUnit(raw);
+    if (size === null || unit === null) {
+      problems.push(t('import_sizeValue', where));
+      return null;
+    }
+    condition.size = size;
+    condition.unit = unit;
+    return condition;
+  }
+
   // Read, star, junk, tag, priority, and auth are pseudo-fields too, each with
   // its own operators. One of them never shares a condition with another field.
-  // Body takes the string operators of a header, and never shares either.
+  // Body and arbitrary custom headers take only the string operators, and never
+  // share a condition with another field either.
   const [only] = fields;
   const stateField = fields.length === 1 && STATE_FIELDS.includes(only);
   const tagField = fields.length === 1 && only === TAG_FIELD;
   const priorityField = fields.length === 1 && only === PRIORITY_FIELD;
   const authField = fields.length === 1 && only === AUTH_FIELD;
   const bodyField = fields.length === 1 && only === BODY_FIELD;
-  const isPseudo = (f) => STATE_FIELDS.includes(f) || [TAG_FIELD, PRIORITY_FIELD, AUTH_FIELD, BODY_FIELD].includes(f);
+  const customField = fields.length === 1 && isCustomHeaderField(only);
+  const isPseudo = (f) =>
+    STATE_FIELDS.includes(f) ||
+    [AGE_FIELD, SIZE_FIELD, TAG_FIELD, PRIORITY_FIELD, AUTH_FIELD, BODY_FIELD].includes(f) ||
+    isCustomHeaderField(f);
   const mixed = fields.length > 1 && fields.some(isPseudo);
   if (
     mixed ||
@@ -214,7 +306,7 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
     tagField !== (operator === HAS_TAG) ||
     priorityField !== (operator === PRIORITY_IS) ||
     authField !== (operator === AUTH_PASSES) ||
-    (bodyField && !Object.hasOwn(OPERATORS, operator))
+    ((bodyField || customField) && !Object.hasOwn(OPERATORS, operator))
   ) {
     problems.push(t('import_operatorMismatch', where, operator, fields.join(',')));
     return null;
@@ -297,6 +389,44 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
 }
 
 /**
+ * Resolve an imported folder id against the current profile's folders.
+ *
+ * When the id does not exist in this profile (e.g. a backup from another
+ * computer), try matching the portable `{ accountName, path }` recorded in
+ * `folderRefs`: first by account name and exact path, then by an unambiguous
+ * path match across accounts.
+ */
+function resolveImportedFolder(folderId, { known, knownFolders, folderRefs }) {
+  const id = String(folderId ?? '');
+  if (!known) return { id, remapped: false, missing: false };
+  if (known.has(id)) return { id, remapped: false, missing: false };
+
+  const ref = folderRefs && typeof folderRefs === 'object' ? folderRefs[id] : null;
+  const refPath = typeof ref?.path === 'string' ? ref.path : '';
+  if (refPath && Array.isArray(knownFolders) && knownFolders.length > 0) {
+    const refAccount = String(ref?.accountName ?? '').trim().toLowerCase();
+    if (refAccount) {
+      const exactAccount = knownFolders.filter(
+        (f) => String(f?.accountName ?? '').trim().toLowerCase() === refAccount && f?.path === refPath,
+      );
+      if (exactAccount.length === 1) return { id: String(exactAccount[0].id), remapped: true, missing: false };
+      const ciAccount = knownFolders.filter(
+        (f) =>
+          String(f?.accountName ?? '').trim().toLowerCase() === refAccount &&
+          String(f?.path ?? '').toLowerCase() === refPath.toLowerCase(),
+      );
+      if (ciAccount.length === 1) return { id: String(ciAccount[0].id), remapped: true, missing: false };
+    }
+    const byPath = knownFolders.filter((f) => f?.path === refPath);
+    if (byPath.length === 1) return { id: String(byPath[0].id), remapped: true, missing: false };
+    const byPathCi = knownFolders.filter((f) => String(f?.path ?? '').toLowerCase() === refPath.toLowerCase());
+    if (byPathCi.length === 1) return { id: String(byPathCi[0].id), remapped: true, missing: false };
+  }
+
+  return { id: null, remapped: false, missing: true };
+}
+
+/**
  * Rebuild a rule's action list field by field, in execution order.
  *
  * At most one terminal action survives. A rule that both moved and trashed the
@@ -304,7 +434,7 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
  * message ids, so the extras are dropped here and reported rather than left to
  * throw during a scheduled run.
  */
-function sanitizeActions(raw, problems, where) {
+function sanitizeActions(raw, problems, where, folderContext) {
   const listed = actionsOf(raw);
   if (listed.length === 0) {
     problems.push(t('import_noAction', where));
@@ -319,9 +449,19 @@ function sanitizeActions(raw, problems, where) {
       problems.push(t('import_unknownAction', where, candidate?.type ?? ''));
       continue;
     }
-    if (def.needsFolder && !candidate.folderId) {
-      problems.push(t('import_needsFolder', where, def.id));
-      continue;
+    let resolvedFolderId = null;
+    if (def.needsFolder) {
+      if (!candidate.folderId) {
+        problems.push(t('import_needsFolder', where, def.id));
+        continue;
+      }
+      const resolved = resolveImportedFolder(candidate.folderId, folderContext);
+      if (resolved.missing) {
+        problems.push(t('import_unknownActionFolder', where, def.id));
+        continue;
+      }
+      if (resolved.remapped) folderContext.remapped += 1;
+      resolvedFolderId = resolved.id;
     }
     if (def.needsTag && !candidate.tagKey) {
       problems.push(t('import_needsTag', where, def.id));
@@ -335,7 +475,7 @@ function sanitizeActions(raw, problems, where) {
       terminal = def.id;
     }
     const action = { type: def.id };
-    if (def.needsFolder) action.folderId = String(candidate.folderId);
+    if (def.needsFolder) action.folderId = resolvedFolderId;
     if (def.needsTag) action.tagKey = String(candidate.tagKey);
     // Exact repeats are noise, not a mistake worth reporting.
     if (actions.some((a) => a.type === action.type && a.folderId === action.folderId && a.tagKey === action.tagKey)) {
@@ -351,10 +491,10 @@ function sanitizeActions(raw, problems, where) {
   return actions;
 }
 
-function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds) {
+function sanitizeRule(raw, index, problems, folderContext, knownAddressBookIds) {
   const where = raw?.name ? t('import_whereNamedRule', index + 1, raw.name) : t('import_whereRule', index + 1);
 
-  const actions = sanitizeActions(raw, problems, where);
+  const actions = sanitizeActions(raw, problems, where, folderContext);
   if (!actions) return null;
 
   const conditions = (Array.isArray(raw?.conditions) ? raw.conditions : [])
@@ -367,13 +507,28 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
     return null;
   }
 
-  let folderIds = Array.isArray(raw?.folderIds) ? raw.folderIds.map(String) : [];
-  if (knownFolderIds) {
-    const missing = folderIds.filter((id) => !knownFolderIds.has(id));
-    if (missing.length > 0) {
-      problems.push(plural('import_unknownFolders', missing.length, where, missing.length));
-      folderIds = folderIds.filter((id) => knownFolderIds.has(id));
+  const rawFolderIds = Array.isArray(raw?.folderIds) ? raw.folderIds.map(String) : [];
+  let folderIds = rawFolderIds;
+  if (folderContext.known) {
+    const resolvedIds = [];
+    const seenIds = new Set();
+    let missingCount = 0;
+    for (const id of rawFolderIds) {
+      const resolved = resolveImportedFolder(id, folderContext);
+      if (resolved.missing) {
+        missingCount += 1;
+        continue;
+      }
+      if (resolved.remapped) folderContext.remapped += 1;
+      if (!seenIds.has(resolved.id)) {
+        seenIds.add(resolved.id);
+        resolvedIds.push(resolved.id);
+      }
     }
+    if (missingCount > 0) {
+      problems.push(plural('import_unknownFolders', missingCount, where, missingCount));
+    }
+    folderIds = resolvedIds;
   }
 
   // A schedule that does not parse is kept as text but turned off, so the rule
@@ -404,10 +559,20 @@ function sanitizeRule(raw, index, problems, knownFolderIds, knownAddressBookIds)
  * Validate a parsed export file. Returns the rules worth keeping plus a
  * human-readable list of everything that was rejected and why.
  */
-export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, existingRules } = {}) {
+export function sanitizeImport(
+  data,
+  { knownFolderIds, knownFolders, knownAddressBookIds, existingRules } = {},
+) {
   const problems = [];
   const duplicates = [];
-  const empty = { rules: [], duplicates, allowlist: null, intervalMinutes: null, advanced: null };
+  const empty = {
+    rules: [],
+    duplicates,
+    allowlist: null,
+    intervalMinutes: null,
+    advanced: null,
+    remappedFolders: 0,
+  };
 
   if (!data || typeof data !== 'object') {
     return { ...empty, problems: [t('import_notAnObject')] };
@@ -419,7 +584,13 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
     return { ...empty, problems: [...problems, t('import_noRules')] };
   }
 
-  const known = knownFolderIds ? new Set(knownFolderIds) : null;
+  const folderIdList = knownFolderIds ?? (Array.isArray(knownFolders) ? knownFolders.map((f) => f.id) : null);
+  const folderContext = {
+    known: folderIdList ? new Set(folderIdList.map(String)) : null,
+    knownFolders: Array.isArray(knownFolders) ? knownFolders : null,
+    folderRefs: data.folderRefs && typeof data.folderRefs === 'object' ? data.folderRefs : null,
+    remapped: 0,
+  };
   const knownBooks = knownAddressBookIds ? new Set(knownAddressBookIds) : null;
 
   // Fingerprint what is already present so re-importing the same file is a
@@ -431,7 +602,7 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
 
   const rules = [];
   for (const [i, raw] of data.rules.entries()) {
-    const rule = sanitizeRule(raw, i, problems, known, knownBooks);
+    const rule = sanitizeRule(raw, i, problems, folderContext, knownBooks);
     if (!rule) continue;
 
     const fingerprint = ruleFingerprint(rule);
@@ -464,5 +635,13 @@ export function sanitizeImport(data, { knownFolderIds, knownAddressBookIds, exis
     problems.push(...sanitized.problems.map((p) => t('import_advanced', p)));
   }
 
-  return { rules, duplicates, allowlist, intervalMinutes, advanced, problems };
+  return {
+    rules,
+    duplicates,
+    allowlist,
+    intervalMinutes,
+    advanced,
+    remappedFolders: folderContext.remapped,
+    problems,
+  };
 }

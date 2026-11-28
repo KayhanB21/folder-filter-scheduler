@@ -15,7 +15,7 @@ import {
 import { ALL_ADDRESS_BOOKS, addressSetFromVCards } from './contacts.js';
 import { LOG_CAP, appendEntries, buildReport, makeEntry } from './diagnostics.js';
 import { actionsOf, runActions } from './actions.js';
-import { planScan, queryBoundsFor, stampScan } from './scan.js';
+import { planScan, queryBoundsFor, queryFilterFor, stampScan } from './scan.js';
 import { ADVANCED_DEFAULTS, AUTH_DOH_SERVERS, alarmNeedsReset, dohOrigin, sanitizeAdvanced, trustedServerList } from './settings.js';
 import { createRunner } from './runner.js';
 import { createHeaderReads, readHeadersOrSkip } from './headers.js';
@@ -27,7 +27,16 @@ import { OWN_BLOCKED, OWN_OFF, OWN_ON } from './auth/check.js';
 import { dohQuery } from './auth/doh.js';
 import { resolveRuleFolders } from './folders.js';
 import { cronAlarmNeedsReset, missedRun, nextRun, scheduleOf } from './cron.js';
-import { MENU_HARVEST, MENU_RUN_ALL, SHORT_NAME, displayName, menuItems, ruleIdFromMenuItem } from './menu.js';
+import {
+  MENU_CREATE_RULE,
+  MENU_HARVEST,
+  MENU_RUN_ALL,
+  SHORT_NAME,
+  displayName,
+  draftRuleFromMessage,
+  menuItems,
+  ruleIdFromMenuItem,
+} from './menu.js';
 import {
   DEFAULT_ALLOWLIST,
   addressesFromHeaderValue,
@@ -72,6 +81,12 @@ const DEFAULT_INTERVAL_MINUTES = 10;
  */
 const HEADER_TIMEOUT_MS = 7_000;
 const HEADER_TIMEOUT_LIMIT = 2;
+/** Total wall-clock budget for header/body downloads in one run, matching RAW_BUDGET_MS. */
+const HEADER_BUDGET_MS = 20_000;
+const BODY_BUDGET_MS = 20_000;
+/** Short timeout when peeking at a single right-clicked message for "Create rule…". */
+const DRAFT_HEADER_TIMEOUT_MS = 3_000;
+const PENDING_DRAFT_KEY = 'pendingDraftRule';
 
 /**
  * The SPF, DKIM, and DMARC check downloads whole messages. One download may
@@ -318,7 +333,11 @@ const FULL_READ_ACCOUNTS_KEY = 'headerFullReadAccounts';
  * skips MIME parsing (TB 147+); `getFull` is the fallback for an account where
  * it never answers.
  */
-async function newHeaderReads() {
+async function newHeaderReads({
+  timeoutMs = HEADER_TIMEOUT_MS,
+  limit = HEADER_TIMEOUT_LIMIT,
+  budgetMs = HEADER_BUDGET_MS,
+} = {}) {
   const session = messenger.storage.session;
   const stored = await session?.get(FULL_READ_ACCOUNTS_KEY).catch(() => null);
   const known = new Set(stored?.[FULL_READ_ACCOUNTS_KEY] ?? []);
@@ -332,8 +351,9 @@ async function newHeaderReads() {
     },
     getHeaders: messenger.messages.getHeaders && ((id) => messenger.messages.getHeaders(id)),
     getFull: (id) => messenger.messages.getFull(id),
-    timeoutMs: HEADER_TIMEOUT_MS,
-    limit: HEADER_TIMEOUT_LIMIT,
+    timeoutMs,
+    limit,
+    budgetMs,
     // Saved at once: the run might be suspended before the usual delay.
     onTimeout: (message) => {
       warn(message);
@@ -343,8 +363,8 @@ async function newHeaderReads() {
 }
 
 /**
- * The body reads of one run, for the body condition. Same time limit as a
- * header read. See body.js.
+ * The body reads of one run, for the body condition. Same time limit and run
+ * budget as header reads. See body.js.
  */
 function newBodyReads() {
   return createBodyReads({
@@ -352,6 +372,7 @@ function newBodyReads() {
     toPlainText: (html) => messenger.messengerUtilities.convertToPlainText(html),
     timeoutMs: HEADER_TIMEOUT_MS,
     limit: HEADER_TIMEOUT_LIMIT,
+    budgetMs: BODY_BUDGET_MS,
     onTimeout: (message) => {
       warn(message);
       return flushLog();
@@ -487,11 +508,12 @@ async function normalize(messageHeader, fetchFull, headerReads, authReads) {
   let authPending = false;
   if (authReads) ({ auth, pending: authPending } = await authReads.read(messageHeader));
 
-  // The indexed Date, state, and tags, for the conditions that are not about a
-  // header. Free, no fetch.
+  // The indexed Date, size, state, and tags, for the conditions that are not
+  // about a header. Free, no fetch.
   return {
     fields,
     date: messageHeader.date,
+    size: messageHeader.size,
     state: { read: messageHeader.read, star: messageHeader.flagged, junk: messageHeader.junk },
     tags: messageHeader.tags,
     // A priority condition needs to know the headers are really there.
@@ -512,11 +534,14 @@ async function* eachMessage(list) {
   }
 }
 
-/** Iterate a folder, optionally bounded by Date on either side. */
-async function* messagesInFolder(folderId, { fromDate, toDate } = {}) {
+/** Iterate a folder, optionally narrowed by Date and cheap indexed query filters. */
+async function* messagesInFolder(folderId, { fromDate, toDate, unread, flagged, tags } = {}) {
   const query = { folderId, autoPaginationTimeout: 0 };
   if (fromDate instanceof Date) query.fromDate = fromDate;
   if (toDate instanceof Date) query.toDate = toDate;
+  if (typeof unread === 'boolean') query.unread = unread;
+  if (typeof flagged === 'boolean') query.flagged = flagged;
+  if (tags) query.tags = tags;
   yield* eachMessage(await messenger.messages.query(query));
 }
 
@@ -547,6 +572,7 @@ async function readBody(bodyReads, messageId) {
   } catch (e) {
     warn('body read failed', messageId, e);
     bodyReads.skipped += 1;
+    bodyReads.markFailed?.(messageId);
     return null;
   }
 }
@@ -564,6 +590,8 @@ async function runRule(
   const plan = planScan(runState[rule.id], { manual, now: startedAt, settings });
   const { kind } = plan;
   const bounds = queryBoundsFor(rule, plan, startedAt);
+  const filter = queryFilterFor(rule);
+  const queryOpts = { ...bounds, ...filter };
   let affected = 0;
   let scanned = 0;
   let matched = 0;
@@ -574,7 +602,7 @@ async function runRule(
   const skippedBefore = headerReads.skipped;
   const bodySkippedBefore = bodyReads.skipped;
 
-  for (const folderId of folderIds) {
+  for (const folderId of filter.impossible ? [] : folderIds) {
     const matchedIds = [];
     const matchedHeaders = new Map();
     const recordMatch = (header) => {
@@ -582,7 +610,7 @@ async function runRule(
       matchedHeaders.set(header.id, header);
     };
     try {
-      for await (const header of messagesInFolder(folderId, bounds)) {
+      for await (const header of messagesInFolder(folderId, queryOpts)) {
         scanned += 1;
         const message = await normalize(header, fetchFull, headerReads, ruleAuthReads);
         if (!message) continue;
@@ -1075,9 +1103,60 @@ function registerMenu() {
   return menuBuild;
 }
 
+async function stashDraftRule(rule) {
+  const area = messenger.storage.session ?? messenger.storage.local;
+  const payload = { id: newId(), rule };
+  await area.set({ [PENDING_DRAFT_KEY]: payload });
+  return payload;
+}
+
+async function takeDraftRule() {
+  const area = messenger.storage.session ?? messenger.storage.local;
+  const stored = await area.get({ [PENDING_DRAFT_KEY]: null });
+  await area.remove(PENDING_DRAFT_KEY);
+  return stored?.[PENDING_DRAFT_KEY] ?? null;
+}
+
+async function handleCreateRule(info) {
+  let first = null;
+  for await (const message of eachMessage(info.selectedMessages)) {
+    first = message;
+    break;
+  }
+  if (!first) return;
+
+  // Peek at full headers with a short timeout to grab List-Id when available;
+  // fall back cleanly to the free indexed author/subject if offline or slow.
+  let headers = null;
+  try {
+    const headerReads = await newHeaderReads({ timeoutMs: DRAFT_HEADER_TIMEOUT_MS, limit: 1 });
+    headers = await readHeadersOrSkip(headerReads, first.id, first.folder?.accountId);
+  } catch (e) {
+    warn('could not read headers for draft rule', first.id, e);
+  }
+
+  const rule = draftRuleFromMessage(first, headers, info.displayedFolder?.id ?? null);
+  const payload = await stashDraftRule(rule);
+
+  // If an options page is already open, hand the draft straight to it and clear
+  // the stashed copy; otherwise opening the options page picks it up on init().
+  const delivered = await messenger.runtime
+    .sendMessage({ command: 'draftRule', draftId: payload.id, rule: payload.rule })
+    .catch(() => null);
+  if (delivered?.handled) {
+    const area = messenger.storage.session ?? messenger.storage.local;
+    await area.remove(PENDING_DRAFT_KEY).catch(() => {});
+  }
+  await messenger.runtime.openOptionsPage();
+}
+
 messenger.menus.onClicked.addListener((info) => {
   if (info.menuItemId === MENU_HARVEST) {
     handleHarvest(info).catch((e) => warn('harvest failed', e));
+    return;
+  }
+  if (info.menuItemId === MENU_CREATE_RULE) {
+    handleCreateRule(info).catch((e) => warn('create rule from message failed', e));
     return;
   }
   const ruleId = ruleIdFromMenuItem(info.menuItemId);
@@ -1206,6 +1285,9 @@ messenger.runtime.onMessage.addListener((msg) => {
       const merged = await mergeHarvestedDomains(msg.domains ?? [], msg.folderId ?? null);
       return { ok: true, ...merged };
     })();
+  }
+  if (msg?.command === 'takeDraftRule') {
+    return takeDraftRule().then((draft) => ({ ok: true, draft }));
   }
   return undefined;
 });

@@ -1191,5 +1191,119 @@
   },
   "confirm_readFailed": {
     "message": "No se pudo leer la selección: $1"
+  },
+  "menu_createRule": {
+    "message": "Crear regla a partir de este mensaje…"
+  },
+  "options_importTitle": {
+    "message": "Importar copias de seguridad (.json) o archivos msgFilterRules.dat de Thunderbird"
+  },
+  "field_to_cc": {
+    "message": "Para o CC"
+  },
+  "field_custom_header": {
+    "message": "Encabezado personalizado…"
+  },
+  "field_size": {
+    "message": "tamaño"
+  },
+  "op_largerThan": {
+    "message": "mayor que"
+  },
+  "op_smallerThan": {
+    "message": "menor que"
+  },
+  "op_sizeOnly": {
+    "message": "$1 (solo campo tamaño)"
+  },
+  "op_sizeOnlyReason": {
+    "message": "Solo funciona con el campo tamaño."
+  },
+  "cond_customHeaderPlaceholder": {
+    "message": "p. ej. List-Unsubscribe"
+  },
+  "cond_customHeaderLabel": {
+    "message": "Nombre del encabezado personalizado"
+  },
+  "cond_customHeaderHint": {
+    "message": "Introduzca cualquier nombre de encabezado de correo, como <code>List-Unsubscribe</code>, <code>X-Spam-Status</code> o <code>Return-Path</code>. Para leerlo, el complemento descarga los encabezados de cada mensaje, por lo que esta comprobación es más lenta que los campos integrados."
+  },
+  "cond_sizeUnitLabel": {
+    "message": "Unidad de tamaño"
+  },
+  "action_removeTag": {
+    "message": "Quitar etiqueta…"
+  },
+  "action_removeTagHint": {
+    "message": "Quita una de sus etiquetas de Thunderbird sin alterar las demás etiquetas del mensaje."
+  },
+  "action_clearTags": {
+    "message": "Quitar todas las etiquetas"
+  },
+  "action_clearTagsHint": {
+    "message": "Quita todas las etiquetas de los mensajes coincidentes sin moverlos."
+  },
+  "summary_size": {
+    "message": "$1 $2 $3 $4"
+  },
+  "summary_removeTagAction": {
+    "message": "Quitar etiqueta $1"
+  },
+  "reject_size": {
+    "message": "la condición de tamaño necesita un número positivo (se recibió \"$1\")"
+  },
+  "reject_sizeEmpty": {
+    "message": "la condición de tamaño necesita un número positivo (está vacía)"
+  },
+  "reject_customHeader": {
+    "message": "el nombre de encabezado personalizado \"$1\" no es válido"
+  },
+  "reject_customHeaderEmpty": {
+    "message": "la condición de encabezado personalizado no tiene nombre"
+  },
+  "import_sizeValue": {
+    "message": "$1: el tamaño necesita un número positivo en KB o MB"
+  },
+  "import_unknownActionFolder": {
+    "message": "$1: la carpeta de destino de \"$2\" no está en este perfil, acción descartada"
+  },
+  "import_tbNoFilters": {
+    "message": "No se encontraron filtros de Thunderbird en este archivo"
+  },
+  "import_tbMatchAllUnsupported": {
+    "message": "$1: no se admiten filtros de \"Coincidir con todos los mensajes\", regla omitida"
+  },
+  "import_tbBadCondition": {
+    "message": "$1: no se pudo leer la condición del filtro, regla omitida"
+  },
+  "import_tbMixedLogic": {
+    "message": "$1: las condiciones mixtas Y/O se simplificaron a un modo, revíselo antes de guardar"
+  },
+  "import_tbUnsupportedCondition": {
+    "message": "$1: condición de Thunderbird no admitida \"$2\", descartada"
+  },
+  "import_tbBookMappedAll": {
+    "message": "$1: libreta de direcciones asignada a Todas las libretas, revíselo antes de guardar"
+  },
+  "import_tbMissingFolder": {
+    "message": "$1: no se encontró la carpeta de destino \"$3\" para \"$2\", acción descartada"
+  },
+  "import_tbUnsupportedAction": {
+    "message": "$1: acción de Thunderbird no admitida \"$2\", descartada"
+  },
+  "status_notSavedCustomHeader": {
+    "message": "No guardado: introduzca un nombre de encabezado válido para «$1» (letras, dígitos y guiones, p. ej. List-Unsubscribe)."
+  },
+  "status_importRemapped_one": {
+    "message": "Se reconectó $1 carpeta de otro perfil."
+  },
+  "status_importRemapped_other": {
+    "message": "Se reconectaron $1 carpetas de otro perfil."
+  },
+  "status_importTbPickFolders": {
+    "message": "Elija las carpetas que debe supervisar cada regla antes de guardar."
+  },
+  "status_draftCreated": {
+    "message": "Borrador de regla creado a partir del mensaje seleccionado: elija una acción y pulse Guardar."
   }
 }

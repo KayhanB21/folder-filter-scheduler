@@ -22,10 +22,14 @@ import { withTimeout } from './runner.js';
  * `onSwitch`. Each later run then skips the wait on those accounts.
  *
  * A wait that ends with no headers counts toward `limit`. When that many have
- * piled up, the reader stops reading, because Thunderbird suspends an idle
- * event page after about 30 seconds and the run still has to log and save. A
- * `getHeaders` wait that `getFull` then makes good is not counted: the run is
- * moving again.
+ * piled up, or when `budgetMs` has elapsed across the run, the reader stops
+ * issuing fresh downloads, because Thunderbird suspends an idle event page
+ * after about 30 seconds and the run still has to log and save. A `getHeaders`
+ * wait that `getFull` then makes good is not counted: the run is moving again.
+ *
+ * Reads are memoised for the lifetime of the reader, so multiple rules
+ * watching the same folder never fetch the same message's headers twice in one
+ * run (and cache hits still succeed even after the time budget is reached).
  *
  * @param {object} options
  * @param {(id: number) => Promise<object>} [options.getHeaders] absent on a
@@ -33,6 +37,9 @@ import { withTimeout } from './runner.js';
  * @param {(id: number) => Promise<object>} options.getFull
  * @param {number} options.timeoutMs limit for one call
  * @param {number} options.limit waits without headers before reading stops
+ * @param {number} [options.budgetMs] total wall-clock budget for fresh reads
+ *   across the run (defaults to Infinity)
+ * @param {() => number} [options.now] clock for `budgetMs`, injectable for tests
  * @param {(message: string) => unknown} [options.onTimeout] told about each
  *   wait, and awaited, so the caller can save its log at once
  * @param {Iterable<string>} [options.viaFull] accounts already known to need
@@ -45,11 +52,17 @@ export function createHeaderReads({
   getFull,
   timeoutMs,
   limit,
+  budgetMs = Infinity,
+  now = Date.now,
   onTimeout = () => {},
   viaFull: known = [],
   onSwitch = () => {},
 }) {
   const viaFull = new Set(known);
+  const cache = new Map();
+  const failed = new Set();
+  const startedAt = now();
+  let budgetExceeded = false;
   const seconds = timeoutMs / 1000;
   const headersOf = (raw) => raw?.headers ?? raw ?? {};
   const isTimeout = (e) => e?.name === 'TimeoutError';
@@ -59,8 +72,15 @@ export function createHeaderReads({
     timeouts: 0,
     /** Messages left out of the run because their headers did not arrive. */
     skipped: 0,
+    /** Requests satisfied from this run's in-memory cache. */
+    cached: 0,
     get stopped() {
-      return reads.timeouts >= limit;
+      return reads.timeouts >= limit || budgetExceeded;
+    },
+
+    /** Remember a message whose read threw so later rules in the same run skip it at once. */
+    markFailed(messageId) {
+      failed.add(messageId);
     },
 
     /**
@@ -71,15 +91,29 @@ export function createHeaderReads({
      * @param {string} [accountId] the fallback is remembered for each account
      */
     async read(messageId, accountId = '') {
-      if (reads.stopped) {
+      if (cache.has(messageId)) {
+        reads.cached += 1;
+        return cache.get(messageId);
+      }
+      if (failed.has(messageId) || reads.stopped) {
         reads.skipped += 1;
+        return null;
+      }
+      if (now() - startedAt >= budgetMs) {
+        budgetExceeded = true;
+        reads.skipped += 1;
+        await onTimeout(
+          `header reads reached the ${budgetMs / 1000} s time budget, remaining messages will be checked on the next run`,
+        );
         return null;
       }
 
       let waited = false;
       if (getHeaders && !viaFull.has(accountId)) {
         try {
-          return headersOf(await withTimeout(getHeaders(messageId), timeoutMs));
+          const headers = headersOf(await withTimeout(getHeaders(messageId), timeoutMs));
+          cache.set(messageId, headers);
+          return headers;
         } catch (e) {
           if (!isTimeout(e)) throw e;
           waited = true;
@@ -92,6 +126,7 @@ export function createHeaderReads({
             `header read gave no answer after ${seconds} s, reading whole messages on this account instead`,
           );
           if (reads.stopped) {
+            failed.add(messageId);
             reads.skipped += 1;
             return null;
           }
@@ -101,11 +136,13 @@ export function createHeaderReads({
       try {
         const headers = headersOf(await withTimeout(getFull(messageId), timeoutMs));
         if (waited) reads.timeouts -= 1;
+        cache.set(messageId, headers);
         return headers;
       } catch (e) {
         if (!isTimeout(e)) throw e;
         reads.timeouts += 1;
         reads.skipped += 1;
+        failed.add(messageId);
         await onTimeout(
           `whole-message read gave no answer after ${seconds} s` +
             (reads.stopped ? `; ${limit} reads gave no answer, no more header reads this run` : ''),
@@ -126,7 +163,7 @@ export function createHeaderReads({
  * returns null, so the message is never evaluated on empty headers and the
  * scan watermark holds for a retry.
  *
- * @param {{ read: Function, skipped: number }} headerReads
+ * @param {{ read: Function, skipped: number, markFailed?: Function }} headerReads
  * @param {number} messageId
  * @param {string} [accountId]
  * @param {(error: unknown) => unknown} [onError]
@@ -136,6 +173,7 @@ export async function readHeadersOrSkip(headerReads, messageId, accountId, onErr
     return await headerReads.read(messageId, accountId);
   } catch (e) {
     headerReads.skipped += 1;
+    headerReads.markFailed?.(messageId);
     await onError(e);
     return null;
   }

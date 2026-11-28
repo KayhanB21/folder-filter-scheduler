@@ -164,3 +164,42 @@ test('an error other than a timeout is thrown to the caller', async () => {
   await assert.rejects(reads.read(1), /gone/);
   assert.equal(reads.skipped, 0);
 });
+
+test('body reads are cached per run and honour markFailed and budgetMs', async () => {
+  let t = 0;
+  const calls = [];
+  const logged = [];
+  const reads = createBodyReads({
+    listInlineTextParts: async (id) => {
+      calls.push(id);
+      t += 15_000;
+      return [{ contentType: 'text/plain', content: `body-${id}` }];
+    },
+    toPlainText: async (html) => html,
+    timeoutMs: 20,
+    limit: 5,
+    budgetMs: 20_000,
+    now: () => t,
+    onTimeout: (m) => logged.push(m),
+  });
+
+  assert.deepEqual(await reads.read(1), ['body-1']);
+  assert.deepEqual(await reads.read(1), ['body-1']);
+  assert.equal(reads.cached, 1);
+  assert.deepEqual(calls, [1]);
+
+  reads.markFailed(9);
+  assert.equal(await reads.read(9), null);
+  assert.equal(reads.skipped, 1);
+  assert.deepEqual(calls, [1]);
+
+  // Second fresh read pushes elapsed to 30s >= 20s; third fresh read hits budget.
+  assert.deepEqual(await reads.read(2), ['body-2']);
+  assert.equal(await reads.read(3), null);
+  assert.equal(reads.stopped, true);
+  assert.equal(logged.length, 1);
+  assert.match(logged[0], /20 s time budget/);
+  // Cached bodies still return even after budget is exhausted.
+  assert.deepEqual(await reads.read(1), ['body-1']);
+  assert.deepEqual(calls, [1, 2]);
+});

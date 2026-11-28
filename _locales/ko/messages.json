@@ -1110,5 +1110,119 @@
   },
   "confirm_readFailed": {
     "message": "선택 항목을 읽을 수 없습니다: $1"
+  },
+  "menu_createRule": {
+    "message": "이 메시지에서 규칙 만들기…"
+  },
+  "options_importTitle": {
+    "message": "백업(.json) 또는 Thunderbird msgFilterRules.dat 파일 가져오기"
+  },
+  "field_to_cc": {
+    "message": "받는 사람 또는 참조"
+  },
+  "field_custom_header": {
+    "message": "사용자 지정 헤더…"
+  },
+  "field_size": {
+    "message": "크기"
+  },
+  "op_largerThan": {
+    "message": "보다 큼"
+  },
+  "op_smallerThan": {
+    "message": "보다 작음"
+  },
+  "op_sizeOnly": {
+    "message": "$1 (크기 필드 전용)"
+  },
+  "op_sizeOnlyReason": {
+    "message": "크기 필드에서만 사용할 수 있습니다."
+  },
+  "cond_customHeaderPlaceholder": {
+    "message": "예: List-Unsubscribe"
+  },
+  "cond_customHeaderLabel": {
+    "message": "사용자 지정 헤더 이름"
+  },
+  "cond_customHeaderHint": {
+    "message": "<code>List-Unsubscribe</code>, <code>X-Spam-Status</code>, <code>Return-Path</code> 등 임의의 이메일 헤더 이름을 입력하세요. 읽으려면 각 메시지의 헤더를 다운로드하므로 기본 필드보다 느립니다."
+  },
+  "cond_sizeUnitLabel": {
+    "message": "크기 단위"
+  },
+  "action_removeTag": {
+    "message": "태그 제거…"
+  },
+  "action_removeTagHint": {
+    "message": "메시지의 다른 태그는 유지하면서 지정한 Thunderbird 태그 하나를 제거합니다."
+  },
+  "action_clearTags": {
+    "message": "모든 태그 제거"
+  },
+  "action_clearTagsHint": {
+    "message": "일치하는 메시지를 이동하지 않고 모든 태그를 제거합니다."
+  },
+  "summary_size": {
+    "message": "$1 $2 $3 $4"
+  },
+  "summary_removeTagAction": {
+    "message": "태그 $1 제거"
+  },
+  "reject_size": {
+    "message": "크기 조건에는 양수가 필요합니다 (입력값: \"$1\")"
+  },
+  "reject_sizeEmpty": {
+    "message": "크기 조건에는 양수가 필요합니다 (비어 있음)"
+  },
+  "reject_customHeader": {
+    "message": "사용자 지정 헤더 이름 \"$1\"이(가) 올바르지 않습니다"
+  },
+  "reject_customHeaderEmpty": {
+    "message": "사용자 지정 헤더 조건에 헤더 이름이 없습니다"
+  },
+  "import_sizeValue": {
+    "message": "$1: 크기는 KB 또는 MB 단위의 양수여야 합니다"
+  },
+  "import_unknownActionFolder": {
+    "message": "$1: \"$2\"의 대상 폴더가 이 프로필에 없어 동작을 제외했습니다"
+  },
+  "import_tbNoFilters": {
+    "message": "이 파일에서 Thunderbird 필터를 찾을 수 없습니다"
+  },
+  "import_tbMatchAllUnsupported": {
+    "message": "$1: \"모든 메시지 일치\" 필터는 지원되지 않아 규칙을 건너뛰었습니다"
+  },
+  "import_tbBadCondition": {
+    "message": "$1: 필터 조건을 읽을 수 없어 규칙을 건너뛰었습니다"
+  },
+  "import_tbMixedLogic": {
+    "message": "$1: 혼합된 AND/OR 조건을 단일 모드로 단순화했습니다. 저장 전에 확인하세요"
+  },
+  "import_tbUnsupportedCondition": {
+    "message": "$1: 지원되지 않는 Thunderbird 조건 \"$2\"을(를) 제외했습니다"
+  },
+  "import_tbBookMappedAll": {
+    "message": "$1: 주소록을 모든 주소록으로 연결했습니다. 저장 전에 확인하세요"
+  },
+  "import_tbMissingFolder": {
+    "message": "$1: \"$2\"의 대상 폴더 \"$3\"을(를) 찾을 수 없어 동작을 제외했습니다"
+  },
+  "import_tbUnsupportedAction": {
+    "message": "$1: 지원되지 않는 Thunderbird 동작 \"$2\"을(를) 제외했습니다"
+  },
+  "status_notSavedCustomHeader": {
+    "message": "저장되지 않음: “$1”에 유효한 헤더 이름을 입력하세요 (영문자, 숫자, 하이픈, 예: List-Unsubscribe)."
+  },
+  "status_importRemapped_one": {
+    "message": "다른 프로필의 폴더 $1개를 다시 연결했습니다."
+  },
+  "status_importRemapped_other": {
+    "message": "다른 프로필의 폴더 $1개를 다시 연결했습니다."
+  },
+  "status_importTbPickFolders": {
+    "message": "저장하기 전에 각 규칙이 감시할 폴더를 선택하세요."
+  },
+  "status_draftCreated": {
+    "message": "선택한 메시지에서 규칙 초안을 만들었습니다 — 동작을 선택하고 저장을 누르세요."
   }
 }

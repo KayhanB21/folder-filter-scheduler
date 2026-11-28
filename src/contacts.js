@@ -18,11 +18,11 @@ export const ALL_ADDRESS_BOOKS = 'all';
 
 /**
  * Fields an address-book condition may read: the ones that hold addresses.
- * To and Cc can name several people; the condition matches when any of them is
- * in the book. Your own address is usually among them, so a book that contains
- * you matches all of your mail on these two fields.
+ * To, Cc, and To or Cc can name several people; the condition matches when any
+ * of them is in the book. Your own address is usually among them, so a book
+ * that contains you matches all of your mail on these fields.
  */
-export const ADDRESS_BOOK_FIELDS = Object.freeze(['from', 'reply-to', 'sender', 'to', 'cc']);
+export const ADDRESS_BOOK_FIELDS = Object.freeze(['from', 'reply-to', 'sender', 'to', 'cc', 'to-cc']);
 
 /**
  * Normalise one address for comparison: the real address of a mailbox (see
