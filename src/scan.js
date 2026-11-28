@@ -110,7 +110,7 @@ export function stampScan(state, kind, startedAt) {
  * Record the user-visible outcome of one rule execution without touching the
  * scan watermarks (`lastRunAt` / `lastCatchUpAt`).
  *
- * Called on every pass — including failed ones where the watermark must hold —
+ * Called on every pass, including failed ones where the watermark must hold,
  * so each rule card can display when it last ran, how many messages matched,
  * and whether errors occurred. Carries counts and timestamps only, never PII.
  */
@@ -206,9 +206,10 @@ export function queryBoundsFor(rule, plan, now = new Date()) {
 
 /**
  * Push cheap `all` (AND) conditions (`read`, `star`, positive `tag`) down into
- * Thunderbird's `messages.query()` so big folders return far fewer headers.
+ * Thunderbird's Manifest V3 `messages.query()` so big folders return far fewer
+ * headers.
  *
- * Returns `{ unread?, flagged?, tags?, impossible? }`. `impossible: true` means
+ * Returns `{ read?, flagged?, tags?, impossible? }`. `impossible: true` means
  * the rule carries contradictory demands (such as read AND unread) so the folder
  * scan can be skipped entirely. The matcher still re-evaluates every returned
  * message, so pushdown only ever narrows the candidate set, never decides it.
@@ -217,7 +218,7 @@ export function queryFilterFor(rule) {
   if (rule?.match !== 'all') return {};
   const conditions = Array.isArray(rule?.conditions) ? rule.conditions : [];
 
-  let unread;
+  let read;
   let flagged;
   const requiredTags = {};
   const forbiddenTags = new Set();
@@ -229,9 +230,8 @@ export function queryFilterFor(rule) {
       if (c.operator !== STATE_OPERATORS.isOn && c.operator !== STATE_OPERATORS.isOff) continue;
       const wantsOn = (c.operator === STATE_OPERATORS.isOn) !== (c.negate === true);
       if (field === 'read') {
-        const wantsUnread = !wantsOn;
-        if (unread !== undefined && unread !== wantsUnread) return { impossible: true };
-        unread = wantsUnread;
+        if (read !== undefined && read !== wantsOn) return { impossible: true };
+        read = wantsOn;
       } else {
         if (flagged !== undefined && flagged !== wantsOn) return { impossible: true };
         flagged = wantsOn;
@@ -250,10 +250,117 @@ export function queryFilterFor(rule) {
   }
 
   const filter = {};
-  if (unread !== undefined) filter.unread = unread;
+  if (read !== undefined) filter.read = read;
   if (flagged !== undefined) filter.flagged = flagged;
   if (Object.keys(requiredTags).length > 0) {
     filter.tags = { tags: requiredTags, mode: 'all' };
   }
   return filter;
+}
+
+export const SCAN_PROGRESS_KEY = 'scanProgress';
+export const SCAN_PROGRESS_CAP = 50_000;
+
+/**
+ * Session-scoped resume progress for header/body scans cut short by the run
+ * time budget.
+ *
+ * Without a resume set, a rule scanning a large uncached IMAP folder would
+ * check messages 1..200, hit the 20-second budget, hold the watermark, and
+ * restart at message 1 on every subsequent run forever. Remembering the message
+ * ids already evaluated in the incomplete pass (invalidated if the rule's
+ * fingerprint changes, and cleared as soon as a pass finishes cleanly) lets
+ * each run continue where the previous one left off.
+ */
+export function createScanProgress({ stored = {}, rules = null, cap = SCAN_PROGRESS_CAP } = {}) {
+  const allowedIds = Array.isArray(rules) ? new Set(rules.map((r) => r?.id).filter(Boolean)) : null;
+  const progress = {};
+  let dirty = false;
+
+  for (const [ruleId, entry] of Object.entries(stored ?? {})) {
+    if (allowedIds && !allowedIds.has(ruleId)) {
+      dirty = true;
+      continue;
+    }
+    if (!entry || typeof entry !== 'object' || typeof entry.fingerprint !== 'string' || !Array.isArray(entry.seenIds)) {
+      dirty = true;
+      continue;
+    }
+    const cleanIds = entry.seenIds.filter((id) => typeof id === 'number' && Number.isInteger(id));
+    if (cleanIds.length === 0) {
+      dirty = true;
+      continue;
+    }
+    const rawMatched = Array.isArray(entry.matchedIds) ? entry.matchedIds : [];
+    const cleanMatched = rawMatched.filter((id) => typeof id === 'number' && Number.isInteger(id));
+    const cappedMatched = cleanMatched.length > cap ? cleanMatched.slice(cleanMatched.length - cap) : cleanMatched;
+    progress[ruleId] = {
+      fingerprint: entry.fingerprint,
+      seenIds: cleanIds.length > cap ? cleanIds.slice(cleanIds.length - cap) : cleanIds,
+      ...(cappedMatched.length > 0 ? { matchedIds: cappedMatched } : {}),
+    };
+    if (
+      cleanIds.length !== entry.seenIds.length ||
+      cleanIds.length > cap ||
+      cleanMatched.length !== rawMatched.length ||
+      cleanMatched.length > cap
+    ) {
+      dirty = true;
+    }
+  }
+
+  return {
+    isDirty() {
+      return dirty;
+    },
+
+    /** Evaluated and matched message ids from an interrupted pass of this exact rule. */
+    progressFor(ruleId, fingerprint) {
+      const entry = ruleId ? progress[ruleId] : null;
+      if (!entry || entry.fingerprint !== fingerprint) {
+        return { seenIds: new Set(), matchedIds: new Set() };
+      }
+      return {
+        seenIds: new Set(entry.seenIds),
+        matchedIds: new Set(entry.matchedIds ?? []),
+      };
+    },
+
+    /** Message ids already evaluated in an interrupted pass of this exact rule. */
+    seenSetFor(ruleId, fingerprint) {
+      return this.progressFor(ruleId, fingerprint).seenIds;
+    },
+
+    /**
+     * Remember evaluated ids (and, for stopping rules, matched ids) when a scan
+     * hits the read budget before finishing.
+     */
+    recordPartial(ruleId, fingerprint, seenSet, matchedSet = null) {
+      if (!ruleId || !fingerprint) return;
+      const list = [...seenSet].filter((id) => typeof id === 'number' && Number.isInteger(id));
+      if (list.length === 0) return;
+      const matchedList = matchedSet
+        ? [...matchedSet].filter((id) => typeof id === 'number' && Number.isInteger(id))
+        : [];
+      const cappedMatched = matchedList.length > cap ? matchedList.slice(matchedList.length - cap) : matchedList;
+      progress[ruleId] = {
+        fingerprint,
+        seenIds: list.length > cap ? list.slice(list.length - cap) : list,
+        ...(cappedMatched.length > 0 ? { matchedIds: cappedMatched } : {}),
+      };
+      dirty = true;
+    },
+
+    /** Clear resume progress once a rule finishes a pass without hitting the budget. */
+    clear(ruleId) {
+      if (ruleId && Object.hasOwn(progress, ruleId)) {
+        delete progress[ruleId];
+        dirty = true;
+      }
+    },
+
+    snapshot() {
+      return progress;
+    },
+  };
 }

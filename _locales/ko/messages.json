@@ -1184,7 +1184,7 @@
     "message": "$1: 크기는 KB 또는 MB 단위의 양수여야 합니다"
   },
   "import_unknownActionFolder": {
-    "message": "$1: \"$2\"의 대상 폴더가 이 프로필에 없어 동작을 제외했습니다"
+    "message": "$1: \"$2\"의 대상 폴더가 이 프로필에 없어 규칙을 건너뛰었습니다"
   },
   "import_tbNoFilters": {
     "message": "이 파일에서 Thunderbird 필터를 찾을 수 없습니다"
@@ -1205,7 +1205,7 @@
     "message": "$1: 주소록을 모든 주소록으로 연결했습니다. 저장 전에 확인하세요"
   },
   "import_tbMissingFolder": {
-    "message": "$1: \"$2\"의 대상 폴더 \"$3\"을(를) 찾을 수 없어 동작을 제외했습니다"
+    "message": "$1: \"$2\"의 대상 폴더 \"$3\"을(를) 찾을 수 없어 규칙을 건너뛰었습니다"
   },
   "import_tbUnsupportedAction": {
     "message": "$1: 지원되지 않는 Thunderbird 동작 \"$2\"을(를) 제외했습니다"
@@ -1223,7 +1223,7 @@
     "message": "저장하기 전에 각 규칙이 감시할 폴더를 선택하세요."
   },
   "status_draftCreated": {
-    "message": "선택한 메시지에서 규칙 초안을 만들었습니다 — 동작을 선택하고 저장을 누르세요."
+    "message": "선택한 메시지에서 규칙 초안을 만들었습니다. 동작을 선택하고 저장을 누르세요."
   },
   "options_filterRules": {
     "message": "규칙 필터링…"
@@ -1346,7 +1346,7 @@
     "message": "일부 폴더를 검사할 수 없었습니다."
   },
   "test_noMatches": {
-    "message": "일치하는 메시지가 없습니다 — 이동, 태그 지정 또는 삭제되는 메일이 없습니다."
+    "message": "일치하는 메시지가 없습니다. 이동, 태그 지정 또는 삭제되는 메일이 없습니다."
   },
   "test_noSubject": {
     "message": "(제목 없음)"
@@ -1358,9 +1358,21 @@
     "message": "테스트하기 전에 “$1”의 폴더를 하나 이상 선택하세요."
   },
   "status_orderChanged": {
-    "message": "규칙 순서가 변경되었습니다 — 저장을 눌러 유지하세요."
+    "message": "규칙 순서가 변경되었습니다. 저장을 눌러 유지하세요."
   },
   "status_ruleDuplicated": {
-    "message": "“$1”(으)로 복제되었습니다 — 확인 후 저장을 누르세요."
+    "message": "“$1”(으)로 복제되었습니다. 확인 후 저장을 누르세요."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "메시지가 이 규칙과 일치하는 동안 이후 규칙은 해당 메시지를 처리하지 않습니다. 이후 규칙을 단독으로 실행하거나 자체 일정으로 실행할 때도 같습니다"
+  },
+  "test_unknownError": {
+    "message": "모의 실행 실패"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1: AND 필터에서 지원되지 않는 조건을 제외하면 의도보다 많은 메일이 일치하므로 규칙을 건너뛰었습니다"
+  },
+  "import_skippedWidened": {
+    "message": "$1: 모든 조건을 요구하는 규칙에서 조건을 제외하면 의도보다 많은 메일이 일치하므로 규칙을 건너뛰었습니다"
   }
 }

@@ -41,7 +41,7 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   with `contains` / `is` / `starts with` / `ends with` / `matches regex`, each
   optionally negated, combined with AND or OR.
 - **Age and size conditions**: `age` · `older than` / `newer than` · N days,
-  and `size` · `larger than` / `smaller than` · N `KB` or `MB` — both read
+  and `size` · `larger than` / `smaller than` · N `KB` or `MB`. Both read
   Thunderbird's indexed header with zero downloads, unlocking rules like
   "archive mail over 5 MB after 90 days".
 - **Address-book conditions**: `from` / `reply-to` / `sender` / `to` / `cc` / `to or cc` · `is in address
@@ -61,7 +61,7 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   Addresses, domains, patterns and folder names are left out unless you opt in.
 - **Actions**: move to Trash, archive with each account's own archive
   settings, move/copy to a chosen folder (**including a folder
-  in a different account** — e.g. Yahoo Bulk → Outlook Trash), add, remove, or
+  in a different account**, for example Yahoo Bulk → Outlook Trash), add, remove, or
   clear Thunderbird tags, mark read or unread, add or remove a star, mark junk
   or not junk, or delete permanently. Actions
   live in a single [registry](src/actions.js) that drives both the engine and
@@ -114,8 +114,8 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   clear *Show Folder Filter Scheduler in the right-click menu* under
   **Advanced**. *Use the short name FFS*, also under **Advanced**, shows FFS
   in both places.
-- **Import / export rules**: export portable JSON backups (recording account
-  names and folder paths alongside folder IDs so folders reconnect automatically
+- **Import / export rules**: export portable JSON backups (recording a hash of each
+  account name and the folder paths alongside folder IDs so folders reconnect automatically
   on another computer), or import Thunderbird's built-in `msgFilterRules.dat`
   directly. Imported rules are validated field by field and staged on the page
   for review before anything is stored.
@@ -125,8 +125,8 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
   arrived since the last one, so a per-message header read stays affordable. A
   wider catch-up scan every 30 minutes picks up mail whose `Date` header lags
   its real arrival. **Run all rules now** always scans the whole folder.
-- **Test Rule (Dry Run) preview**: click **Test** on any rule card — even before
-  saving — to see how many messages would match and inspect matched subjects,
+- **Test Rule (Dry Run) preview**: click **Test** on any rule card, even before
+  saving, to see how many messages would match and inspect matched subjects,
   senders, and folders without moving, tagging, or deleting a single email.
 - **Per-rule status at a glance**: each card displays when it last ran and how
   many messages matched (even when collapsed), plus an inline warning if the
@@ -134,8 +134,10 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Rule management at scale**: reorder rules top-to-bottom with **↑ / ↓**,
   clone rules in one click with **Duplicate**, filter large rule sets with the
   **Filter rules…** search bar, and tick **Stop running later rules on matched
-  messages** (also mapped automatically when importing Thunderbird's `Stop
-  execution` filter action).
+  messages** to keep later rules from acting on mail that an earlier rule
+  matches (this also holds for single-rule **Run** and for independent
+  per-rule cron schedules; also mapped automatically when importing
+  Thunderbird's `Stop execution` filter action).
 - **Run now** button for immediate, on-demand runs, and a **Run** button on each
   rule that runs only that rule.
 - **A schedule for each rule**, written as a cron expression such as

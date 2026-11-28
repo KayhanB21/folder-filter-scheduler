@@ -61,11 +61,25 @@ export function createHeaderReads({
   const viaFull = new Set(known);
   const cache = new Map();
   const failed = new Set();
-  const startedAt = now();
+  let spentMs = 0;
   let budgetExceeded = false;
   const seconds = timeoutMs / 1000;
   const headersOf = (raw) => raw?.headers ?? raw ?? {};
   const isTimeout = (e) => e?.name === 'TimeoutError';
+
+  const remainingBudget = () => Math.max(0, budgetMs - spentMs);
+
+  const hitBudget = async () => {
+    const first = !budgetExceeded;
+    budgetExceeded = true;
+    reads.skipped += 1;
+    if (first) {
+      await onTimeout(
+        `header reads reached the ${budgetMs / 1000} s time budget, remaining messages will be checked on the next run`,
+      );
+    }
+    return null;
+  };
 
   const reads = {
     /** Waits that ended with no headers. */
@@ -74,6 +88,14 @@ export function createHeaderReads({
     skipped: 0,
     /** Requests satisfied from this run's in-memory cache. */
     cached: 0,
+    /** Total milliseconds spent inside fresh Thunderbird header calls this run. */
+    get spentMs() {
+      return spentMs;
+    },
+    /** True when fresh reads stopped because `budgetMs` was exhausted. */
+    get budgetReached() {
+      return budgetExceeded;
+    },
     get stopped() {
       return reads.timeouts >= limit || budgetExceeded;
     },
@@ -99,23 +121,27 @@ export function createHeaderReads({
         reads.skipped += 1;
         return null;
       }
-      if (now() - startedAt >= budgetMs) {
-        budgetExceeded = true;
-        reads.skipped += 1;
-        await onTimeout(
-          `header reads reached the ${budgetMs / 1000} s time budget, remaining messages will be checked on the next run`,
-        );
-        return null;
+      if (remainingBudget() <= 0) {
+        return hitBudget();
       }
 
       let waited = false;
       if (getHeaders && !viaFull.has(accountId)) {
+        const callLimit = Math.min(timeoutMs, remainingBudget());
+        const callStart = now();
         try {
-          const headers = headersOf(await withTimeout(getHeaders(messageId), timeoutMs));
+          const headers = headersOf(await withTimeout(getHeaders(messageId), callLimit));
+          spentMs += Math.max(0, now() - callStart);
           cache.set(messageId, headers);
           return headers;
         } catch (e) {
+          spentMs += Math.max(0, now() - callStart);
           if (!isTimeout(e)) throw e;
+          // If the timeout fired solely because the remaining run budget ran out,
+          // stop cleanly without blaming `getHeaders` or switching the account.
+          if (callLimit < timeoutMs || remainingBudget() <= 0) {
+            return hitBudget();
+          }
           waited = true;
           reads.timeouts += 1;
           viaFull.add(accountId);
@@ -133,13 +159,24 @@ export function createHeaderReads({
         }
       }
 
+      if (remainingBudget() <= 0) {
+        return hitBudget();
+      }
+
+      const fullLimit = Math.min(timeoutMs, remainingBudget());
+      const fullStart = now();
       try {
-        const headers = headersOf(await withTimeout(getFull(messageId), timeoutMs));
+        const headers = headersOf(await withTimeout(getFull(messageId), fullLimit));
+        spentMs += Math.max(0, now() - fullStart);
         if (waited) reads.timeouts -= 1;
         cache.set(messageId, headers);
         return headers;
       } catch (e) {
+        spentMs += Math.max(0, now() - fullStart);
         if (!isTimeout(e)) throw e;
+        if (fullLimit < timeoutMs || remainingBudget() <= 0) {
+          return hitBudget();
+        }
         reads.timeouts += 1;
         reads.skipped += 1;
         failed.add(messageId);

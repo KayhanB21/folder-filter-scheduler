@@ -1684,7 +1684,7 @@
     "description": "Import problem. $1 says which condition."
   },
   "import_unknownActionFolder": {
-    "message": "$1: destination folder for \"$2\" is not in this profile, action dropped",
+    "message": "$1: destination folder for \"$2\" is not in this profile, rule skipped",
     "description": "Import problem. $1 says which rule, $2 is an action id such as move or copy."
   },
   "import_tbNoFilters": {
@@ -1712,7 +1712,7 @@
     "description": "Import note when a Thunderbird address-book filter is imported. $1 says which condition."
   },
   "import_tbMissingFolder": {
-    "message": "$1: destination folder \"$3\" for \"$2\" was not found, action dropped",
+    "message": "$1: destination folder \"$3\" for \"$2\" was not found, rule skipped",
     "description": "Import problem when a Thunderbird Move/Copy folder URI does not match any folder in this profile. $1 says which rule, $2 is the Thunderbird action name, $3 is the folder path."
   },
   "import_tbUnsupportedAction": {
@@ -1736,7 +1736,7 @@
     "description": "Added to the status after importing rules from Thunderbird msgFilterRules.dat."
   },
   "status_draftCreated": {
-    "message": "Draft rule created from the selected message — pick an action and press Save.",
+    "message": "Draft rule created from the selected message. Pick an action and press Save.",
     "description": "Status shown on the options page when opened via Create rule from this message."
   },
   "options_filterRules": {
@@ -1900,7 +1900,7 @@
     "description": "Warning in dry-run preview when scanning one or more folders threw an error."
   },
   "test_noMatches": {
-    "message": "No messages matched — nothing would be moved, tagged, or deleted.",
+    "message": "No messages matched. Nothing would be moved, tagged, or deleted.",
     "description": "Shown in dry-run preview when zero messages matched."
   },
   "test_noSubject": {
@@ -1916,11 +1916,27 @@
     "description": "Status when the user clicks Test on a rule with no folders selected. $1 is the rule name."
   },
   "status_orderChanged": {
-    "message": "Rule order changed — press Save to keep the new order.",
+    "message": "Rule order changed. Press Save to keep the new order.",
     "description": "Status after moving a rule up or down."
   },
   "status_ruleDuplicated": {
-    "message": "Duplicated as “$1” — review it and press Save.",
+    "message": "Duplicated as “$1”. Review it and press Save.",
     "description": "Status after duplicating a rule. $1 is the copy name."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "Later rules leave a message alone while it matches this rule, also when a later rule runs alone or on its own schedule",
+    "description": "Tooltip on the Stop running later rules checkbox."
+  },
+  "test_unknownError": {
+    "message": "Dry run failed",
+    "description": "Fallback error text when a rule test fails without a specific error message."
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1: skipped because dropping an unsupported condition from an AND filter would match more mail than intended",
+    "description": "Import problem when an AND Thunderbird filter had an unsupported condition and is therefore skipped for safety. $1 says which rule."
+  },
+  "import_skippedWidened": {
+    "message": "$1: skipped because dropping a condition from a rule that requires all conditions would match more mail than intended",
+    "description": "Import problem when a rule requiring all conditions had an invalid condition dropped and is therefore skipped for safety. $1 says which rule."
   }
 }

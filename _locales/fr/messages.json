@@ -1346,7 +1346,7 @@
     "message": "$1 : la taille nécessite un nombre positif en KB ou MB"
   },
   "import_unknownActionFolder": {
-    "message": "$1 : le dossier de destination pour « $2 » n’existe pas dans ce profil, action ignorée"
+    "message": "$1 : le dossier de destination pour « $2 » n’existe pas dans ce profil, règle ignorée"
   },
   "import_tbNoFilters": {
     "message": "Aucun filtre Thunderbird trouvé dans ce fichier"
@@ -1367,7 +1367,7 @@
     "message": "$1 : carnet d’adresses associé à Tous les carnets d’adresses, vérifiez avant d’enregistrer"
   },
   "import_tbMissingFolder": {
-    "message": "$1 : dossier de destination « $3 » pour « $2 » introuvable, action ignorée"
+    "message": "$1 : dossier de destination « $3 » pour « $2 » introuvable, règle ignorée"
   },
   "import_tbUnsupportedAction": {
     "message": "$1 : action Thunderbird non prise en charge « $2 », ignorée"
@@ -1385,7 +1385,7 @@
     "message": "Choisissez les dossiers que chaque règle doit surveiller avant d’enregistrer."
   },
   "status_draftCreated": {
-    "message": "Brouillon de règle créé à partir du message sélectionné — choisissez une action puis cliquez sur Enregistrer."
+    "message": "Brouillon de règle créé à partir du message sélectionné. Choisissez une action puis cliquez sur Enregistrer."
   },
   "options_filterRules": {
     "message": "Filtrer les règles…"
@@ -1508,7 +1508,7 @@
     "message": "Certains dossiers n’ont pas pu être analysés."
   },
   "test_noMatches": {
-    "message": "Aucun message ne correspond — rien ne serait déplacé, étiqueté ou supprimé."
+    "message": "Aucun message ne correspond. Rien ne serait déplacé, étiqueté ou supprimé."
   },
   "test_noSubject": {
     "message": "(sans sujet)"
@@ -1520,9 +1520,21 @@
     "message": "Choisissez au moins un dossier pour « $1 » avant de la tester."
   },
   "status_orderChanged": {
-    "message": "Ordre des règles modifié — cliquez sur Enregistrer pour le conserver."
+    "message": "Ordre des règles modifié. Cliquez sur Enregistrer pour le conserver."
   },
   "status_ruleDuplicated": {
-    "message": "Dupliquée en « $1 » — vérifiez-la et cliquez sur Enregistrer."
+    "message": "Dupliquée en « $1 ». Vérifiez-la et cliquez sur Enregistrer."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "Les règles suivantes n’agissent pas sur un message tant qu’il correspond à cette règle, y compris quand une règle suivante s’exécute seule ou selon sa propre planification"
+  },
+  "test_unknownError": {
+    "message": "Échec de la simulation"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1 : ignorée car retirer une condition non prise en charge d’un filtre ET ferait correspondre plus de messages que prévu"
+  },
+  "import_skippedWidened": {
+    "message": "$1 : ignorée car retirer une condition d’une règle exigeant toutes les conditions ferait correspondre plus de messages que prévu"
   }
 }

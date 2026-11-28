@@ -203,3 +203,39 @@ test('body reads are cached per run and honour markFailed and budgetMs', async (
   assert.deepEqual(await reads.read(1), ['body-1']);
   assert.deepEqual(calls, [1, 2]);
 });
+
+test('body budgetMs counts only read time and caps calls to remaining budget', async () => {
+  let t = 0;
+  const reads = createBodyReads({
+    listInlineTextParts: async (id) => {
+      t += 150;
+      return [{ contentType: 'text/plain', content: `b-${id}` }];
+    },
+    toPlainText: async (html) => html,
+    timeoutMs: 1000,
+    limit: 5,
+    budgetMs: 20_000,
+    now: () => t,
+  });
+
+  t += 30_000;
+  assert.deepEqual(await reads.read(1), ['b-1']);
+  assert.equal(reads.spentMs, 150);
+  assert.equal(reads.budgetReached, false);
+
+  const logged = [];
+  const capped = createBodyReads({
+    listInlineTextParts: never,
+    toPlainText: async (html) => html,
+    timeoutMs: 80,
+    limit: 2,
+    budgetMs: 25,
+    onTimeout: (m) => logged.push(m),
+  });
+  assert.equal(await capped.read(1), null);
+  assert.equal(capped.budgetReached, true);
+  assert.equal(capped.stopped, true);
+  assert.equal(capped.timeouts, 0);
+  assert.equal(logged.length, 1);
+  assert.match(logged[0], /time budget/);
+});

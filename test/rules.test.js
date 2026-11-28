@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   EXPORT_FORMAT,
+  accountHash,
   buildExport,
   duplicateRule,
   exportFilename,
@@ -162,6 +163,25 @@ test('an unknown operator or header field drops the condition', () => {
   );
   assert.deepEqual(bogusField.rules, []);
   assert.ok(bogusField.problems.some((p) => /no recognised header field/.test(p)));
+});
+
+test('dropping a condition skips an "all" rule instead of widening it, while an "any" rule keeps surviving branches', () => {
+  const mixedConditions = [
+    { field: 'from', operator: 'contains', value: 'boss@example.com' },
+    { field: 'from', operator: 'sudo', value: 'x' },
+  ];
+  const widenedAnd = sanitizeImport(
+    file({ rules: [{ ...validRule, name: 'Strict delete', match: 'all', conditions: mixedConditions }] }),
+  );
+  assert.deepEqual(widenedAnd.rules, []);
+  assert.ok(widenedAnd.problems.some((p) => /requires all conditions/.test(p)));
+
+  const narrowedOr = sanitizeImport(
+    file({ rules: [{ ...validRule, name: 'Loose delete', match: 'any', conditions: mixedConditions }] }),
+  );
+  assert.equal(narrowedOr.rules.length, 1);
+  assert.equal(narrowedOr.rules[0].conditions.length, 1);
+  assert.ok(narrowedOr.problems.some((p) => /unknown operator/.test(p)));
 });
 
 test('an empty value on a string operator is refused', () => {
@@ -727,10 +747,10 @@ test('import accepts removeTag and clearTags and orders clear/remove before tag 
 
 // --- Portable folder references across computers -----------------------------
 
-test('buildExport includes folderRefs only when folders are supplied and reconnects them on import', () => {
+test('buildExport hashes account names in folderRefs and reconnects them on import', () => {
   const sourceFolders = [
-    { id: 'acctA://INBOX', accountName: 'Work', path: '/INBOX' },
-    { id: 'acctA://Archive/Receipts', accountName: 'Work', path: '/Archive/Receipts' },
+    { id: 'acctA://INBOX', accountName: 'alice@work.example', path: '/INBOX' },
+    { id: 'acctA://Archive/Receipts', accountName: 'alice@work.example', path: '/Archive/Receipts' },
     { id: 'acctB://Unused', accountName: 'Personal', path: '/Unused' },
   ];
   const rule = {
@@ -744,15 +764,19 @@ test('buildExport includes folderRefs only when folders are supplied and reconne
 
   assert.equal('folderRefs' in buildExport({ rules: [rule] }), false);
   const exported = buildExport({ rules: [rule] }, { folders: sourceFolders });
+  const hash = accountHash('alice@work.example');
+  assert.match(hash, /^[0-9a-f]{16}$/);
   assert.deepEqual(exported.folderRefs, {
-    'acctA://INBOX': { accountName: 'Work', path: '/INBOX' },
-    'acctA://Archive/Receipts': { accountName: 'Work', path: '/Archive/Receipts' },
+    'acctA://INBOX': { accountHash: hash, path: '/INBOX' },
+    'acctA://Archive/Receipts': { accountHash: hash, path: '/Archive/Receipts' },
   });
+  // Plain-text account name / email address never appears in folderRefs.
+  assert.equal(JSON.stringify(exported.folderRefs).includes('alice'), false);
 
-  // New computer has completely different folder IDs, same account names and paths.
+  // New computer has completely different folder IDs, same account names (case-insensitive) and paths.
   const targetFolders = [
-    { id: 'new1://INBOX', accountName: 'work', path: '/INBOX' },
-    { id: 'new1://Archive/Receipts', accountName: 'Work', path: '/Archive/Receipts' },
+    { id: 'new1://INBOX', accountName: 'Alice@Work.Example', path: '/INBOX' },
+    { id: 'new1://Archive/Receipts', accountName: 'alice@work.example', path: '/Archive/Receipts' },
     { id: 'new2://INBOX', accountName: 'Personal', path: '/INBOX' },
   ];
   const imported = sanitizeImport(exported, { knownFolders: targetFolders });
@@ -760,40 +784,86 @@ test('buildExport includes folderRefs only when folders are supplied and reconne
   assert.equal(imported.remappedFolders, 2);
   assert.deepEqual(imported.rules[0].folderIds, ['new1://INBOX']);
   assert.deepEqual(imported.rules[0].actions, [{ type: 'move', folderId: 'new1://Archive/Receipts' }]);
+
+  // Legacy exports carrying plain-text accountName still reconnect when the account matches.
+  const legacyExport = {
+    ...exported,
+    folderRefs: {
+      'acctA://INBOX': { accountName: 'alice@work.example', path: '/INBOX' },
+      'acctA://Archive/Receipts': { accountName: 'alice@work.example', path: '/Archive/Receipts' },
+    },
+  };
+  const legacyImported = sanitizeImport(legacyExport, { knownFolders: targetFolders });
+  assert.deepEqual(legacyImported.problems, []);
+  assert.deepEqual(legacyImported.rules[0].folderIds, ['new1://INBOX']);
+  assert.deepEqual(legacyImported.rules[0].actions, [{ type: 'move', folderId: 'new1://Archive/Receipts' }]);
 });
 
-test('portable import falls back to an unambiguous path match and drops unresolvable destination folders', () => {
+test('portable import requires an account match, catches id collisions across computers, and skips rules with missing destinations', () => {
+  const workHash = accountHash('Work');
   const exported = {
     format: EXPORT_FORMAT,
     version: 1,
     folderRefs: {
-      'old://Receipts': { accountName: 'Old Account Name', path: '/Receipts' },
-      'old://Nowhere': { accountName: 'Old Account Name', path: '/Nowhere' },
+      'account1://Spam': { accountHash: workHash, path: '/Spam' },
+      'account1://Receipts': { accountHash: workHash, path: '/Receipts' },
+      'old://Nowhere': { accountHash: workHash, path: '/Nowhere' },
     },
     rules: [
       {
-        name: 'Move to receipts',
-        folderIds: ['old://Receipts'],
-        conditions: [{ field: 'subject', operator: 'contains', value: 'x' }],
-        actions: [{ type: 'move', folderId: 'old://Receipts' }],
+        name: 'Colliding folder id',
+        folderIds: ['account1://Spam'],
+        conditions: [{ field: 'subject', operator: 'contains', value: 'spam' }],
+        actions: [{ type: 'trash' }],
       },
       {
-        name: 'Move to missing',
-        folderIds: ['old://Receipts'],
-        conditions: [{ field: 'subject', operator: 'contains', value: 'y' }],
-        actions: [{ type: 'move', folderId: 'old://Nowhere' }],
+        name: 'Copy then Delete with missing copy folder',
+        folderIds: ['account1://Spam'],
+        conditions: [{ field: 'subject', operator: 'contains', value: 'invoice' }],
+        actions: [{ type: 'copy', folderId: 'old://Nowhere' }, { type: 'trash' }],
       },
     ],
   };
 
-  const targetFolders = [{ id: 'new://Receipts', accountName: 'Renamed Account', path: '/Receipts' }];
-  const res = sanitizeImport(exported, { knownFolders: targetFolders });
+  // On the target machine, account1 is Personal and account2 is Work:
+  // account1://Spam must remap to account2://Spam rather than binding to Personal!
+  const swappedAccounts = [
+    { id: 'account1://Spam', accountName: 'Personal', path: '/Spam' },
+    { id: 'account2://Spam', accountName: 'Work', path: '/Spam' },
+  ];
+  const res = sanitizeImport(exported, { knownFolders: swappedAccounts });
   assert.equal(res.rules.length, 1);
-  assert.equal(res.rules[0].name, 'Move to receipts');
-  assert.deepEqual(res.rules[0].folderIds, ['new://Receipts']);
-  assert.deepEqual(res.rules[0].actions, [{ type: 'move', folderId: 'new://Receipts' }]);
-  assert.equal(res.remappedFolders, 2);
-  assert.ok(res.problems.some((p) => /destination folder for "move"/.test(p)));
+  assert.equal(res.rules[0].name, 'Colliding folder id');
+  assert.deepEqual(res.rules[0].folderIds, ['account2://Spam']);
+  assert.equal(res.remappedFolders, 1);
+  // Copy + Delete with missing Copy folder was skipped entirely rather than becoming Delete only.
+  assert.ok(res.problems.some((p) => /destination folder for "copy"/.test(p)));
+
+  // When Work does not exist on the target machine, neither id collision nor unique path fallback
+  // may bind to Personal's folders.
+  const onlyPersonal = [
+    { id: 'account1://Spam', accountName: 'Personal', path: '/Spam' },
+    { id: 'account1://Receipts', accountName: 'Personal', path: '/Receipts' },
+  ];
+  const noWork = sanitizeImport(
+    {
+      format: EXPORT_FORMAT,
+      version: 1,
+      folderRefs: exported.folderRefs,
+      rules: [
+        {
+          name: 'Move to Work receipts',
+          folderIds: ['account1://Spam'],
+          conditions: [{ field: 'subject', operator: 'contains', value: 'x' }],
+          actions: [{ type: 'move', folderId: 'account1://Receipts' }],
+        },
+      ],
+    },
+    { knownFolders: onlyPersonal },
+  );
+  assert.equal(noWork.rules.length, 0);
+  assert.equal(noWork.remappedFolders, 0);
+  assert.ok(noWork.problems.some((p) => /destination folder for "move"/.test(p)));
 });
 
 // --- Stop later rules, duplicate, and search filter -------------------------

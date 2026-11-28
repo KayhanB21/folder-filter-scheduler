@@ -1265,7 +1265,7 @@
     "message": "$1: el tamaño necesita un número positivo en KB o MB"
   },
   "import_unknownActionFolder": {
-    "message": "$1: la carpeta de destino de \"$2\" no está en este perfil, acción descartada"
+    "message": "$1: la carpeta de destino de \"$2\" no está en este perfil, regla omitida"
   },
   "import_tbNoFilters": {
     "message": "No se encontraron filtros de Thunderbird en este archivo"
@@ -1286,7 +1286,7 @@
     "message": "$1: libreta de direcciones asignada a Todas las libretas, revíselo antes de guardar"
   },
   "import_tbMissingFolder": {
-    "message": "$1: no se encontró la carpeta de destino \"$3\" para \"$2\", acción descartada"
+    "message": "$1: no se encontró la carpeta de destino \"$3\" para \"$2\", regla omitida"
   },
   "import_tbUnsupportedAction": {
     "message": "$1: acción de Thunderbird no admitida \"$2\", descartada"
@@ -1443,5 +1443,17 @@
   },
   "status_ruleDuplicated": {
     "message": "Duplicada como «$1»: revísela y pulse Guardar."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "Las reglas posteriores no actúan sobre un mensaje mientras coincida con esta regla, también cuando una regla posterior se ejecuta sola o con su propio horario"
+  },
+  "test_unknownError": {
+    "message": "Error en la prueba"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1: omitida porque eliminar una condición no admitida en un filtro Y haría coincidir más correos de los previstos"
+  },
+  "import_skippedWidened": {
+    "message": "$1: omitida porque eliminar una condición de una regla que requiere todas las condiciones haría coincidir más correos de los previstos"
   }
 }

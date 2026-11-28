@@ -71,6 +71,20 @@ const PRIORITY_NUMBER_MAP = Object.freeze({
   2: 'lowest',
 });
 
+function isSingleQuotedValue(str) {
+  if (str.length < 2 || str[0] !== '"' || str[str.length - 1] !== '"') return false;
+  let escaped = false;
+  for (let i = 1; i < str.length - 1; i += 1) {
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (str[i] === '\\') escaped = true;
+    else if (str[i] === '"') return false;
+  }
+  return !escaped;
+}
+
 /** Unescape Thunderbird's `\"` and `\\` inside a quoted value, keeping other backslashes (like `\d`) intact. */
 function unescapeQuoted(text) {
   let out = '';
@@ -235,7 +249,13 @@ export function parseThunderbirdCondition(conditionStr) {
       customQuoted = true;
     }
     const operator = parts[1].trim().toLowerCase();
-    const value = parts[2];
+    // Thunderbird wraps a condition value in double quotes when it contains
+    // `)` or starts/ends with whitespace (e.g. `"(urgent)"` or `" note"`).
+    let value = parts[2];
+    const trimmedVal = value.trim();
+    if (isSingleQuotedValue(trimmedVal)) {
+      value = unescapeQuoted(trimmedVal.slice(1, -1));
+    }
     clauses.push({ field: rawField, customQuoted, operator, value });
   }
 
@@ -251,9 +271,12 @@ function safeDecode(segment) {
 }
 
 /**
- * Extract `{ accountHints, path }` from a Thunderbird folder URI such as
+ * Extract `{ username, host, path }` from a Thunderbird folder URI such as
  * `imap://user%40gmail.com@imap.gmail.com/Archive/2026` or
  * `mailbox://nobody@Local%20Folders/Work`.
+ *
+ * `nobody` is Thunderbird's placeholder for accounts without a login username
+ * (such as Local Folders), so it is normalised to `username: ''`.
  */
 export function parseThunderbirdFolderUri(uri) {
   const raw = String(uri ?? '').trim();
@@ -267,47 +290,86 @@ export function parseThunderbirdFolderUri(uri) {
   if (decodedSegments.length === 0) return null;
   const path = `/${decodedSegments.join('/')}`;
 
-  const accountHints = [];
+  let username = '';
+  let host = '';
   const at = authority.lastIndexOf('@');
   if (at > 0) {
-    const user = safeDecode(authority.slice(0, at)).trim();
-    const host = safeDecode(authority.slice(at + 1)).trim();
-    if (user && user.toLowerCase() !== 'nobody') accountHints.push(user.toLowerCase());
-    if (host) accountHints.push(host.toLowerCase());
+    const rawUser = safeDecode(authority.slice(0, at)).trim().toLowerCase();
+    username = rawUser && rawUser !== 'nobody' ? rawUser : '';
+    host = safeDecode(authority.slice(at + 1)).trim().toLowerCase();
   } else if (authority) {
-    accountHints.push(safeDecode(authority).trim().toLowerCase());
+    host = safeDecode(authority).trim().toLowerCase();
   }
-  return { accountHints, path };
+  return { username, host, path };
 }
 
-/** Match a Thunderbird folder URI to a folder in the current profile, or null. */
+/**
+ * Match a Thunderbird folder URI to a folder in the current profile, or null.
+ *
+ * When the URI carries a username (e.g. `work@gmail.com` or `alice`), it is
+ * matched against the account's identity email addresses (or exact account name
+ * only when identity emails are unavailable), never against the mail server
+ * host alone, so two Gmail accounts cannot collide. Host matching is allowed
+ * only when the URI has no username, as with `mailbox://nobody@Local%20Folders`.
+ */
 export function resolveThunderbirdFolderUri(uri, knownFolders) {
   if (!Array.isArray(knownFolders) || knownFolders.length === 0) return null;
   const parsed = parseThunderbirdFolderUri(uri);
   if (!parsed) return null;
-  const { accountHints, path } = parsed;
+  const { username, host, path } = parsed;
   const pathLower = path.toLowerCase();
 
-  const matchesAccount = (folder) => {
-    const name = String(folder?.accountName ?? '').trim().toLowerCase();
-    return name && accountHints.some((h) => name === h || name.includes(h) || h.includes(name));
+  const pickByPath = (candidates) => {
+    const exact = candidates.filter((f) => f?.path === path);
+    if (exact.length === 1) return exact[0];
+    const ci = candidates.filter((f) => String(f?.path ?? '').toLowerCase() === pathLower);
+    return ci.length === 1 ? ci[0] : null;
   };
 
-  const exactByAccount = knownFolders.filter((f) => f?.path === path && matchesAccount(f));
-  if (exactByAccount.length === 1) return exactByAccount[0];
+  const emailsOf = (folder) =>
+    Array.isArray(folder?.accountEmails)
+      ? folder.accountEmails.map((e) => String(e ?? '').trim().toLowerCase()).filter(Boolean)
+      : [];
 
-  const ciByAccount = knownFolders.filter(
-    (f) => String(f?.path ?? '').toLowerCase() === pathLower && matchesAccount(f),
-  );
-  if (ciByAccount.length === 1) return ciByAccount[0];
+  if (username) {
+    // 1. Exact identity email match (authoritative regardless of display name).
+    const byExactEmail = knownFolders.filter((f) => emailsOf(f).includes(username));
+    if (byExactEmail.length > 0) return pickByPath(byExactEmail);
 
-  const exactPath = knownFolders.filter((f) => f?.path === path);
-  if (exactPath.length === 1) return exactPath[0];
+    // 2. Local-part login + server host matching the identity email's domain
+    //    (e.g. `imap://alice@mail.company.com/...` -> `alice@company.com`).
+    if (!username.includes('@') && host) {
+      const byLocalAndHost = knownFolders.filter((f) =>
+        emailsOf(f).some((email) => {
+          const split = email.lastIndexOf('@');
+          if (split <= 0) return false;
+          const local = email.slice(0, split);
+          const domain = email.slice(split + 1);
+          return local === username && (host === domain || host.endsWith(`.${domain}`));
+        }),
+      );
+      if (byLocalAndHost.length > 0) return pickByPath(byLocalAndHost);
+    }
 
-  const ciPath = knownFolders.filter((f) => String(f?.path ?? '').toLowerCase() === pathLower);
-  if (ciPath.length === 1) return ciPath[0];
+    // 3. Fallback when a folder carries no identity emails: exact account name
+    //    match against the username only (never host or substring matching).
+    const byExactName = knownFolders.filter(
+      (f) => emailsOf(f).length === 0 && String(f?.accountName ?? '').trim().toLowerCase() === username,
+    );
+    return pickByPath(byExactName);
+  }
 
-  return null;
+  if (!host) return null;
+
+  // Host-only URIs (such as `mailbox://nobody@Local%20Folders/...`): match by
+  // exact account name, or Thunderbird's `none` account type for Local Folders
+  // (which works even when "Local Folders" is localised).
+  const byHost = knownFolders.filter((f) => {
+    const name = String(f?.accountName ?? '').trim().toLowerCase();
+    if (name === host) return true;
+    return host === 'local folders' && String(f?.accountType ?? '').toLowerCase() === 'none';
+  });
+  return pickByPath(byHost);
 }
 
 function convertClause(clause, where, problems) {
@@ -383,13 +445,15 @@ function convertClause(clause, where, problems) {
     return null;
   }
 
-  // Junk status
+  // Junk status (Thunderbird writes "2" for Junk and "1" for Good/Not Junk)
   if (lowerField === 'junk status') {
     const junkVal = val.trim().toLowerCase();
-    if ((op === 'is' && (junkVal === 'junk' || junkVal === '100')) || (op === "isn't" && junkVal === 'good')) {
+    const isJunkValue = junkVal === '2' || junkVal === 'junk' || junkVal === '100';
+    const isGoodValue = junkVal === '1' || junkVal === 'good';
+    if ((op === 'is' && isJunkValue) || (op === "isn't" && isGoodValue)) {
       return { field: 'junk', operator: STATE_OPERATORS.isOn, negate: false };
     }
-    if ((op === "isn't" && (junkVal === 'junk' || junkVal === '100')) || (op === 'is' && junkVal === 'good')) {
+    if ((op === "isn't" && isJunkValue) || (op === 'is' && isGoodValue)) {
       return { field: 'junk', operator: STATE_OPERATORS.isOff, negate: false };
     }
     problems.push(t('import_tbUnsupportedCondition', where, `${clause.field} ${op} ${val}`));
@@ -470,6 +534,7 @@ function convertActions(rawActions, where, knownFolders, problems) {
 
   const mapped = [];
   let stopProcessing = false;
+  let missingDestFolder = false;
   for (const raw of rawActions) {
     const kind = String(raw?.type ?? '').trim();
     const value = String(raw?.value ?? '').trim();
@@ -485,6 +550,7 @@ function convertActions(rawActions, where, knownFolders, problems) {
       if (!folder) {
         const parsed = parseThunderbirdFolderUri(value);
         problems.push(t('import_tbMissingFolder', where, kind, parsed?.path ?? value));
+        missingDestFolder = true;
         continue;
       }
       mapped.push({ type, folderId: String(folder.id) });
@@ -511,6 +577,12 @@ function convertActions(rawActions, where, knownFolders, problems) {
     } else {
       problems.push(t('import_tbUnsupportedAction', where, kind));
     }
+  }
+
+  // Never keep a partial rule when Copy or Move lost its destination folder:
+  // "Copy to Archive, then Delete" must never turn into "Delete only".
+  if (missingDestFolder) {
+    return { actions: null, stopProcessing };
   }
 
   // Enforce execution order and at most one terminal action, matching rules.js.
@@ -593,6 +665,13 @@ export function importThunderbirdFilters(text, { knownFolders = [], existingRule
 
     if (conditions.length === 0) {
       problems.push(t('import_noConditions', where));
+      continue;
+    }
+    // Dropping a condition from an AND rule widens what it matches (e.g.
+    // "From boss AND date before 2020 -> Delete" would become "From boss ->
+    // Delete"). Skip the rule instead of staging a broader destructive filter.
+    if (condParsed.mode === 'all' && conditions.length < condParsed.clauses.length) {
+      problems.push(t('import_tbSkippedWidened', where));
       continue;
     }
     if (!actions) continue;

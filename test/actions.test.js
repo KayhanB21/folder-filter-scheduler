@@ -309,7 +309,7 @@ test('tag and mark actions throttle concurrent updates to UPDATE_BATCH_SIZE', as
   }
 });
 
-test('a failure in an update wave stops subsequent waves', async () => {
+test('a single failed update finishes remaining messages, excludes the failed id from later actions, and reports it', async () => {
   const ids = Array.from({ length: UPDATE_BATCH_SIZE * 3 }, (_, i) => i + 1);
   let calls = 0;
   const m = {
@@ -321,7 +321,138 @@ test('a failure in an update wave stops subsequent waves', async () => {
     },
   };
   await assert.rejects(runAction(m, ids, { type: 'markRead' }), /update failed/);
+  // All waves still ran despite the single broken message.
+  assert.equal(calls, UPDATE_BATCH_SIZE * 3);
+
+  // In runActions, healthy messages finish tag + move while the failed id is skipped by move.
+  const ops = [];
+  const m2 = {
+    messages: {
+      update: async (id, props) => {
+        if (id === 2) throw new Error('transient tag error');
+        ops.push(['update', id, props]);
+      },
+      move: async (batch, folderId) => {
+        ops.push(['move', batch, folderId]);
+      },
+    },
+  };
+  const headers = new Map([
+    [1, { id: 1, tags: [] }],
+    [2, { id: 2, tags: [] }],
+    [3, { id: 3, tags: [] }],
+  ]);
+  const res = await runActions(
+    m2,
+    [1, 2, 3],
+    [{ type: 'tag', tagKey: '$label1' }, { type: 'move', folderId: 'dest' }],
+    { headers },
+  );
+  assert.deepEqual(ops, [
+    ['update', 1, { tags: ['$label1'] }],
+    ['update', 3, { tags: ['$label1'] }],
+    ['move', [1, 3], 'dest'],
+  ]);
+  assert.equal(res.affected, 2);
+  assert.deepEqual(res.actedIds, [1, 3]);
+  assert.equal(res.errors.length, 1);
+  assert.equal(res.errors[0].id, 2);
+  assert.equal(res.errors[0].action, 'tag');
+  assert.match(res.errors[0].error.message, /transient tag error/);
+});
+
+test('one failed message in a 1-item final wave does not stop healthy messages from moving', async () => {
+  const ids = Array.from({ length: UPDATE_BATCH_SIZE + 1 }, (_, i) => i + 1);
+  const lastId = ids[ids.length - 1];
+  const moved = [];
+  const m = {
+    messages: {
+      update: async (id) => {
+        if (id === lastId) throw new Error('single final message failed');
+      },
+      move: async (batch) => {
+        moved.push(...batch);
+      },
+    },
+  };
+  const headers = new Map(ids.map((id) => [id, { id, tags: [] }]));
+  const res = await runActions(
+    m,
+    ids,
+    [{ type: 'tag', tagKey: '$label1' }, { type: 'move', folderId: 'dest' }],
+    { headers },
+  );
+  assert.deepEqual(moved, ids.slice(0, UPDATE_BATCH_SIZE));
+  assert.equal(res.affected, UPDATE_BATCH_SIZE);
+  assert.equal(res.errors.length, 1);
+  assert.equal(res.errors[0].id, lastId);
+});
+
+test('25 consecutive update failures abort remaining waves without blocking already-healthy messages from moving', async () => {
+  const ids = Array.from({ length: UPDATE_BATCH_SIZE * 3 }, (_, i) => i + 1);
+  let calls = 0;
+  const m = {
+    messages: {
+      update: async (id) => {
+        calls += 1;
+        if (id > UPDATE_BATCH_SIZE) throw new Error('offline');
+      },
+    },
+  };
+  await assert.rejects(runAction(m, ids, { type: 'markRead' }), /offline/);
   assert.equal(calls, UPDATE_BATCH_SIZE * 2);
+
+  // Inside runActions, aborting after 25 consecutive failures does not throw:
+  // the 25 healthy messages from wave 1 still move, while wave 2 (failed) and
+  // wave 3 (skipped) are excluded from move and recorded in result.errors.
+  let calls2 = 0;
+  const moved = [];
+  const m2 = {
+    messages: {
+      update: async (id) => {
+        calls2 += 1;
+        if (id > UPDATE_BATCH_SIZE) throw new Error('offline');
+      },
+      move: async (batch) => {
+        moved.push(...batch);
+      },
+    },
+  };
+  const headers = new Map(ids.map((id) => [id, { id, tags: [] }]));
+  const res = await runActions(
+    m2,
+    ids,
+    [{ type: 'tag', tagKey: '$label1' }, { type: 'move', folderId: 'dest' }],
+    { headers },
+  );
+  assert.equal(calls2, UPDATE_BATCH_SIZE * 2);
+  assert.deepEqual(moved, ids.slice(0, UPDATE_BATCH_SIZE));
+  assert.equal(res.affected, UPDATE_BATCH_SIZE);
+  assert.equal(res.errors.length, UPDATE_BATCH_SIZE * 2);
+  assert.deepEqual(
+    res.errors.map((e) => e.id),
+    ids.slice(UPDATE_BATCH_SIZE),
+  );
+});
+
+test('markNotJunk always updates even when header.junk is false (unclassified mail)', async () => {
+  const m = fakeMessenger();
+  const headers = new Map([
+    [1, { id: 1, junk: false }],
+    [2, { id: 2, junk: true }],
+  ]);
+  const res = await runActions(m, [1, 2], [{ type: 'markNotJunk' }], { headers });
+  assert.deepEqual(m.calls, [
+    { name: 'update', args: [1, { junk: false }] },
+    { name: 'update', args: [2, { junk: false }] },
+  ]);
+  assert.equal(res.affected, 2);
+
+  // markJunk still skips messages already marked as junk.
+  const m2 = fakeMessenger();
+  const junkRes = await runActions(m2, [1, 2], [{ type: 'markJunk' }], { headers });
+  assert.deepEqual(m2.calls, [{ name: 'update', args: [1, { junk: true }] }]);
+  assert.equal(junkRes.affected, 1);
 });
 
 test('tag reuses scanned headers, skips messages already tagged, and composes two tag actions', async () => {

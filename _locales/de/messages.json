@@ -1265,7 +1265,7 @@
     "message": "$1: Größe benötigt eine positive Zahl in KB oder MB"
   },
   "import_unknownActionFolder": {
-    "message": "$1: Zielordner für \"$2\" ist in diesem Profil nicht vorhanden, Aktion verworfen"
+    "message": "$1: Zielordner für \"$2\" ist in diesem Profil nicht vorhanden, Regel übersprungen"
   },
   "import_tbNoFilters": {
     "message": "Keine Thunderbird-Filter in dieser Datei gefunden"
@@ -1286,7 +1286,7 @@
     "message": "$1: Adressbuch wurde auf Alle Adressbücher abgebildet, vor dem Speichern prüfen"
   },
   "import_tbMissingFolder": {
-    "message": "$1: Zielordner \"$3\" für \"$2\" wurde nicht gefunden, Aktion verworfen"
+    "message": "$1: Zielordner \"$3\" für \"$2\" wurde nicht gefunden, Regel übersprungen"
   },
   "import_tbUnsupportedAction": {
     "message": "$1: Nicht unterstützte Thunderbird-Aktion \"$2\", verworfen"
@@ -1304,7 +1304,7 @@
     "message": "Wählen Sie vor dem Speichern die Ordner aus, die jede Regel überwachen soll."
   },
   "status_draftCreated": {
-    "message": "Regelentwurf aus der ausgewählten Nachricht erstellt — Aktion wählen und Speichern drücken."
+    "message": "Regelentwurf aus der ausgewählten Nachricht erstellt. Aktion wählen und Speichern drücken."
   },
   "options_filterRules": {
     "message": "Regeln filtern…"
@@ -1427,7 +1427,7 @@
     "message": "Einige Ordner konnten nicht durchsucht werden."
   },
   "test_noMatches": {
-    "message": "Keine passende Nachricht — nichts würde verschoben, markiert oder gelöscht."
+    "message": "Keine passende Nachricht. Nichts würde verschoben, markiert oder gelöscht."
   },
   "test_noSubject": {
     "message": "(kein Betreff)"
@@ -1439,9 +1439,21 @@
     "message": "Wählen Sie vor dem Testen mindestens einen Ordner für „$1“."
   },
   "status_orderChanged": {
-    "message": "Reihenfolge geändert — drücken Sie Speichern, um sie zu übernehmen."
+    "message": "Reihenfolge geändert. Drücken Sie Speichern, um sie zu übernehmen."
   },
   "status_ruleDuplicated": {
-    "message": "Als „$1“ dupliziert — prüfen und Speichern drücken."
+    "message": "Als „$1“ dupliziert. Prüfen und Speichern drücken."
+  },
+  "rule_stopProcessingTitle": {
+    "message": "Nachfolgende Regeln lassen eine Nachricht unberührt, solange sie dieser Regel entspricht, auch wenn eine spätere Regel einzeln oder nach eigenem Zeitplan läuft"
+  },
+  "test_unknownError": {
+    "message": "Testlauf fehlgeschlagen"
+  },
+  "import_tbSkippedWidened": {
+    "message": "$1: übersprungen, weil das Weglassen einer nicht unterstützten Bedingung in einem UND-Filter mehr Nachrichten treffen würde als beabsichtigt"
+  },
+  "import_skippedWidened": {
+    "message": "$1: übersprungen, weil das Weglassen einer Bedingung in einer Regel, die alle Bedingungen erfordert, mehr Nachrichten treffen würde als beabsichtigt"
   }
 }

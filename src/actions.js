@@ -65,20 +65,52 @@ async function inBatches(ids, fn, { onProgress, onBatch } = {}) {
 /**
  * Call `fn` on each id in sequential waves of `UPDATE_BATCH_SIZE`.
  *
+ * Uses `Promise.allSettled` per wave so one broken or missing message never
+ * aborts the rest of a bulk tag/mark action. Individual failures are handed to
+ * `onItemError(id, error)` so callers can exclude those ids from downstream
+ * actions and hold the scan watermark. If `UPDATE_BATCH_SIZE` updates fail in
+ * a row (e.g. Thunderbird IPC/offline failure), remaining updates are skipped
+ * and recorded as failed without throwing so already-updated healthy messages
+ * still reach downstream actions (such as Move) while failed and skipped ids
+ * stay excluded.
+ *
  * Progress is reported at the same `BATCH_SIZE` cadence as bulk actions so a
  * large tag or mark run stays quiet on normal folders and still leaves a clear
  * trail in diagnostics if a huge manual run stalls.
  */
-async function inUpdateBatches(ids, fn, { onProgress } = {}) {
+async function inUpdateBatches(ids, fn, { onProgress, onItemError } = {}) {
   let reported = 0;
+  let firstError = null;
+  let consecutiveFailures = 0;
   for (let i = 0; i < ids.length; i += UPDATE_BATCH_SIZE) {
     const chunk = ids.slice(i, i + UPDATE_BATCH_SIZE);
-    await Promise.all(chunk.map(fn));
+    const settled = await Promise.allSettled(chunk.map((id) => fn(id)));
+    for (let idx = 0; idx < settled.length; idx += 1) {
+      const res = settled[idx];
+      if (res.status === 'rejected') {
+        consecutiveFailures += 1;
+        if (firstError === null) firstError = res.reason;
+        onItemError?.(chunk[idx], res.reason);
+      } else {
+        consecutiveFailures = 0;
+      }
+    }
+    if (consecutiveFailures >= UPDATE_BATCH_SIZE) {
+      if (onItemError) {
+        for (let j = i + chunk.length; j < ids.length; j += 1) {
+          onItemError(ids[j], firstError);
+        }
+      }
+      break;
+    }
     const done = i + chunk.length;
     if (ids.length > BATCH_SIZE && (done - reported >= BATCH_SIZE || done === ids.length)) {
       reported = done;
       await onProgress?.(done, ids.length);
     }
+  }
+  if (firstError !== null && !onItemError) {
+    throw firstError;
   }
 }
 
@@ -111,7 +143,7 @@ function snapshotState(headers) {
  * for messages that already carry the tag. Without `stateById`, each message is
  * read back first as before, still throttled to `UPDATE_BATCH_SIZE` at a time.
  */
-async function applyTag(messenger, ids, action, { onProgress, stateById } = {}) {
+async function applyTag(messenger, ids, action, { onProgress, onItemError, stateById } = {}) {
   const todo = stateById
     ? ids.filter((id) => {
         const known = stateById.get(id)?.tags;
@@ -139,7 +171,7 @@ async function applyTag(messenger, ids, action, { onProgress, stateById } = {}) 
       else if (stateById) stateById.set(id, { tags: nextTags });
       acted.push(id);
     },
-    { onProgress },
+    { onProgress, onItemError },
   );
   return acted;
 }
@@ -150,7 +182,7 @@ async function applyTag(messenger, ids, action, { onProgress, stateById } = {}) 
  * Reuses scanned headers (`stateById`) just like `applyTag`, skipping both
  * `messages.get` and no-op updates for messages that do not carry the tag.
  */
-async function applyRemoveTag(messenger, ids, action, { onProgress, stateById } = {}) {
+async function applyRemoveTag(messenger, ids, action, { onProgress, onItemError, stateById } = {}) {
   const todo = stateById
     ? ids.filter((id) => {
         const known = stateById.get(id)?.tags;
@@ -178,7 +210,7 @@ async function applyRemoveTag(messenger, ids, action, { onProgress, stateById } 
       else if (stateById) stateById.set(id, { tags: nextTags });
       acted.push(id);
     },
-    { onProgress },
+    { onProgress, onItemError },
   );
   return acted;
 }
@@ -187,7 +219,7 @@ async function applyRemoveTag(messenger, ids, action, { onProgress, stateById } 
  * Remove every tag from each matched message, skipping messages already known
  * to carry no tags.
  */
-async function applyClearTags(messenger, ids, _action, { onProgress, stateById } = {}) {
+async function applyClearTags(messenger, ids, _action, { onProgress, onItemError, stateById } = {}) {
   const todo = stateById
     ? ids.filter((id) => {
         const known = stateById.get(id)?.tags;
@@ -214,31 +246,37 @@ async function applyClearTags(messenger, ids, _action, { onProgress, stateById }
       else if (stateById) stateById.set(id, { tags: [] });
       acted.push(id);
     },
-    { onProgress },
+    { onProgress, onItemError },
   );
   return acted;
 }
 
 /**
  * Set one boolean message flag (`read`, `flagged`, or `junk`) in throttled
- * waves, skipping messages already known to be in the desired state.
+ * waves. When `skipUnchanged` is true, messages already known to be in the
+ * desired state are skipped. `markNotJunk` passes `skipUnchanged: false`
+ * because Thunderbird reports `junk: false` for both explicitly Not Junk and
+ * unclassified mail, so skipping it would never classify unclassified mail as
+ * good.
  */
-function applyMark(prop, value) {
-  return async (messenger, ids, _action, { onProgress, stateById } = {}) => {
-    const todo = stateById
+function applyMark(prop, value, { skipUnchanged = true } = {}) {
+  return async (messenger, ids, _action, { onProgress, onItemError, stateById } = {}) => {
+    const todo = skipUnchanged && stateById
       ? ids.filter((id) => stateById.get(id)?.[prop] !== value)
       : ids;
     if (todo.length === 0) return [];
+    const acted = [];
     await inUpdateBatches(
       todo,
       async (id) => {
         await messenger.messages.update(id, { [prop]: value });
         const state = stateById?.get(id);
         if (state) state[prop] = value;
+        acted.push(id);
       },
-      { onProgress },
+      { onProgress, onItemError },
     );
-    return todo;
+    return acted;
   };
 }
 
@@ -339,7 +377,7 @@ export const ACTIONS = [
     get label() { return t('action_markNotJunk'); },
     needsFolder: false,
     get hint() { return t('action_markNotJunkHint'); },
-    apply: applyMark('junk', false),
+    apply: applyMark('junk', false, { skipUnchanged: false }),
   },
   {
     id: 'deletePermanently',
@@ -424,6 +462,7 @@ export async function runAction(messenger, ids, action, optionsOrProgress) {
   return (await def.apply(messenger, targetIds, action, {
     onProgress: options.onProgress,
     onBatch: options.onBatch,
+    onItemError: options.onItemError,
     stateById,
   })) ?? targetIds;
 }
@@ -432,26 +471,36 @@ export async function runAction(messenger, ids, action, optionsOrProgress) {
  * Run every action of a rule against the same matched ids, terminal action last.
  *
  * Sequential on purpose: "tag, then move" has to finish tagging before the
- * message leaves the folder. The fourth argument may be
- * `onProgress(action, done, total)` or `{ onProgress, onBatch, filterIds, headers }`.
- * Returns `{ affected, actedIds }`, counting distinct messages at least one
- * action actually touched.
+ * message leaves the folder. If one message fails an earlier per-message update
+ * (such as tagging), healthy messages still complete the rule while the failed
+ * message is excluded from later actions (so it is never moved untagged) and
+ * reported in `errors` so the caller logs it and holds the scan watermark.
+ *
+ * Returns `{ affected, actedIds, errors }`.
  */
 export async function runActions(messenger, ids, actions, optionsOrProgress) {
-  if (!ids || ids.length === 0) return { affected: 0, actedIds: [] };
+  if (!ids || ids.length === 0) return { affected: 0, actedIds: [], errors: [] };
   const ordered = orderActions(actions);
   if (ordered.length === 0) throw new Error('Rule has no action');
   const options = normalizeOptions(optionsOrProgress);
   const stateById = snapshotState(options.headers);
   const acted = new Set();
+  const failedIds = new Set();
+  const errors = [];
   for (const action of ordered) {
-    const ran = await runAction(messenger, ids, action, {
+    const eligible = failedIds.size > 0 ? ids.filter((id) => !failedIds.has(id)) : ids;
+    if (eligible.length === 0) break;
+    const ran = await runAction(messenger, eligible, action, {
       onProgress: options.onProgress && ((done, total) => options.onProgress(action, done, total)),
       onBatch: options.onBatch && ((batch) => options.onBatch(action, batch)),
+      onItemError: (id, error) => {
+        failedIds.add(id);
+        errors.push({ id, action: action.type, error });
+      },
       filterIds: options.filterIds && ((candidateIds) => options.filterIds(action, candidateIds)),
       stateById,
     });
     for (const id of ran) acted.add(id);
   }
-  return { affected: acted.size, actedIds: [...acted] };
+  return { affected: acted.size, actedIds: [...acted], errors };
 }

@@ -28,8 +28,70 @@
 import { actionsOf } from './actions.js';
 
 export const COPY_HISTORY_KEY = 'copyHistory';
+/** Prefix for per-target sharded keys in `storage.local`. */
+export const COPY_BUCKET_PREFIX = 'copyHistory:';
+/** Storage key recording which `(ruleId, destFolderId)` buckets have dropped entries past `COPY_CAP_PER_TARGET`. */
+export const COPY_OVERFLOW_KEY = 'copyHistoryOverflow';
 /** Max remembered copies per `(ruleId, destFolderId)` target. */
-export const COPY_CAP_PER_TARGET = 5000;
+export const COPY_CAP_PER_TARGET = 50_000;
+
+/** Storage key for one `(ruleId, destFolderId)` bucket so saving one rule never rewrites others. */
+export function copyBucketKey(ruleId, destFolderId) {
+  return `${COPY_BUCKET_PREFIX}${encodeURIComponent(String(ruleId))}:${encodeURIComponent(String(destFolderId))}`;
+}
+
+/** Parse a sharded `copyHistory:<ruleId>:<destId>` key back into `[ruleId, destId]`, or null. */
+export function parseCopyBucketKey(key) {
+  if (typeof key !== 'string' || !key.startsWith(COPY_BUCKET_PREFIX)) return null;
+  const rest = key.slice(COPY_BUCKET_PREFIX.length);
+  const sep = rest.indexOf(':');
+  if (sep <= 0) return null;
+  try {
+    return [decodeURIComponent(rest.slice(0, sep)), decodeURIComponent(rest.slice(sep + 1))];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reassemble the nested `{ [ruleId]: { [destId]: bucket } }` map from a full
+ * `storage.local.get(null)` dump, merging both sharded `copyHistory:*` keys and
+ * any pre-sharding legacy `copyHistory` key.
+ */
+export function loadStoredCopyHistory(allStorage) {
+  const merged = {};
+  const legacy = allStorage?.[COPY_HISTORY_KEY];
+  const hasLegacy = Boolean(legacy && typeof legacy === 'object' && Object.keys(legacy).length > 0);
+  const shardKeys = [];
+
+  if (hasLegacy) {
+    for (const [ruleId, byDest] of Object.entries(legacy)) {
+      if (!byDest || typeof byDest !== 'object') continue;
+      merged[ruleId] = {};
+      for (const [destId, bucket] of Object.entries(byDest)) {
+        if (bucket && typeof bucket === 'object') merged[ruleId][destId] = { ...bucket };
+      }
+    }
+  }
+
+  for (const [key, value] of Object.entries(allStorage ?? {})) {
+    const parsed = parseCopyBucketKey(key);
+    if (!parsed) continue;
+    shardKeys.push(key);
+    if (!value || typeof value !== 'object') continue;
+    const [ruleId, destId] = parsed;
+    merged[ruleId] ??= {};
+    merged[ruleId][destId] = { ...(merged[ruleId][destId] ?? {}), ...value };
+  }
+
+  const rawOverflow = allStorage?.[COPY_OVERFLOW_KEY];
+  const hadOverflowKey = Object.hasOwn(allStorage ?? {}, COPY_OVERFLOW_KEY);
+  const overflowed = Array.isArray(rawOverflow)
+    ? rawOverflow.filter((k) => typeof k === 'string' && parseCopyBucketKey(k) !== null)
+    : [];
+
+  return { stored: merged, shardKeys, hasLegacy, overflowed, hadOverflowKey };
+}
 
 const toHex = (buffer) => [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
@@ -90,12 +152,14 @@ function trimBucket(bucket, cap) {
     ([key, at]) => key && typeof at === 'number' && Number.isFinite(at),
   );
   let changed = valid.length !== Object.keys(bucket ?? {}).length;
+  let trimmed = false;
   if (valid.length > cap) {
     valid.reverse().sort(([, a], [, b]) => b - a);
     valid.length = cap;
     changed = true;
+    trimmed = true;
   }
-  return { bucket: Object.fromEntries(valid), changed };
+  return { bucket: Object.fromEntries(valid), changed, trimmed };
 }
 
 /**
@@ -108,12 +172,13 @@ function trimBucket(bucket, cap) {
  * @param {object} history
  * @param {Array|null} [rules] full config rule list (enabled and disabled), or null
  * @param {number} [cap]
- * @returns {{ history: object, changed: boolean }}
+ * @returns {{ history: object, changed: boolean, trimmedTargets: Set<string> }}
  */
 export function pruneCopyHistory(history, rules = null, cap = COPY_CAP_PER_TARGET) {
   const source = history && typeof history === 'object' ? history : {};
   const targets = Array.isArray(rules) ? copyTargetsByRule(rules) : null;
   const out = {};
+  const trimmedTargets = new Set();
   let changed = false;
 
   for (const [ruleId, byDest] of Object.entries(source)) {
@@ -130,6 +195,7 @@ export function pruneCopyHistory(history, rules = null, cap = COPY_CAP_PER_TARGE
       }
       const trimmed = trimBucket(bucket, cap);
       if (trimmed.changed) changed = true;
+      if (trimmed.trimmed) trimmedTargets.add(copyBucketKey(ruleId, destId));
       if (Object.keys(trimmed.bucket).length > 0) keptDests[destId] = trimmed.bucket;
       else changed = true;
     }
@@ -137,7 +203,7 @@ export function pruneCopyHistory(history, rules = null, cap = COPY_CAP_PER_TARGE
     else changed = true;
   }
 
-  return { history: out, changed };
+  return { history: out, changed, trimmedTargets };
 }
 
 /**
@@ -145,24 +211,50 @@ export function pruneCopyHistory(history, rules = null, cap = COPY_CAP_PER_TARGE
  *
  * @param {object} options
  * @param {object} [options.stored] stored history from `storage.local`; never mutated
+ * @param {string[]} [options.overflowed] bucket keys whose history has previously dropped entries past `cap`
  * @param {Array|null} [options.rules] full config rule list for pruning stale entries
  * @param {() => number} [options.now]
  * @param {number} [options.cap]
  * @param {SubtleCrypto} [options.subtle]
+ * @param {(ruleId: string, destFolderId: string) => unknown} [options.onOverflow] called once when a destination first drops entries past `cap`
  */
 export function createCopyHistory({
   stored = {},
+  overflowed = [],
   rules = null,
   now = Date.now,
   cap = COPY_CAP_PER_TARGET,
   subtle,
+  onOverflow = () => {},
 } = {}) {
   const initial = pruneCopyHistory(stored, rules, cap);
   const history = initial.history;
-  let version = initial.changed ? 1 : 0;
+  const initialLiveKeys = new Set();
+  for (const [ruleId, byDest] of Object.entries(history)) {
+    for (const destId of Object.keys(byDest)) initialLiveKeys.add(copyBucketKey(ruleId, destId));
+  }
+  const priorOverflow = Array.isArray(overflowed) ? overflowed : [];
+  const overflowTargets = new Set(priorOverflow.filter((k) => initialLiveKeys.has(k)));
+  let overflowDirty = overflowTargets.size !== priorOverflow.length;
+  for (const k of initial.trimmedTargets) {
+    if (!overflowTargets.has(k)) {
+      overflowTargets.add(k);
+      overflowDirty = true;
+      const parsed = parseCopyBucketKey(k);
+      if (parsed) onOverflow(parsed[0], parsed[1]);
+    }
+  }
+
+  let version = initial.changed || overflowDirty ? 1 : 0;
   let savedVersion = 0;
+  let pendingAdds = 0;
+  const dirtyBuckets = new Set();
   // Memoize hashed keys per MessageHeader object within one run.
   const keyCache = new WeakMap();
+
+  if (initial.changed) {
+    for (const key of initialLiveKeys) dirtyBuckets.add(key);
+  }
 
   async function keyFor(header) {
     if (!header || typeof header !== 'object') return null;
@@ -177,29 +269,49 @@ export function createCopyHistory({
       return version;
     },
 
+    get pendingAdds() {
+      return pendingAdds;
+    },
+
     isDirty() {
-      return version !== savedVersion;
+      return version !== savedVersion || overflowDirty;
+    },
+
+    isOverflowed(ruleId, destFolderId) {
+      return overflowTargets.has(copyBucketKey(ruleId, destFolderId));
     },
 
     /**
      * Separate `ids` into those not yet copied to `(ruleId, destFolderId)` and
      * those already copied (including duplicate copies of the same message
      * inside `ids` itself).
+     *
+     * Once a destination's history has dropped entries past `cap`, any message
+     * missing from the local hash history is checked via `checkDestination`
+     * against the destination folder itself so copies past the cap never loop.
      */
-    async filterUncopied(ruleId, destFolderId, ids, headersById) {
+    async filterUncopied(ruleId, destFolderId, ids, headersById, { checkDestination } = {}) {
       const bucket = history[ruleId]?.[destFolderId] ?? {};
+      const bucketKey = copyBucketKey(ruleId, destFolderId);
+      const checkDest = overflowTargets.has(bucketKey) && typeof checkDestination === 'function';
       const seen = new Set();
       const toCopy = [];
       const skipped = [];
       const keysById = new Map();
 
       for (const id of ids) {
-        const key = await keyFor(headersById?.get?.(id));
+        const header = headersById?.get?.(id);
+        const key = await keyFor(header);
         if (key === null) {
           toCopy.push(id);
           continue;
         }
         if (Object.hasOwn(bucket, key) || seen.has(key)) {
+          skipped.push(id);
+          continue;
+        }
+        if (checkDest && (await checkDestination(destFolderId, header))) {
+          seen.add(key);
           skipped.push(id);
           continue;
         }
@@ -228,8 +340,16 @@ export function createCopyHistory({
         added = true;
       }
       if (!added) return false;
+      const bucketKey = copyBucketKey(ruleId, destFolderId);
       const trimmed = trimBucket(history[ruleId][destFolderId], cap);
       history[ruleId][destFolderId] = trimmed.bucket;
+      if (trimmed.trimmed && !overflowTargets.has(bucketKey)) {
+        overflowTargets.add(bucketKey);
+        overflowDirty = true;
+        onOverflow(ruleId, destFolderId);
+      }
+      dirtyBuckets.add(bucketKey);
+      pendingAdds += ids.length;
       version += 1;
       return true;
     },
@@ -239,9 +359,40 @@ export function createCopyHistory({
       return pruneCopyHistory(history, rules, cap).history;
     },
 
+    /**
+     * Sharded `{ toSet, toRemove, liveKeys, hasOverflow }` diff against
+     * `knownShardKeys`, so saving a copy batch writes only the single bucket
+     * that changed instead of rewriting every rule's history.
+     */
+    shardedPatch(knownShardKeys = [], { forceAll = false, hadOverflow = false } = {}) {
+      const pruned = pruneCopyHistory(history, rules, cap).history;
+      const liveKeys = new Set();
+      const toSet = {};
+      for (const [ruleId, byDest] of Object.entries(pruned)) {
+        for (const [destId, bucket] of Object.entries(byDest)) {
+          const key = copyBucketKey(ruleId, destId);
+          liveKeys.add(key);
+          if (forceAll || dirtyBuckets.has(key)) toSet[key] = bucket;
+        }
+      }
+      const toRemove = knownShardKeys.filter((k) => !liveKeys.has(k));
+      const liveOverflow = [...overflowTargets].filter((k) => liveKeys.has(k));
+      if (liveOverflow.length > 0 && (forceAll || overflowDirty)) {
+        toSet[COPY_OVERFLOW_KEY] = liveOverflow;
+      } else if (liveOverflow.length === 0 && (hadOverflow || overflowDirty)) {
+        toRemove.push(COPY_OVERFLOW_KEY);
+      }
+      return { toSet, toRemove, liveKeys: [...liveKeys], hasOverflow: liveOverflow.length > 0 };
+    },
+
     /** Record that `savedAtVersion` was persisted successfully. */
     markSaved(savedAtVersion) {
       if (savedAtVersion > savedVersion) savedVersion = savedAtVersion;
+      if (savedVersion === version) {
+        dirtyBuckets.clear();
+        overflowDirty = false;
+        pendingAdds = 0;
+      }
     },
 
     /** History to save at the end of a run, or null when nothing changed. */

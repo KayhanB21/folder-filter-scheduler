@@ -161,10 +161,70 @@ export function exportFilename(date = new Date()) {
   return `ffs-rules-${stamp}.json`;
 }
 
+const SHA256_K = new Uint32Array([
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+]);
+
+/** Synchronous pure-JS SHA-256 hex digest (FIPS 180-4) so exports stay sync and dependency-free. */
+function sha256Hex(text) {
+  const bytes = new TextEncoder().encode(String(text));
+  const bitLen = bytes.length * 8;
+  const paddedLen = Math.ceil((bytes.length + 9) / 64) * 64;
+  const buf = new Uint8Array(paddedLen);
+  buf.set(bytes);
+  buf[bytes.length] = 0x80;
+  const view = new DataView(buf.buffer);
+  view.setUint32(paddedLen - 8, Math.floor(bitLen / 0x100000000), false);
+  view.setUint32(paddedLen - 4, bitLen >>> 0, false);
+
+  let h0 = 0x6a09e667; let h1 = 0xbb67ae85; let h2 = 0x3c6ef372; let h3 = 0xa54ff53a;
+  let h4 = 0x510e527f; let h5 = 0x9b05688c; let h6 = 0x1f83d9ab; let h7 = 0x5be0cd19;
+  const w = new Uint32Array(64);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+
+  for (let off = 0; off < paddedLen; off += 64) {
+    for (let i = 0; i < 16; i += 1) w[i] = view.getUint32(off + i * 4, false);
+    for (let i = 16; i < 64; i += 1) {
+      const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+      const s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+    }
+    let a = h0; let b = h1; let c = h2; let d = h3;
+    let e = h4; let f = h5; let g = h6; let h = h7;
+    for (let i = 0; i < 64; i += 1) {
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + SHA256_K[i] + w[i]) >>> 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0;
+      d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0; h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0; h5 = (h5 + f) >>> 0; h6 = (h6 + g) >>> 0; h7 = (h7 + h) >>> 0;
+  }
+  return [h0, h1, h2, h3, h4, h5, h6, h7].map((v) => v.toString(16).padStart(8, '0')).join('');
+}
+
+/** Privacy-preserving account fingerprint for portable folder matching across computers. */
+export function accountHash(accountName) {
+  const norm = String(accountName ?? '').trim().toLowerCase();
+  return norm ? sha256Hex(`ffs-account-v1:${norm}`).slice(0, 16) : '';
+}
+
 /**
  * Portable folder metadata for every folder referenced by a rule or action.
- * Lets an export from one computer reconnect folders by account name and path
- * when imported on another profile whose internal folder ids differ.
+ * Stores a hashed account identifier alongside the folder path so exports
+ * reconnect folders across computers without writing plain-text account names
+ * (often email addresses) into `folderRefs`.
  */
 function buildFolderRefs(rules, folders) {
   if (!Array.isArray(folders) || folders.length === 0) return null;
@@ -175,7 +235,7 @@ function buildFolderRefs(rules, folders) {
     if (!key || refs[key]) return;
     const folder = byId.get(key);
     if (!folder) return;
-    refs[key] = { accountName: String(folder.accountName ?? ''), path: String(folder.path) };
+    refs[key] = { accountHash: accountHash(folder.accountName), path: String(folder.path) };
   };
   for (const rule of rules ?? []) {
     for (const id of rule?.folderIds ?? []) record(id);
@@ -394,36 +454,59 @@ function sanitizeCondition(raw, problems, where, knownAddressBookIds) {
 /**
  * Resolve an imported folder id against the current profile's folders.
  *
- * When the id does not exist in this profile (e.g. a backup from another
- * computer), try matching the portable `{ accountName, path }` recorded in
- * `folderRefs`: first by account name and exact path, then by an unambiguous
- * path match across accounts.
+ * When `folderRefs` carries metadata for the folder, we verify that even an
+ * existing id (`account1://Spam`) belongs to the same account and path rather
+ * than a different account that happens to sit in slot 1 on this computer. If
+ * the id differs or belongs to another account, we reconnect ONLY when BOTH
+ * the account hash (or legacy account name) AND folder path match uniquely,
+ * never guessing across accounts.
  */
 function resolveImportedFolder(folderId, { known, knownFolders, folderRefs }) {
   const id = String(folderId ?? '');
   if (!known) return { id, remapped: false, missing: false };
-  if (known.has(id)) return { id, remapped: false, missing: false };
 
   const ref = folderRefs && typeof folderRefs === 'object' ? folderRefs[id] : null;
   const refPath = typeof ref?.path === 'string' ? ref.path : '';
-  if (refPath && Array.isArray(knownFolders) && knownFolders.length > 0) {
-    const refAccount = String(ref?.accountName ?? '').trim().toLowerCase();
-    if (refAccount) {
-      const exactAccount = knownFolders.filter(
-        (f) => String(f?.accountName ?? '').trim().toLowerCase() === refAccount && f?.path === refPath,
-      );
-      if (exactAccount.length === 1) return { id: String(exactAccount[0].id), remapped: true, missing: false };
-      const ciAccount = knownFolders.filter(
-        (f) =>
-          String(f?.accountName ?? '').trim().toLowerCase() === refAccount &&
-          String(f?.path ?? '').toLowerCase() === refPath.toLowerCase(),
-      );
-      if (ciAccount.length === 1) return { id: String(ciAccount[0].id), remapped: true, missing: false };
+  const wantedHash =
+    typeof ref?.accountHash === 'string' && ref.accountHash
+      ? ref.accountHash
+      : typeof ref?.accountName === 'string' && ref.accountName
+        ? accountHash(ref.accountName)
+        : '';
+
+  const hasFolders = Array.isArray(knownFolders) && knownFolders.length > 0;
+  if (known.has(id)) {
+    // Legacy export (no folderRefs): keep the id as before.
+    if (!refPath || !hasFolders) return { id, remapped: false, missing: false };
+    const direct = knownFolders.find((f) => String(f?.id) === id);
+    if (
+      direct &&
+      String(direct.path ?? '').toLowerCase() === refPath.toLowerCase() &&
+      (!wantedHash || accountHash(direct.accountName) === wantedHash)
+    ) {
+      return { id, remapped: false, missing: false };
     }
-    const byPath = knownFolders.filter((f) => f?.path === refPath);
-    if (byPath.length === 1) return { id: String(byPath[0].id), remapped: true, missing: false };
-    const byPathCi = knownFolders.filter((f) => String(f?.path ?? '').toLowerCase() === refPath.toLowerCase());
-    if (byPathCi.length === 1) return { id: String(byPathCi[0].id), remapped: true, missing: false };
+    // `id` exists on this profile, but points at a different account or path
+    // than the export recorded, so fall through to reconnect by account + path.
+  }
+
+  if (refPath && wantedHash && hasFolders) {
+    const exactAccount = knownFolders.filter(
+      (f) => accountHash(f?.accountName) === wantedHash && f?.path === refPath,
+    );
+    if (exactAccount.length === 1) {
+      const matchedId = String(exactAccount[0].id);
+      return { id: matchedId, remapped: matchedId !== id, missing: false };
+    }
+    const ciAccount = knownFolders.filter(
+      (f) =>
+        accountHash(f?.accountName) === wantedHash &&
+        String(f?.path ?? '').toLowerCase() === refPath.toLowerCase(),
+    );
+    if (ciAccount.length === 1) {
+      const matchedId = String(ciAccount[0].id);
+      return { id: matchedId, remapped: matchedId !== id, missing: false };
+    }
   }
 
   return { id: null, remapped: false, missing: true };
@@ -435,7 +518,9 @@ function resolveImportedFolder(folderId, { known, knownFolders, folderRefs }) {
  * At most one terminal action survives. A rule that both moved and trashed the
  * same message would fail on the second step, because the first invalidates the
  * message ids, so the extras are dropped here and reported rather than left to
- * throw during a scheduled run.
+ * throw during a scheduled run. If a move or copy destination folder is missing
+ * from this profile, the entire rule is skipped so "Copy to Archive, then
+ * Delete" can never silently degrade into "Delete only".
  */
 function sanitizeActions(raw, problems, where, folderContext) {
   const listed = actionsOf(raw);
@@ -446,6 +531,7 @@ function sanitizeActions(raw, problems, where, folderContext) {
 
   const actions = [];
   let terminal = null;
+  let missingDestFolder = false;
   for (const candidate of orderActions(listed)) {
     const def = ACTIONS_BY_ID[candidate?.type];
     if (!def) {
@@ -461,6 +547,7 @@ function sanitizeActions(raw, problems, where, folderContext) {
       const resolved = resolveImportedFolder(candidate.folderId, folderContext);
       if (resolved.missing) {
         problems.push(t('import_unknownActionFolder', where, def.id));
+        missingDestFolder = true;
         continue;
       }
       if (resolved.remapped) folderContext.remapped += 1;
@@ -487,6 +574,7 @@ function sanitizeActions(raw, problems, where, folderContext) {
     actions.push(action);
   }
 
+  if (missingDestFolder) return null;
   if (actions.length === 0) {
     problems.push(t('import_noUsableAction', where));
     return null;
@@ -500,13 +588,21 @@ function sanitizeRule(raw, index, problems, folderContext, knownAddressBookIds) 
   const actions = sanitizeActions(raw, problems, where, folderContext);
   if (!actions) return null;
 
-  const conditions = (Array.isArray(raw?.conditions) ? raw.conditions : [])
+  const rawConditions = Array.isArray(raw?.conditions) ? raw.conditions : [];
+  const conditions = rawConditions
     .map((c, i) => sanitizeCondition(c, problems, t('import_whereCondition', where, i + 1), knownAddressBookIds))
     .filter(Boolean);
 
   // A rule with no usable conditions is dropped rather than imported inert.
   if (conditions.length === 0) {
     problems.push(t('import_noConditions', where));
+    return null;
+  }
+  const match = raw?.match === 'all' ? 'all' : 'any';
+  // Dropping a condition from an "all" (AND) rule widens what it matches; skip
+  // the whole rule instead of staging a broader destructive filter.
+  if (match === 'all' && conditions.length < rawConditions.length) {
+    problems.push(t('import_skippedWidened', where));
     return null;
   }
 

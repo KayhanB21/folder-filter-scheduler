@@ -52,9 +52,23 @@ export function createBodyReads({
 }) {
   const cache = new Map();
   const failed = new Set();
-  const startedAt = now();
+  let spentMs = 0;
   let budgetExceeded = false;
   const seconds = timeoutMs / 1000;
+
+  const remainingBudget = () => Math.max(0, budgetMs - spentMs);
+
+  const hitBudget = async () => {
+    const first = !budgetExceeded;
+    budgetExceeded = true;
+    reads.skipped += 1;
+    if (first) {
+      await onTimeout(
+        `body reads reached the ${budgetMs / 1000} s time budget, remaining messages will be checked on the next run`,
+      );
+    }
+    return null;
+  };
 
   const reads = {
     /** Reads that ended with no answer. */
@@ -63,6 +77,14 @@ export function createBodyReads({
     skipped: 0,
     /** Requests satisfied from this run's in-memory cache. */
     cached: 0,
+    /** Total milliseconds spent inside fresh Thunderbird body calls this run. */
+    get spentMs() {
+      return spentMs;
+    },
+    /** True when fresh reads stopped because `budgetMs` was exhausted. */
+    get budgetReached() {
+      return budgetExceeded;
+    },
     get stopped() {
       return reads.timeouts >= limit || budgetExceeded;
     },
@@ -87,20 +109,22 @@ export function createBodyReads({
         reads.skipped += 1;
         return null;
       }
-      if (now() - startedAt >= budgetMs) {
-        budgetExceeded = true;
-        reads.skipped += 1;
-        await onTimeout(
-          `body reads reached the ${budgetMs / 1000} s time budget, remaining messages will be checked on the next run`,
-        );
-        return null;
+      if (remainingBudget() <= 0) {
+        return hitBudget();
       }
+      const callLimit = Math.min(timeoutMs, remainingBudget());
+      const callStart = now();
       try {
-        const texts = await withTimeout(bodyText(messageId, listInlineTextParts, toPlainText), timeoutMs);
+        const texts = await withTimeout(bodyText(messageId, listInlineTextParts, toPlainText), callLimit);
+        spentMs += Math.max(0, now() - callStart);
         cache.set(messageId, texts);
         return texts;
       } catch (e) {
+        spentMs += Math.max(0, now() - callStart);
         if (e?.name !== 'TimeoutError') throw e;
+        if (callLimit < timeoutMs || remainingBudget() <= 0) {
+          return hitBudget();
+        }
         reads.timeouts += 1;
         reads.skipped += 1;
         failed.add(messageId);

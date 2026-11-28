@@ -14,10 +14,12 @@ import {
 } from '../src/tb-filters.js';
 
 const KNOWN_FOLDERS = [
-  { id: 'acc1://INBOX', accountName: 'alice@gmail.com', path: '/INBOX' },
-  { id: 'acc1://Newsletters', accountName: 'alice@gmail.com', path: '/Newsletters' },
-  { id: 'acc1://Work/Receipts', accountName: 'alice@gmail.com', path: '/Work/Receipts' },
-  { id: 'local://Backup/2026', accountName: 'Local Folders', path: '/Backup/2026' },
+  { id: 'acc1://INBOX', accountName: 'Gmail', accountEmails: ['alice@gmail.com'], accountType: 'imap', path: '/INBOX' },
+  { id: 'acc1://Newsletters', accountName: 'Gmail', accountEmails: ['alice@gmail.com'], accountType: 'imap', path: '/Newsletters' },
+  { id: 'acc1://Work/Receipts', accountName: 'Gmail', accountEmails: ['alice@gmail.com'], accountType: 'imap', path: '/Work/Receipts' },
+  { id: 'acc2://Receipts', accountName: 'Work', accountEmails: ['work@gmail.com'], accountType: 'imap', path: '/Receipts' },
+  { id: 'corp://Invoices', accountName: 'Company', accountEmails: ['alice@company.com'], accountType: 'imap', path: '/Invoices' },
+  { id: 'local://Backup/2026', accountName: 'Local Folders', accountEmails: [], accountType: 'none', path: '/Backup/2026' },
 ];
 
 test('isThunderbirdFilterFile distinguishes msgFilterRules.dat from JSON exports', () => {
@@ -72,22 +74,56 @@ test('parseThunderbirdCondition handles commas, parentheses, quoted headers, and
 
   const mixed = parseThunderbirdCondition('AND (from,contains,a) OR (subject,contains,b)');
   assert.equal(mixed.mixed, true);
+
+  // Thunderbird wraps values containing `)` or leading/trailing spaces in quotes.
+  const quoted = parseThunderbirdCondition(
+    'AND (subject,contains,"(urgent)") AND (subject,contains," lead ") AND (subject,contains,"Say \\"hi\\")") AND (subject,contains,"a" and "b")',
+  );
+  assert.deepEqual(
+    quoted.clauses.map((c) => c.value),
+    ['(urgent)', ' lead ', 'Say "hi")', '"a" and "b"'],
+  );
 });
 
-test('resolveThunderbirdFolderUri decodes percent-encoding and matches account + path', () => {
+test('resolveThunderbirdFolderUri matches by identity email and never matches on mail server host alone', () => {
   assert.deepEqual(
     parseThunderbirdFolderUri('mailbox://nobody@Local%20Folders/Backup/2026'),
-    { accountHints: ['local folders'], path: '/Backup/2026' },
+    { username: '', host: 'local folders', path: '/Backup/2026' },
   );
+  assert.deepEqual(
+    parseThunderbirdFolderUri('imap://work%40gmail.com@imap.gmail.com/Receipts'),
+    { username: 'work@gmail.com', host: 'imap.gmail.com', path: '/Receipts' },
+  );
+  // Matches by identity email even when the account's display name is "Gmail" or "Work".
   assert.equal(
     resolveThunderbirdFolderUri('imap://alice%40gmail.com@imap.gmail.com/Work/Receipts', KNOWN_FOLDERS)?.id,
     'acc1://Work/Receipts',
   );
   assert.equal(
+    resolveThunderbirdFolderUri('imap://work%40gmail.com@imap.gmail.com/Receipts', KNOWN_FOLDERS)?.id,
+    'acc2://Receipts',
+  );
+  // Local-part username + matching mail host resolves via identity email domain.
+  assert.equal(
+    resolveThunderbirdFolderUri('imap://alice@mail.company.com/Invoices', KNOWN_FOLDERS)?.id,
+    'corp://Invoices',
+  );
+  // Local Folders has no username (`nobody`), so host matching applies (including localized names via accountType 'none').
+  assert.equal(
     resolveThunderbirdFolderUri('mailbox://nobody@Local%20Folders/Backup/2026', KNOWN_FOLDERS)?.id,
     'local://Backup/2026',
   );
+  assert.equal(
+    resolveThunderbirdFolderUri('mailbox://nobody@Local%20Folders/Backup/2026', [
+      { id: 'de-local://Backup/2026', accountName: 'Lokale Ordner', accountEmails: [], accountType: 'none', path: '/Backup/2026' },
+    ])?.id,
+    'de-local://Backup/2026',
+  );
   assert.equal(resolveThunderbirdFolderUri('imap://alice%40gmail.com@imap.gmail.com/Missing', KNOWN_FOLDERS), null);
+  // Another Gmail user's filter must NEVER match alice's account named "Gmail" via server host `imap.gmail.com`.
+  assert.equal(resolveThunderbirdFolderUri('imap://other%40gmail.com@imap.gmail.com/Newsletters', KNOWN_FOLDERS), null);
+  assert.equal(resolveThunderbirdFolderUri('imap://work%40gmail.com@imap.gmail.com/Newsletters', KNOWN_FOLDERS), null);
+  assert.equal(resolveThunderbirdFolderUri('imap://bob%40work.example@imap.work.example/Newsletters', KNOWN_FOLDERS), null);
 });
 
 test('importThunderbirdFilters converts rich conditions and actions accurately', () => {
@@ -155,23 +191,51 @@ condition="OR (from,ends with,@shop.example) OR (size,is less than,500) OR (body
   ]);
 });
 
-test('importThunderbirdFilters reports unsupported items, ALL, address-book mapping, and missing folders', () => {
+test('importThunderbirdFilters supports numeric junk status values written by Thunderbird', () => {
+  const dat = `
+version="9"
+name="Junk numeric"
+action="Delete"
+condition="AND (junk status,is,2) AND (junk status,is,1) AND (junk status,isn't,2) AND (junk status,isn't,1)"
+name="Junk unknown"
+action="Delete"
+condition="AND (junk status,is,0)"
+`;
+  const res = importThunderbirdFilters(dat, { knownFolders: KNOWN_FOLDERS });
+  assert.equal(res.rules.length, 1);
+  assert.deepEqual(res.rules[0].conditions, [
+    { field: 'junk', operator: 'isOn', negate: false },
+    { field: 'junk', operator: 'isOff', negate: false },
+    { field: 'junk', operator: 'isOff', negate: false },
+    { field: 'junk', operator: 'isOn', negate: false },
+  ]);
+  assert.ok(res.problems.some((p) => /unsupported Thunderbird condition "junk status is 0"/.test(p)));
+});
+
+test('importThunderbirdFilters skips widened AND rules and rules whose Copy/Move destination is missing, while keeping narrowed OR rules', () => {
   const dat = `
 version="9"
 name="Match Everything"
 action="Delete"
 condition="ALL"
-name="Mixed & Partial"
-action="Forward"
-actionValue="boss@example.com"
-action="Move to folder"
+name="Widened AND delete"
+action="Delete"
+condition="AND (from,contains,boss@example.com) AND (date,is before,01-Jan-2020)"
+name="Copy then Delete missing folder"
+action="Copy to folder"
 actionValue="imap://alice%40gmail.com@imap.gmail.com/Nonexistent"
 action="Delete"
-condition="AND (from,is in ab,moz-abmdbdirectory://abook.sqlite) OR (date,is before,01-Jan-2026)"
+condition="AND (from,contains,receipts@example.com)"
+name="OR partial"
+action="Forward"
+actionValue="boss@example.com"
+action="Delete"
+condition="OR (from,is in ab,moz-abmdbdirectory://abook.sqlite) OR (date,is before,01-Jan-2026)"
 `;
   const res = importThunderbirdFilters(dat, { knownFolders: KNOWN_FOLDERS });
   assert.equal(res.rules.length, 1);
-  assert.equal(res.rules[0].name, 'Mixed & Partial');
+  assert.equal(res.rules[0].name, 'OR partial');
+  assert.equal(res.rules[0].match, 'any');
   assert.deepEqual(res.rules[0].conditions, [
     { field: 'from', operator: 'inAddressBook', addressBookId: 'all', negate: false },
   ]);
@@ -179,9 +243,9 @@ condition="AND (from,is in ab,moz-abmdbdirectory://abook.sqlite) OR (date,is bef
 
   const joined = res.problems.join('\n');
   assert.match(joined, /Match all messages/);
+  assert.match(joined, /Widened AND delete.*skipped because dropping an unsupported condition from an AND filter/);
+  assert.match(joined, /destination folder "\/Nonexistent" for "Copy to folder" was not found, rule skipped/);
   assert.match(joined, /unsupported Thunderbird action "Forward"/);
-  assert.match(joined, /destination folder "\/Nonexistent" for "Move to folder" was not found/);
-  assert.match(joined, /mixed AND\/OR/);
   assert.match(joined, /address book mapped to All address books/);
   assert.match(joined, /unsupported Thunderbird condition "date is before"/);
 });
