@@ -1445,7 +1445,7 @@
     "message": "Als „$1“ dupliziert. Prüfen und Speichern drücken."
   },
   "rule_stopProcessingTitle": {
-    "message": "Gilt für nachfolgende Regeln im selben Lauf; betrifft nicht das Ausführen einer einzelnen Regel oder eigene Zeitpläne"
+    "message": "Nachfolgende Regeln lassen eine Nachricht unberührt, solange sie dieser Regel entspricht, auch wenn eine spätere Regel einzeln oder nach eigenem Zeitplan läuft"
   },
   "test_unknownError": {
     "message": "Testlauf fehlgeschlagen"

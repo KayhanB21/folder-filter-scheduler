@@ -1445,7 +1445,7 @@
     "message": "Duplicata come «$1». Controllala e premi Salva."
   },
   "rule_stopProcessingTitle": {
-    "message": "Si applica alle regole successive nella stessa esecuzione; non influisce su Esegui singola regola o pianificazioni indipendenti"
+    "message": "Le regole successive non agiscono su un messaggio finché corrisponde a questa regola, anche quando una regola successiva viene eseguita da sola o con una propria pianificazione"
   },
   "test_unknownError": {
     "message": "Simulazione non riuscita"

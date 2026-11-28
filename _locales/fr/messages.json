@@ -1526,7 +1526,7 @@
     "message": "Dupliquée en « $1 ». Vérifiez-la et cliquez sur Enregistrer."
   },
   "rule_stopProcessingTitle": {
-    "message": "S’applique aux règles suivantes d’une même exécution ; n’affecte pas l’exécution d’une seule règle ni les planifications indépendantes"
+    "message": "Les règles suivantes n’agissent pas sur un message tant qu’il correspond à cette règle, y compris quand une règle suivante s’exécute seule ou selon sa propre planification"
   },
   "test_unknownError": {
     "message": "Échec de la simulation"

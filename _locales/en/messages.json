@@ -1924,7 +1924,7 @@
     "description": "Status after duplicating a rule. $1 is the copy name."
   },
   "rule_stopProcessingTitle": {
-    "message": "Applies to later rules in the same run; does not affect single-rule Run or independent rule schedules",
+    "message": "Later rules leave a message alone while it matches this rule, also when a later rule runs alone or on its own schedule",
     "description": "Tooltip on the Stop running later rules checkbox."
   },
   "test_unknownError": {

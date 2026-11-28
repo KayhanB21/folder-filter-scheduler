@@ -1364,7 +1364,7 @@
     "message": "已复制为“$1”。请检查并点击保存。"
   },
   "rule_stopProcessingTitle": {
-    "message": "适用于同一次运行中的后续规则；不影响单条规则的运行或独立计划任务"
+    "message": "只要邮件符合此规则，后续规则就不会处理该邮件；后续规则单独运行或按独立计划运行时也是如此"
   },
   "test_unknownError": {
     "message": "试运行失败"

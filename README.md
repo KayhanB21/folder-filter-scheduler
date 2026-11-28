@@ -134,8 +134,8 @@ under plain Node, with no Thunderbird needed — see [`test/matcher.test.js`](te
 - **Rule management at scale**: reorder rules top-to-bottom with **↑ / ↓**,
   clone rules in one click with **Duplicate**, filter large rule sets with the
   **Filter rules…** search bar, and tick **Stop running later rules on matched
-  messages** to stop subsequent rules in the same run from acting on mail an
-  earlier rule matched (does not affect single-rule **Run** or independent
+  messages** to keep later rules from acting on mail that an earlier rule
+  matches (this also holds for single-rule **Run** and for independent
   per-rule cron schedules; also mapped automatically when importing
   Thunderbird's `Stop execution` filter action).
 - **Run now** button for immediate, on-demand runs, and a **Run** button on each

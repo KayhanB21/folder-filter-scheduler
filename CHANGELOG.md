@@ -17,9 +17,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Reorder, duplicate, and search rules.** **↑** and **↓** change the order
   that rules run in, **Duplicate** copies a rule, and **Filter rules…**
   searches a long list of rules.
-- **Stop running later rules on matched messages.** With this option on, later
-  rules in the same run skip the mail that the rule matched. It doesn't apply
-  when a later rule runs alone, through its own schedule or its **Run** button.
+- **Stop running later rules on matched messages.** With this option on, a
+  later rule doesn't act on a message that matches the rule. Before a later
+  rule acts on a message, the add-on checks it against each earlier rule that
+  has the option on and watches the same folder. The check also runs when the
+  later rule runs alone, through its own schedule or its **Run** button, and
+  for mail that the earlier rule didn't scan in that run. If the add-on can't
+  read a message to make the check, the later rule leaves the message alone
+  and checks it again in the next run. **Test** doesn't make this check, so it
+  counts such a message as a match.
 - **Custom header conditions.** Choose **Custom header…** in a condition and
   enter a header name, such as `List-Unsubscribe`, `X-Spam-Status`, or
   `Return-Path`. The add-on downloads the message headers to read it, as it

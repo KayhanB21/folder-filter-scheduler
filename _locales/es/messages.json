@@ -1445,7 +1445,7 @@
     "message": "Duplicada como «$1»: revísela y pulse Guardar."
   },
   "rule_stopProcessingTitle": {
-    "message": "Se aplica a las reglas posteriores en la misma ejecución; no afecta a Ejecutar una sola regla ni a horarios propios"
+    "message": "Las reglas posteriores no actúan sobre un mensaje mientras coincida con esta regla, también cuando una regla posterior se ejecuta sola o con su propio horario"
   },
   "test_unknownError": {
     "message": "Error en la prueba"
