@@ -1452,5 +1452,8 @@
   },
   "import_tbSkippedWidened": {
     "message": "$1: saltata perché rimuovere una condizione non supportata da un filtro E farebbe corrispondere più messaggi del previsto"
+  },
+  "import_skippedWidened": {
+    "message": "$1: saltata perché rimuovere una condizione da una regola che richiede tutte le condizioni farebbe corrispondere più messaggi del previsto"
   }
 }

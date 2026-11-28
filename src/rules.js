@@ -588,13 +588,21 @@ function sanitizeRule(raw, index, problems, folderContext, knownAddressBookIds) 
   const actions = sanitizeActions(raw, problems, where, folderContext);
   if (!actions) return null;
 
-  const conditions = (Array.isArray(raw?.conditions) ? raw.conditions : [])
+  const rawConditions = Array.isArray(raw?.conditions) ? raw.conditions : [];
+  const conditions = rawConditions
     .map((c, i) => sanitizeCondition(c, problems, t('import_whereCondition', where, i + 1), knownAddressBookIds))
     .filter(Boolean);
 
   // A rule with no usable conditions is dropped rather than imported inert.
   if (conditions.length === 0) {
     problems.push(t('import_noConditions', where));
+    return null;
+  }
+  const match = raw?.match === 'all' ? 'all' : 'any';
+  // Dropping a condition from an "all" (AND) rule widens what it matches; skip
+  // the whole rule instead of staging a broader destructive filter.
+  if (match === 'all' && conditions.length < rawConditions.length) {
+    problems.push(t('import_skippedWidened', where));
     return null;
   }
 

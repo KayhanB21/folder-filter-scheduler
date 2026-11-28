@@ -295,14 +295,27 @@ function saveCollapsed(ids, key = COLLAPSED_KEY) {
 let collapsed = loadCollapsed();
 const collapsedFolders = loadCollapsed(COLLAPSED_FOLDERS_KEY);
 
+/** Lowercased, deduplicated identity emails of a Thunderbird account. */
+function emailsOfAccount(account) {
+  return [
+    ...new Set(
+      (account?.identities ?? [])
+        .map((id) => String(id?.email ?? '').trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+}
+
 /** One picker entry. `label` is the full "Account: /path" form, for tooltips. */
-function folderEntry(folder, accountName) {
+function folderEntry(folder, accountName, accountEmails = [], accountType = '') {
   const path = folder.path;
   return {
     id: folder.id,
     label: `${accountName}: ${path}`,
     accountId: folder.accountId,
     accountName,
+    accountEmails,
+    accountType,
     path,
     name: folder.name || path.split('/').filter(Boolean).pop() || path,
     depth: folderDepth(path),
@@ -313,7 +326,7 @@ function folderEntry(folder, accountName) {
 /** Build a flat, labelled folder list for the <select>s, across all accounts. */
 async function loadFolders() {
   const accounts = await messenger.accounts.list();
-  const nameByAccount = new Map(accounts.map((a) => [a.id, a.name]));
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
   const flat = [];
 
   // Preferred path: the flat folder query (Thunderbird 121+). One call, every folder.
@@ -322,7 +335,8 @@ async function loadFolders() {
       const all = await messenger.folders.query({});
       for (const f of all) {
         if (!f.id || !f.path || f.path === '/') continue;
-        flat.push(folderEntry(f, nameByAccount.get(f.accountId) ?? ''));
+        const acct = accountById.get(f.accountId);
+        flat.push(folderEntry(f, acct?.name ?? '', emailsOfAccount(acct), acct?.type ?? ''));
       }
       if (flat.length) {
         // Grouped by account in the account list's order; the query keeps each
@@ -339,14 +353,14 @@ async function loadFolders() {
 
   // Fallback: walk each account's tree, explicitly requesting subfolders.
   const withSubs = await messenger.accounts.list(true);
-  const walk = (folder, accountName) => {
+  const walk = (folder, accountName, accountEmails, accountType) => {
     if (folder.id && folder.path && folder.path !== '/') {
-      flat.push(folderEntry(folder, accountName));
+      flat.push(folderEntry(folder, accountName, accountEmails, accountType));
     }
-    for (const child of folder.subFolders ?? []) walk(child, accountName);
+    for (const child of folder.subFolders ?? []) walk(child, accountName, accountEmails, accountType);
   };
   for (const account of withSubs) {
-    walk(account.rootFolder ?? account, account.name);
+    walk(account.rootFolder ?? account, account.name, emailsOfAccount(account), account.type ?? '');
   }
   folders = flat;
   guides = treeGuides(folders);

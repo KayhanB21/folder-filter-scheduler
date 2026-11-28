@@ -30,7 +30,7 @@ import { ADVANCED_DEFAULTS, AUTH_DOH_SERVERS, alarmNeedsReset, dohOrigin, saniti
 import { createRunner } from './runner.js';
 import { createHeaderReads, readHeadersOrSkip } from './headers.js';
 import { createBodyReads } from './body.js';
-import { COPY_HISTORY_KEY, createCopyHistory, loadStoredCopyHistory } from './copied.js';
+import { COPY_CAP_PER_TARGET, COPY_HISTORY_KEY, createCopyHistory, loadStoredCopyHistory } from './copied.js';
 import { createAuthReads } from './auth/reads.js';
 import { AUTH_CACHE_KEY } from './auth/cache.js';
 import { OWN_BLOCKED, OWN_OFF, OWN_ON } from './auth/check.js';
@@ -241,6 +241,31 @@ async function saveRunState(runState) {
 const COPY_CHECKPOINT_ADDS = 1000;
 
 /**
+ * Check whether a message with the same Message-ID already sits in the copy
+ * destination folder. Called only after a destination's local copy history has
+ * dropped entries past `COPY_CAP_PER_TARGET`.
+ */
+async function hasMessageInFolder(folderId, header) {
+  const headerMessageId = String(header?.headerMessageId ?? '').trim();
+  if (!headerMessageId || !folderId) return false;
+  try {
+    let page = await messenger.messages.query({ folderId, headerMessageId, autoPaginationTimeout: 0 });
+    while (page) {
+      if ((page.messages?.length ?? 0) > 0) {
+        if (page.id) messenger.messages.abortList?.(page.id).catch?.(() => {});
+        return true;
+      }
+      if (!page.id) break;
+      page = await messenger.messages.continueList(page.id);
+    }
+    return false;
+  } catch (e) {
+    warn(`copy destination lookup failed for folder ${folderId}`, e);
+    return false;
+  }
+}
+
+/**
  * Load per-rule copy history from sharded `copyHistory:*` storage keys (plus
  * any legacy single `copyHistory` key for seamless migration).
  */
@@ -249,9 +274,21 @@ async function loadCopyHistory(rules) {
     warn('could not load copy history', e);
     return {};
   });
-  const { stored, shardKeys, hasLegacy } = loadStoredCopyHistory(all);
-  const tracker = createCopyHistory({ stored, rules });
-  return { tracker, shardKeys, needsMigration: hasLegacy };
+  const ruleNames = new Map((rules ?? []).filter((r) => r?.id).map((r) => [r.id, r.name || r.id]));
+  const { stored, shardKeys, hasLegacy, overflowed, hadOverflowKey } = loadStoredCopyHistory(all);
+  const tracker = createCopyHistory({
+    stored,
+    overflowed,
+    rules,
+    onOverflow: (ruleId) => {
+      const name = ruleNames.get(ruleId) ?? ruleId;
+      log(
+        `copy history for rule "${name}" reached ${COPY_CAP_PER_TARGET} messages; ` +
+          'older messages will be checked in the destination folder before copying',
+      );
+    },
+  });
+  return { tracker, shardKeys, needsMigration: hasLegacy, hadOverflow: hadOverflowKey };
 }
 
 /** Save only the changed copy-history buckets (and migrate/prune stale keys). */
@@ -261,8 +298,9 @@ async function persistCopyHistory(copyStore, { force = false } = {}) {
   if (!copyStore.needsMigration && !tracker.isDirty()) return;
   if (!force && !copyStore.needsMigration && tracker.pendingAdds < COPY_CHECKPOINT_ADDS) return;
   const version = tracker.version;
-  const { toSet, toRemove, liveKeys } = tracker.shardedPatch(copyStore.shardKeys, {
+  const { toSet, toRemove, liveKeys, hasOverflow } = tracker.shardedPatch(copyStore.shardKeys, {
     forceAll: copyStore.needsMigration,
+    hadOverflow: copyStore.hadOverflow,
   });
   try {
     if (Object.keys(toSet).length > 0) await messenger.storage.local.set(toSet);
@@ -270,6 +308,7 @@ async function persistCopyHistory(copyStore, { force = false } = {}) {
     if (removeKeys.length > 0) await messenger.storage.local.remove(removeKeys);
     copyStore.shardKeys = liveKeys;
     copyStore.needsMigration = false;
+    copyStore.hadOverflow = hasOverflow;
     tracker.markSaved(version);
   } catch (e) {
     warn('could not save copy history', e);
@@ -652,8 +691,13 @@ async function runRule(
   const copyHistory = copyStore?.tracker ?? null;
   const fingerprint = rule.id ? ruleFingerprint(rule) : null;
   const trackProgress = Boolean(rule.id && scanProgress && (fetchFull || needsBody));
-  const resumedIds = trackProgress ? scanProgress.seenSetFor(rule.id, fingerprint) : new Set();
+  const resumed = trackProgress
+    ? scanProgress.progressFor(rule.id, fingerprint)
+    : { seenIds: new Set(), matchedIds: new Set() };
+  const resumedIds = resumed.seenIds;
+  const resumedMatchedIds = resumed.matchedIds;
   const evaluatedIds = new Set(resumedIds);
+  const matchedProgressIds = new Set(resumedMatchedIds);
   // Stamped before the scan so messages arriving mid-scan are not skipped next time.
   const startedAt = new Date();
   const plan = planScan(runState[rule.id], { manual, now: startedAt, settings });
@@ -716,13 +760,19 @@ async function runRule(
       }
     } catch (e) {
       warn(`scan failed for folder ${folderId} in rule "${rule.name}"`, e);
+      // Matches collected before the scan threw never received their actions,
+      // so remove them from resume progress to ensure the next run retries them.
+      for (const id of matchedIds) evaluatedIds.delete(id);
       scanFailed = true;
       continue;
     }
     // Protect matched messages BEFORE running actions so an action error
     // cannot allow a later rule in the same run to act on them.
-    if (rule.stopProcessing === true && stoppedMessages) {
-      for (const id of matchedIds) stoppedMessages.add(id);
+    if (rule.stopProcessing === true) {
+      for (const id of matchedIds) {
+        if (stoppedMessages) stoppedMessages.add(id);
+        if (trackProgress) matchedProgressIds.add(id);
+      }
     }
     try {
       matched += matchedIds.length;
@@ -740,6 +790,7 @@ async function runRule(
             action.folderId,
             candidateIds,
             matchedHeaders,
+            { checkDestination: hasMessageInFolder },
           );
           copyKeysByAction.set(action, keysById);
           for (const id of skipped) skippedCopyIds.add(id);
@@ -775,6 +826,13 @@ async function runRule(
     }
   }
 
+  // Carry forward matches from earlier resumed passes of this stopping rule so
+  // later rules in the current run still skip them (added after this rule's own
+  // loop so failed-action retries for this rule are never skipped by itself).
+  if (rule.stopProcessing === true && stoppedMessages) {
+    for (const id of resumedMatchedIds) stoppedMessages.add(id);
+  }
+
   // A message whose headers did not arrive was left out, so the pass is not
   // clean and the next run reads it again.
   const skipped = headerReads.skipped - skippedBefore;
@@ -788,14 +846,20 @@ async function runRule(
 
   // Only advance the watermark on a clean pass, so a transient failure does not
   // permanently skip the messages it could not read. When a pass stops early
-  // because the read time budget ran out, remember evaluated ids so the next
-  // run resumes where this one left off instead of re-reading from message 1.
+  // because the read time budget ran out, remember evaluated ids (and, for a
+  // stopping rule, matched ids) so the next run resumes where this one left off
+  // instead of re-reading from message 1.
   if (rule.id) {
     if (!holdWatermark) {
       runState[rule.id] = stampScan(runState[rule.id], kind, startedAt);
       scanProgress?.clear(rule.id);
     } else if (trackProgress && (headerReads.budgetReached || bodyReads.budgetReached)) {
-      scanProgress.recordPartial(rule.id, fingerprint, evaluatedIds);
+      scanProgress.recordPartial(
+        rule.id,
+        fingerprint,
+        evaluatedIds,
+        rule.stopProcessing === true ? matchedProgressIds : null,
+      );
     }
     runState[rule.id] = recordRuleRun(runState[rule.id], {
       at: startedAt,

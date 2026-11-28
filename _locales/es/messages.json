@@ -1452,5 +1452,8 @@
   },
   "import_tbSkippedWidened": {
     "message": "$1: omitida porque eliminar una condición no admitida en un filtro Y haría coincidir más correos de los previstos"
+  },
+  "import_skippedWidened": {
+    "message": "$1: omitida porque eliminar una condición de una regla que requiere todas las condiciones haría coincidir más correos de los previstos"
   }
 }

@@ -1452,5 +1452,8 @@
   },
   "import_tbSkippedWidened": {
     "message": "$1: übersprungen, weil das Weglassen einer nicht unterstützten Bedingung in einem UND-Filter mehr Nachrichten treffen würde als beabsichtigt"
+  },
+  "import_skippedWidened": {
+    "message": "$1: übersprungen, weil das Weglassen einer Bedingung in einer Regel, die alle Bedingungen erfordert, mehr Nachrichten treffen würde als beabsichtigt"
   }
 }

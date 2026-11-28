@@ -291,11 +291,22 @@ export function createScanProgress({ stored = {}, rules = null, cap = SCAN_PROGR
       dirty = true;
       continue;
     }
+    const rawMatched = Array.isArray(entry.matchedIds) ? entry.matchedIds : [];
+    const cleanMatched = rawMatched.filter((id) => typeof id === 'number' && Number.isInteger(id));
+    const cappedMatched = cleanMatched.length > cap ? cleanMatched.slice(cleanMatched.length - cap) : cleanMatched;
     progress[ruleId] = {
       fingerprint: entry.fingerprint,
       seenIds: cleanIds.length > cap ? cleanIds.slice(cleanIds.length - cap) : cleanIds,
+      ...(cappedMatched.length > 0 ? { matchedIds: cappedMatched } : {}),
     };
-    if (cleanIds.length !== entry.seenIds.length || cleanIds.length > cap) dirty = true;
+    if (
+      cleanIds.length !== entry.seenIds.length ||
+      cleanIds.length > cap ||
+      cleanMatched.length !== rawMatched.length ||
+      cleanMatched.length > cap
+    ) {
+      dirty = true;
+    }
   }
 
   return {
@@ -303,21 +314,39 @@ export function createScanProgress({ stored = {}, rules = null, cap = SCAN_PROGR
       return dirty;
     },
 
-    /** Message ids already evaluated in an interrupted pass of this exact rule. */
-    seenSetFor(ruleId, fingerprint) {
+    /** Evaluated and matched message ids from an interrupted pass of this exact rule. */
+    progressFor(ruleId, fingerprint) {
       const entry = ruleId ? progress[ruleId] : null;
-      if (!entry || entry.fingerprint !== fingerprint) return new Set();
-      return new Set(entry.seenIds);
+      if (!entry || entry.fingerprint !== fingerprint) {
+        return { seenIds: new Set(), matchedIds: new Set() };
+      }
+      return {
+        seenIds: new Set(entry.seenIds),
+        matchedIds: new Set(entry.matchedIds ?? []),
+      };
     },
 
-    /** Remember evaluated ids when a scan hits the read budget before finishing. */
-    recordPartial(ruleId, fingerprint, seenSet) {
+    /** Message ids already evaluated in an interrupted pass of this exact rule. */
+    seenSetFor(ruleId, fingerprint) {
+      return this.progressFor(ruleId, fingerprint).seenIds;
+    },
+
+    /**
+     * Remember evaluated ids (and, for stopping rules, matched ids) when a scan
+     * hits the read budget before finishing.
+     */
+    recordPartial(ruleId, fingerprint, seenSet, matchedSet = null) {
       if (!ruleId || !fingerprint) return;
       const list = [...seenSet].filter((id) => typeof id === 'number' && Number.isInteger(id));
       if (list.length === 0) return;
+      const matchedList = matchedSet
+        ? [...matchedSet].filter((id) => typeof id === 'number' && Number.isInteger(id))
+        : [];
+      const cappedMatched = matchedList.length > cap ? matchedList.slice(matchedList.length - cap) : matchedList;
       progress[ruleId] = {
         fingerprint,
         seenIds: list.length > cap ? list.slice(list.length - cap) : list,
+        ...(cappedMatched.length > 0 ? { matchedIds: cappedMatched } : {}),
       };
       dirty = true;
     },

@@ -1934,5 +1934,9 @@
   "import_tbSkippedWidened": {
     "message": "$1: skipped because dropping an unsupported condition from an AND filter would match more mail than intended",
     "description": "Import problem when an AND Thunderbird filter had an unsupported condition and is therefore skipped for safety. $1 says which rule."
+  },
+  "import_skippedWidened": {
+    "message": "$1: skipped because dropping a condition from a rule that requires all conditions would match more mail than intended",
+    "description": "Import problem when a rule requiring all conditions had an invalid condition dropped and is therefore skipped for safety. $1 says which rule."
   }
 }

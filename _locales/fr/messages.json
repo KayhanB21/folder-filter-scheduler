@@ -1533,5 +1533,8 @@
   },
   "import_tbSkippedWidened": {
     "message": "$1 : ignorée car retirer une condition non prise en charge d’un filtre ET ferait correspondre plus de messages que prévu"
+  },
+  "import_skippedWidened": {
+    "message": "$1 : ignorée car retirer une condition d’une règle exigeant toutes les conditions ferait correspondre plus de messages que prévu"
   }
 }

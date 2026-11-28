@@ -165,6 +165,25 @@ test('an unknown operator or header field drops the condition', () => {
   assert.ok(bogusField.problems.some((p) => /no recognised header field/.test(p)));
 });
 
+test('dropping a condition skips an "all" rule instead of widening it, while an "any" rule keeps surviving branches', () => {
+  const mixedConditions = [
+    { field: 'from', operator: 'contains', value: 'boss@example.com' },
+    { field: 'from', operator: 'sudo', value: 'x' },
+  ];
+  const widenedAnd = sanitizeImport(
+    file({ rules: [{ ...validRule, name: 'Strict delete', match: 'all', conditions: mixedConditions }] }),
+  );
+  assert.deepEqual(widenedAnd.rules, []);
+  assert.ok(widenedAnd.problems.some((p) => /requires all conditions/.test(p)));
+
+  const narrowedOr = sanitizeImport(
+    file({ rules: [{ ...validRule, name: 'Loose delete', match: 'any', conditions: mixedConditions }] }),
+  );
+  assert.equal(narrowedOr.rules.length, 1);
+  assert.equal(narrowedOr.rules[0].conditions.length, 1);
+  assert.ok(narrowedOr.problems.some((p) => /unknown operator/.test(p)));
+});
+
 test('an empty value on a string operator is refused', () => {
   // endsWith "" matches every message; it must not survive an import.
   const { rules, problems } = sanitizeImport(

@@ -1371,5 +1371,8 @@
   },
   "import_tbSkippedWidened": {
     "message": "$1：已跳过，因为从“与”过滤器中移除不支持的条件会匹配比预期更多的邮件"
+  },
+  "import_skippedWidened": {
+    "message": "$1：已跳过，因为从要求满足全部条件的规则中移除条件会匹配比预期更多的邮件"
   }
 }

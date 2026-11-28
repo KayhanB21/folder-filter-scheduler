@@ -14,10 +14,12 @@ import {
 } from '../src/tb-filters.js';
 
 const KNOWN_FOLDERS = [
-  { id: 'acc1://INBOX', accountName: 'alice@gmail.com', path: '/INBOX' },
-  { id: 'acc1://Newsletters', accountName: 'alice@gmail.com', path: '/Newsletters' },
-  { id: 'acc1://Work/Receipts', accountName: 'alice@gmail.com', path: '/Work/Receipts' },
-  { id: 'local://Backup/2026', accountName: 'Local Folders', path: '/Backup/2026' },
+  { id: 'acc1://INBOX', accountName: 'Gmail', accountEmails: ['alice@gmail.com'], accountType: 'imap', path: '/INBOX' },
+  { id: 'acc1://Newsletters', accountName: 'Gmail', accountEmails: ['alice@gmail.com'], accountType: 'imap', path: '/Newsletters' },
+  { id: 'acc1://Work/Receipts', accountName: 'Gmail', accountEmails: ['alice@gmail.com'], accountType: 'imap', path: '/Work/Receipts' },
+  { id: 'acc2://Receipts', accountName: 'Work', accountEmails: ['work@gmail.com'], accountType: 'imap', path: '/Receipts' },
+  { id: 'corp://Invoices', accountName: 'Company', accountEmails: ['alice@company.com'], accountType: 'imap', path: '/Invoices' },
+  { id: 'local://Backup/2026', accountName: 'Local Folders', accountEmails: [], accountType: 'none', path: '/Backup/2026' },
 ];
 
 test('isThunderbirdFilterFile distinguishes msgFilterRules.dat from JSON exports', () => {
@@ -83,21 +85,44 @@ test('parseThunderbirdCondition handles commas, parentheses, quoted headers, and
   );
 });
 
-test('resolveThunderbirdFolderUri decodes percent-encoding, matches account + path, and never falls back across accounts', () => {
+test('resolveThunderbirdFolderUri matches by identity email and never matches on mail server host alone', () => {
   assert.deepEqual(
     parseThunderbirdFolderUri('mailbox://nobody@Local%20Folders/Backup/2026'),
-    { accountHints: ['local folders'], path: '/Backup/2026' },
+    { username: '', host: 'local folders', path: '/Backup/2026' },
   );
+  assert.deepEqual(
+    parseThunderbirdFolderUri('imap://work%40gmail.com@imap.gmail.com/Receipts'),
+    { username: 'work@gmail.com', host: 'imap.gmail.com', path: '/Receipts' },
+  );
+  // Matches by identity email even when the account's display name is "Gmail" or "Work".
   assert.equal(
     resolveThunderbirdFolderUri('imap://alice%40gmail.com@imap.gmail.com/Work/Receipts', KNOWN_FOLDERS)?.id,
     'acc1://Work/Receipts',
   );
   assert.equal(
+    resolveThunderbirdFolderUri('imap://work%40gmail.com@imap.gmail.com/Receipts', KNOWN_FOLDERS)?.id,
+    'acc2://Receipts',
+  );
+  // Local-part username + matching mail host resolves via identity email domain.
+  assert.equal(
+    resolveThunderbirdFolderUri('imap://alice@mail.company.com/Invoices', KNOWN_FOLDERS)?.id,
+    'corp://Invoices',
+  );
+  // Local Folders has no username (`nobody`), so host matching applies (including localized names via accountType 'none').
+  assert.equal(
     resolveThunderbirdFolderUri('mailbox://nobody@Local%20Folders/Backup/2026', KNOWN_FOLDERS)?.id,
     'local://Backup/2026',
   );
+  assert.equal(
+    resolveThunderbirdFolderUri('mailbox://nobody@Local%20Folders/Backup/2026', [
+      { id: 'de-local://Backup/2026', accountName: 'Lokale Ordner', accountEmails: [], accountType: 'none', path: '/Backup/2026' },
+    ])?.id,
+    'de-local://Backup/2026',
+  );
   assert.equal(resolveThunderbirdFolderUri('imap://alice%40gmail.com@imap.gmail.com/Missing', KNOWN_FOLDERS), null);
-  // Different account with the same unique folder path must NOT match alice@gmail.com's folder.
+  // Another Gmail user's filter must NEVER match alice's account named "Gmail" via server host `imap.gmail.com`.
+  assert.equal(resolveThunderbirdFolderUri('imap://other%40gmail.com@imap.gmail.com/Newsletters', KNOWN_FOLDERS), null);
+  assert.equal(resolveThunderbirdFolderUri('imap://work%40gmail.com@imap.gmail.com/Newsletters', KNOWN_FOLDERS), null);
   assert.equal(resolveThunderbirdFolderUri('imap://bob%40work.example@imap.work.example/Newsletters', KNOWN_FOLDERS), null);
 });
 

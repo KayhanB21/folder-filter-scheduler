@@ -361,7 +361,34 @@ test('a single failed update finishes remaining messages, excludes the failed id
   assert.match(res.errors[0].error.message, /transient tag error/);
 });
 
-test('an entire failed update wave aborts immediately without running later waves', async () => {
+test('one failed message in a 1-item final wave does not stop healthy messages from moving', async () => {
+  const ids = Array.from({ length: UPDATE_BATCH_SIZE + 1 }, (_, i) => i + 1);
+  const lastId = ids[ids.length - 1];
+  const moved = [];
+  const m = {
+    messages: {
+      update: async (id) => {
+        if (id === lastId) throw new Error('single final message failed');
+      },
+      move: async (batch) => {
+        moved.push(...batch);
+      },
+    },
+  };
+  const headers = new Map(ids.map((id) => [id, { id, tags: [] }]));
+  const res = await runActions(
+    m,
+    ids,
+    [{ type: 'tag', tagKey: '$label1' }, { type: 'move', folderId: 'dest' }],
+    { headers },
+  );
+  assert.deepEqual(moved, ids.slice(0, UPDATE_BATCH_SIZE));
+  assert.equal(res.affected, UPDATE_BATCH_SIZE);
+  assert.equal(res.errors.length, 1);
+  assert.equal(res.errors[0].id, lastId);
+});
+
+test('25 consecutive update failures abort remaining waves without blocking already-healthy messages from moving', async () => {
   const ids = Array.from({ length: UPDATE_BATCH_SIZE * 3 }, (_, i) => i + 1);
   let calls = 0;
   const m = {
@@ -374,6 +401,38 @@ test('an entire failed update wave aborts immediately without running later wave
   };
   await assert.rejects(runAction(m, ids, { type: 'markRead' }), /offline/);
   assert.equal(calls, UPDATE_BATCH_SIZE * 2);
+
+  // Inside runActions, aborting after 25 consecutive failures does not throw:
+  // the 25 healthy messages from wave 1 still move, while wave 2 (failed) and
+  // wave 3 (skipped) are excluded from move and recorded in result.errors.
+  let calls2 = 0;
+  const moved = [];
+  const m2 = {
+    messages: {
+      update: async (id) => {
+        calls2 += 1;
+        if (id > UPDATE_BATCH_SIZE) throw new Error('offline');
+      },
+      move: async (batch) => {
+        moved.push(...batch);
+      },
+    },
+  };
+  const headers = new Map(ids.map((id) => [id, { id, tags: [] }]));
+  const res = await runActions(
+    m2,
+    ids,
+    [{ type: 'tag', tagKey: '$label1' }, { type: 'move', folderId: 'dest' }],
+    { headers },
+  );
+  assert.equal(calls2, UPDATE_BATCH_SIZE * 2);
+  assert.deepEqual(moved, ids.slice(0, UPDATE_BATCH_SIZE));
+  assert.equal(res.affected, UPDATE_BATCH_SIZE);
+  assert.equal(res.errors.length, UPDATE_BATCH_SIZE * 2);
+  assert.deepEqual(
+    res.errors.map((e) => e.id),
+    ids.slice(UPDATE_BATCH_SIZE),
+  );
 });
 
 test('markNotJunk always updates even when header.junk is false (unclassified mail)', async () => {

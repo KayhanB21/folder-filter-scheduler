@@ -271,9 +271,12 @@ function safeDecode(segment) {
 }
 
 /**
- * Extract `{ accountHints, path }` from a Thunderbird folder URI such as
+ * Extract `{ username, host, path }` from a Thunderbird folder URI such as
  * `imap://user%40gmail.com@imap.gmail.com/Archive/2026` or
  * `mailbox://nobody@Local%20Folders/Work`.
+ *
+ * `nobody` is Thunderbird's placeholder for accounts without a login username
+ * (such as Local Folders), so it is normalised to `username: ''`.
  */
 export function parseThunderbirdFolderUri(uri) {
   const raw = String(uri ?? '').trim();
@@ -287,47 +290,86 @@ export function parseThunderbirdFolderUri(uri) {
   if (decodedSegments.length === 0) return null;
   const path = `/${decodedSegments.join('/')}`;
 
-  const accountHints = [];
+  let username = '';
+  let host = '';
   const at = authority.lastIndexOf('@');
   if (at > 0) {
-    const user = safeDecode(authority.slice(0, at)).trim();
-    const host = safeDecode(authority.slice(at + 1)).trim();
-    if (user && user.toLowerCase() !== 'nobody') accountHints.push(user.toLowerCase());
-    if (host) accountHints.push(host.toLowerCase());
+    const rawUser = safeDecode(authority.slice(0, at)).trim().toLowerCase();
+    username = rawUser && rawUser !== 'nobody' ? rawUser : '';
+    host = safeDecode(authority.slice(at + 1)).trim().toLowerCase();
   } else if (authority) {
-    accountHints.push(safeDecode(authority).trim().toLowerCase());
+    host = safeDecode(authority).trim().toLowerCase();
   }
-  return { accountHints, path };
+  return { username, host, path };
 }
 
 /**
  * Match a Thunderbird folder URI to a folder in the current profile, or null.
  *
- * Requires BOTH an account match and a path match so a folder URI for one
- * account can never silently bind to a same-named folder in another account.
+ * When the URI carries a username (e.g. `work@gmail.com` or `alice`), it is
+ * matched against the account's identity email addresses (or exact account name
+ * only when identity emails are unavailable) — never against the mail server
+ * host alone, so two Gmail accounts cannot collide. Host matching is allowed
+ * only when the URI has no username, as with `mailbox://nobody@Local%20Folders`.
  */
 export function resolveThunderbirdFolderUri(uri, knownFolders) {
   if (!Array.isArray(knownFolders) || knownFolders.length === 0) return null;
   const parsed = parseThunderbirdFolderUri(uri);
   if (!parsed) return null;
-  const { accountHints, path } = parsed;
-  if (accountHints.length === 0) return null;
+  const { username, host, path } = parsed;
   const pathLower = path.toLowerCase();
 
-  const matchesAccount = (folder) => {
-    const name = String(folder?.accountName ?? '').trim().toLowerCase();
-    return name && accountHints.some((h) => name === h || name.includes(h) || h.includes(name));
+  const pickByPath = (candidates) => {
+    const exact = candidates.filter((f) => f?.path === path);
+    if (exact.length === 1) return exact[0];
+    const ci = candidates.filter((f) => String(f?.path ?? '').toLowerCase() === pathLower);
+    return ci.length === 1 ? ci[0] : null;
   };
 
-  const exactByAccount = knownFolders.filter((f) => f?.path === path && matchesAccount(f));
-  if (exactByAccount.length === 1) return exactByAccount[0];
+  const emailsOf = (folder) =>
+    Array.isArray(folder?.accountEmails)
+      ? folder.accountEmails.map((e) => String(e ?? '').trim().toLowerCase()).filter(Boolean)
+      : [];
 
-  const ciByAccount = knownFolders.filter(
-    (f) => String(f?.path ?? '').toLowerCase() === pathLower && matchesAccount(f),
-  );
-  if (ciByAccount.length === 1) return ciByAccount[0];
+  if (username) {
+    // 1. Exact identity email match (authoritative regardless of display name).
+    const byExactEmail = knownFolders.filter((f) => emailsOf(f).includes(username));
+    if (byExactEmail.length > 0) return pickByPath(byExactEmail);
 
-  return null;
+    // 2. Local-part login + server host matching the identity email's domain
+    //    (e.g. `imap://alice@mail.company.com/...` -> `alice@company.com`).
+    if (!username.includes('@') && host) {
+      const byLocalAndHost = knownFolders.filter((f) =>
+        emailsOf(f).some((email) => {
+          const split = email.lastIndexOf('@');
+          if (split <= 0) return false;
+          const local = email.slice(0, split);
+          const domain = email.slice(split + 1);
+          return local === username && (host === domain || host.endsWith(`.${domain}`));
+        }),
+      );
+      if (byLocalAndHost.length > 0) return pickByPath(byLocalAndHost);
+    }
+
+    // 3. Fallback when a folder carries no identity emails: exact account name
+    //    match against the username only (never host or substring matching).
+    const byExactName = knownFolders.filter(
+      (f) => emailsOf(f).length === 0 && String(f?.accountName ?? '').trim().toLowerCase() === username,
+    );
+    return pickByPath(byExactName);
+  }
+
+  if (!host) return null;
+
+  // Host-only URIs (such as `mailbox://nobody@Local%20Folders/...`): match by
+  // exact account name, or Thunderbird's `none` account type for Local Folders
+  // (which works even when "Local Folders" is localised).
+  const byHost = knownFolders.filter((f) => {
+    const name = String(f?.accountName ?? '').trim().toLowerCase();
+    if (name === host) return true;
+    return host === 'local folders' && String(f?.accountType ?? '').toLowerCase() === 'none';
+  });
+  return pickByPath(byHost);
 }
 
 function convertClause(clause, where, problems) {

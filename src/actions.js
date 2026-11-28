@@ -68,9 +68,11 @@ async function inBatches(ids, fn, { onProgress, onBatch } = {}) {
  * Uses `Promise.allSettled` per wave so one broken or missing message never
  * aborts the rest of a bulk tag/mark action. Individual failures are handed to
  * `onItemError(id, error)` so callers can exclude those ids from downstream
- * actions and hold the scan watermark. If every single item in a wave fails
- * (e.g. Thunderbird IPC/offline failure), the loop aborts immediately with the
- * first error rather than hammering Thunderbird across remaining waves.
+ * actions and hold the scan watermark. If `UPDATE_BATCH_SIZE` updates fail in
+ * a row (e.g. Thunderbird IPC/offline failure), remaining updates are skipped
+ * and recorded as failed without throwing so already-updated healthy messages
+ * still reach downstream actions (such as Move) while failed and skipped ids
+ * stay excluded.
  *
  * Progress is reported at the same `BATCH_SIZE` cadence as bulk actions so a
  * large tag or mark run stays quiet on normal folders and still leaves a clear
@@ -79,19 +81,27 @@ async function inBatches(ids, fn, { onProgress, onBatch } = {}) {
 async function inUpdateBatches(ids, fn, { onProgress, onItemError } = {}) {
   let reported = 0;
   let firstError = null;
+  let consecutiveFailures = 0;
   for (let i = 0; i < ids.length; i += UPDATE_BATCH_SIZE) {
     const chunk = ids.slice(i, i + UPDATE_BATCH_SIZE);
     const settled = await Promise.allSettled(chunk.map((id) => fn(id)));
-    let waveFailures = 0;
-    settled.forEach((res, idx) => {
+    for (let idx = 0; idx < settled.length; idx += 1) {
+      const res = settled[idx];
       if (res.status === 'rejected') {
-        waveFailures += 1;
+        consecutiveFailures += 1;
         if (firstError === null) firstError = res.reason;
         onItemError?.(chunk[idx], res.reason);
+      } else {
+        consecutiveFailures = 0;
       }
-    });
-    if (waveFailures === chunk.length) {
-      throw firstError;
+    }
+    if (consecutiveFailures >= UPDATE_BATCH_SIZE) {
+      if (onItemError) {
+        for (let j = i + chunk.length; j < ids.length; j += 1) {
+          onItemError(ids[j], firstError);
+        }
+      }
+      break;
     }
     const done = i + chunk.length;
     if (ids.length > BATCH_SIZE && (done - reported >= BATCH_SIZE || done === ids.length)) {

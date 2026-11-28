@@ -8,6 +8,7 @@ import {
   COPY_BUCKET_PREFIX,
   COPY_CAP_PER_TARGET,
   COPY_HISTORY_KEY,
+  COPY_OVERFLOW_KEY,
   copyBucketKey,
   copyKeyOf,
   createCopyHistory,
@@ -243,4 +244,88 @@ test('sharded copyHistory keys round-trip, migrate legacy data, and write only d
 
   tracker.markSaved(tracker.version);
   assert.equal(tracker.pendingAdds, 0);
+});
+
+test('after a destination drops entries past cap, filterUncopied checks the destination folder for evicted messages', async () => {
+  const rules = [copyRule('r1', ['dest'])];
+  const h1 = header({ id: 1, headerMessageId: '<1@example>' });
+  const h2 = header({ id: 2, headerMessageId: '<2@example>' });
+  const h3 = header({ id: 3, headerMessageId: '<3@example>' });
+  const h4 = header({ id: 4, headerMessageId: '<4@example>' });
+  const headers = new Map([[1, h1], [2, h2], [3, h3], [4, h4]]);
+
+  let clock = 1000;
+  const overflows = [];
+  const destQueries = [];
+  const inDest = new Set();
+  const checkDestination = async (folderId, hdr) => {
+    destQueries.push([folderId, hdr.headerMessageId]);
+    return inDest.has(hdr.headerMessageId);
+  };
+
+  const run1 = createCopyHistory({
+    stored: {},
+    rules,
+    cap: 2,
+    now: () => (clock += 10),
+    onOverflow: (rId, dId) => overflows.push([rId, dId]),
+  });
+
+  // Copying up to cap (2 messages) never triggers overflow or destination lookups.
+  const f1 = await run1.filterUncopied('r1', 'dest', [1, 2], headers, { checkDestination });
+  assert.deepEqual(f1.toCopy, [1, 2]);
+  assert.deepEqual(destQueries, []);
+  run1.recordCopied('r1', 'dest', [1], f1.keysById);
+  run1.recordCopied('r1', 'dest', [2], f1.keysById);
+  inDest.add('<1@example>');
+  inDest.add('<2@example>');
+  assert.equal(run1.isOverflowed('r1', 'dest'), false);
+  assert.deepEqual(overflows, []);
+
+  // Copying a 3rd message drops message 1 from the cap-2 history and flips overflow mode once.
+  const f2 = await run1.filterUncopied('r1', 'dest', [3], headers, { checkDestination });
+  assert.deepEqual(f2.toCopy, [3]);
+  run1.recordCopied('r1', 'dest', [3], f2.keysById);
+  inDest.add('<3@example>');
+  assert.equal(run1.isOverflowed('r1', 'dest'), true);
+  assert.deepEqual(overflows, [['r1', 'dest']]);
+
+  // Persist sharded state including overflow metadata, then reload on a new run.
+  const patch = run1.shardedPatch([], { hadOverflow: false });
+  const key = copyBucketKey('r1', 'dest');
+  assert.deepEqual(patch.toSet[COPY_OVERFLOW_KEY], [key]);
+  assert.equal(patch.hasOverflow, true);
+  run1.markSaved(run1.version);
+
+  const loaded = loadStoredCopyHistory(patch.toSet);
+  assert.equal(loaded.hadOverflowKey, true);
+  assert.deepEqual(loaded.overflowed, [key]);
+
+  const run2 = createCopyHistory({
+    stored: loaded.stored,
+    overflowed: loaded.overflowed,
+    rules,
+    cap: 2,
+    now: () => (clock += 10),
+  });
+  assert.equal(run2.isOverflowed('r1', 'dest'), true);
+
+  // Run 2 scans [1 (evicted, still in dest), 2 (in history), 3 (in history), 4 (brand new)]:
+  // - 2 and 3 hit the local hash bucket with NO destination query
+  // - 1 misses local history, queries destination -> found -> skipped (no duplicate!)
+  // - 4 misses local history, queries destination -> not found -> copied!
+  const f3 = await run2.filterUncopied('r1', 'dest', [1, 2, 3, 4], headers, { checkDestination });
+  assert.deepEqual(f3.toCopy, [4]);
+  assert.deepEqual(f3.skipped, [1, 2, 3]);
+  assert.deepEqual(destQueries, [
+    ['dest', '<1@example>'],
+    ['dest', '<4@example>'],
+  ]);
+
+  // Deleting the rule removes both the shard and the overflow key.
+  const run3 = createCopyHistory({ stored: loaded.stored, overflowed: loaded.overflowed, rules: [] });
+  const cleanup = run3.shardedPatch(loaded.shardKeys, { hadOverflow: loaded.hadOverflowKey });
+  assert.deepEqual(cleanup.toSet, {});
+  assert.deepEqual(cleanup.toRemove.sort(), [key, COPY_OVERFLOW_KEY].sort());
+  assert.equal(cleanup.hasOverflow, false);
 });
